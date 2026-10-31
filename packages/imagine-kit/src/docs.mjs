@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { KitError } from "./errors.mjs";
-import { readYaml } from "./fsx.mjs";
+import { readYaml, writeYamlAtomic } from "./fsx.mjs";
 import { loadValidator } from "./schemas.mjs";
 
 export function renderStyleOutput(g0) {
@@ -102,3 +102,10 @@ export function loadVoDurations(dir, manifest) {
   for (const a of vo.sort((x, y) => x.v - y.v)) out[a.line] = a.duration_s;
   return out;
 }
+
+export function saveManifest(dir, manifest) {
+  const v = loadValidator("manifest")(manifest);
+  if (!v.valid) throw new KitError("HARD_NOT_RUN", "refusing to write an invalid manifest", { rule: "HARD-AUDIO-LICENCE", detail: v.errors.join("; ") });
+  writeYamlAtomic(join(dir, "assets", "manifest.yaml"), manifest);
+}
+

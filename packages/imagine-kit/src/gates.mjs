@@ -70,3 +70,13 @@ export function itemDeps(id, ctx) {
   return [id];
 }
 
+export function applyAssetDecision(manifest, itemId, decision) {
+  const m = itemId.match(/^asset:(.+)\.v(\d+)$/);
+  const entry = m && assetEntry(manifest, m[1], Number(m[2]));
+  if (!entry) return false;
+  entry.status = decision === "approve" ? "approved" : "rejected";
+  if (entry.kind === "vo") entry.listen_status = decision === "approve" ? "ok" : "redo";
+  return true;
+}
+
+
