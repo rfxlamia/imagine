@@ -6,8 +6,10 @@
 # Planning material, not shipped
 /.internal/
 /spikes/
-# Planning docs for now; docs/ will hold user documentation only.
-/docs/
+# Planning docs (pre-.internal); new planning material goes to .internal/.
+/docs/architecture-proposal.md
+/docs/architecture-proposal-v0.1.md
+/docs/phase0-spike-report.md
 
 # Template placeholders
 /packages/placeholder/
@@ -51,3 +53,10 @@ __pycache__/
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Non-Claude harness integrations and bd byproducts (not used here)
+/.codex/
+/.cursor/
+/.agents/
+/.beads/hooks/*.backup
+/.beads/PRIME.md
