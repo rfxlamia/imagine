@@ -1,0 +1,10 @@
+{
+  "name": "imagine-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test 'hooks/*.test.mjs' 'tools/*.test.mjs'",
+    "check:names": "node tools/check-forbidden-names.mjs",
+    "check:rules": "node tools/check-traceability.mjs --registry-only"
+  }
+}
