@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { findViolations, loadPatterns } from "./check-forbidden-names.mjs";
 
 const patterns = loadPatterns();
@@ -15,4 +19,48 @@ test("flags a file containing a pattern, case-insensitive", () => {
 });
 test("clean file passes", () => {
   assert.deepEqual(findViolations([{ path: "a.md", text: "codex image adapter" }], patterns), []);
+});
+
+test("entry guard runs main when invoked via symlink", () => {
+  const toolsDir = fileURLToPath(new URL(".", import.meta.url));
+  const docsDir = fileURLToPath(new URL("../docs", import.meta.url));
+  const base = realpathSync(mkdtempSync(join(tmpdir(), "imagine-alias-")));
+  try {
+    const real = join(base, "real");
+    mkdirSync(real, { recursive: true });
+    cpSync(toolsDir, join(real, "tools"), { recursive: true });
+    cpSync(docsDir, join(real, "docs"), { recursive: true });
+    const alias = join(base, "alias");
+    symlinkSync(real, alias);
+    const r = spawnSync(process.execPath, [join(alias, "tools", "check-forbidden-names.mjs")], { encoding: "utf8" });
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /forbidden names: clean/);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("checker scans tests/spikes but skips repo-root spikes", () => {
+  const toolsDir = fileURLToPath(new URL(".", import.meta.url));
+  const docsDir = fileURLToPath(new URL("../docs", import.meta.url));
+  const tmp = realpathSync(mkdtempSync(join(tmpdir(), "imagine-spikes-")));
+  try {
+    cpSync(toolsDir, join(tmp, "tools"), { recursive: true });
+    cpSync(docsDir, join(tmp, "docs"), { recursive: true });
+
+    mkdirSync(join(tmp, "tests", "spikes"), { recursive: true });
+    writeFileSync(join(tmp, "tests", "spikes", "x.md"), `bad: ${word}\n`);
+    const r1 = spawnSync(process.execPath, [join(tmp, "tools", "check-forbidden-names.mjs")], { encoding: "utf8" });
+    assert.equal(r1.status, 1);
+    assert.match(r1.stderr, /tests\/spikes\/x\.md:1/);
+
+    rmSync(join(tmp, "tests", "spikes", "x.md"));
+    mkdirSync(join(tmp, "spikes"), { recursive: true });
+    writeFileSync(join(tmp, "spikes", "x.md"), `bad: ${word}\n`);
+    const r2 = spawnSync(process.execPath, [join(tmp, "tools", "check-forbidden-names.mjs")], { encoding: "utf8" });
+    assert.equal(r2.status, 0);
+    assert.match(r2.stdout, /forbidden names: clean/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });

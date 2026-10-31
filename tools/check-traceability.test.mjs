@@ -1,5 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { checkRegistry, checkCoverage } from "./check-traceability.mjs";
 
 const rules = [
@@ -38,4 +43,23 @@ test("coverage: test-only id not satisfied by instruction marker", () => {
   const files = [{ path: "agents/b.md", text: "<!-- rule:AC-01 --> <!-- rule:HARD-X-ONE --> <!-- rule:PROC-Y -->" }];
   const r = checkCoverage(rules, files);
   assert.deepEqual(r.missing.sort(), ["AC-01 (tests)", "HARD-X-ONE (tests)"]);
+});
+
+test("entry guard runs main when invoked via symlink", () => {
+  const toolsDir = fileURLToPath(new URL(".", import.meta.url));
+  const docsDir = fileURLToPath(new URL("../docs", import.meta.url));
+  const base = realpathSync(mkdtempSync(join(tmpdir(), "imagine-alias-")));
+  try {
+    const real = join(base, "real");
+    mkdirSync(real, { recursive: true });
+    cpSync(toolsDir, join(real, "tools"), { recursive: true });
+    cpSync(docsDir, join(real, "docs"), { recursive: true });
+    const alias = join(base, "alias");
+    symlinkSync(real, alias);
+    const r = spawnSync(process.execPath, [join(alias, "tools", "check-traceability.mjs"), "--registry-only"], { encoding: "utf8" });
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /registry ok:/);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
 });

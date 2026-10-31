@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // Fails if any repo file names the research reference that must stay unnamed.
 // Patterns are base64 in forbidden-names.b64 so this tool never contains them.
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = join(fileURLToPath(import.meta.url), "..");
 const root = join(here, "..");
-const SKIP_DIRS = new Set(["node_modules", ".git", "spikes"]);
-const SKIP_PATHS = new Set(["packages/hyperframes", "packages/pocket-tts", "tools/forbidden-names.b64"]);
+const SKIP_DIRS = new Set(["node_modules", ".git"]);
+const SKIP_PATHS = new Set(["packages/hyperframes", "packages/pocket-tts", "tools/forbidden-names.b64", "spikes"]);
 
 export function loadPatterns() {
   return readFileSync(join(here, "forbidden-names.b64"), "utf8")
@@ -51,4 +51,4 @@ function main() {
   console.log("forbidden names: clean");
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main();

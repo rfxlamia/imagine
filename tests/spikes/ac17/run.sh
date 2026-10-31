@@ -50,3 +50,4 @@ prompt="Do these three steps in order, each by dispatching the named subagent wi
     console.log(JSON.stringify(j.plugin_errors||[]));' 2>/dev/null || echo unparseable)"
   echo "scratch=$scratch"
 } | tee -a "$out"
+sed -i.bak "s#$HOME#\$HOME#g" "$out" && rm -f "$out.bak"

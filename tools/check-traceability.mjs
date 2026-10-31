@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Verifies the rule registry and that every rule is enforced by an instruction
 // marker (<!-- rule:ID -->) and/or referenced by a test, per its `cover` field.
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -111,4 +111,4 @@ function main() {
   console.log(`coverage ok: ${covered}/${rules.length}`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main();
