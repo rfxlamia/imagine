@@ -4,11 +4,11 @@ Claude Code 2.1.314. Probe plugin: throwaway `imagine` plugin in a temp dir outs
 
 ## Status and ISOLATION_FLAGS
 
-**ISOLATION_FLAGS (PROPOSED, PENDING CONTROLLER SIGN-OFF):** `--setting-sources project,local --strict-mcp-config`
+**ISOLATION_FLAGS (ACCEPTED 2026-10-31):** `--setting-sources project,local --strict-mcp-config`
 
 **Base command (same for every run):** `claude -p "<prompt>" --model claude-haiku-5-5 --plugin-dir <P> --permission-mode acceptEdits --output-format stream-json --verbose --include-hook-events` with stdin `< /dev/null`.
 
-The proposed set removes every user-owned plugin, skill, agent, MCP server, SessionStart hook and CLAUDE.md effect, and the plugin hook still fires. It does **not** meet the literal acceptance test "plugins lists only `imagine`": the init event still lists three builtin plugins (`cc-plugin-agents-md`, `cc-plugin-telemetry`, `cc-plugin-plugin-authoring`, `path: builtin`). See D5. Task 3 must not treat this set as final until the controller accepts the builtin plugins or supplies another way to exclude them.
+The proposed set removes every user-owned plugin, skill, agent, MCP server, SessionStart hook and CLAUDE.md effect, and the plugin hook still fires. It does **not** meet the literal acceptance test "plugins lists only `imagine`": the init event still lists three builtin plugins (`cc-plugin-agents-md`, `cc-plugin-telemetry`, `cc-plugin-plugin-authoring`, `path: builtin`). See D5. Controller decision: the three builtin plugins (`path: "builtin"`) ship with Claude Code itself, not with the user's configuration, so they are accepted. The isolation acceptance test is restated as: init `plugins` lists `imagine` plus only `path: "builtin"` entries, `mcp_servers` is empty, no user SessionStart hook output appears, and the user's CLAUDE.md has no effect. Fixtures must not contain an `AGENTS.md` (the builtin `cc-plugin-agents-md` may load it).
 
 ## Deviations
 
