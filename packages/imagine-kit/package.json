@@ -1,0 +1,10 @@
+{
+  "name": "imagine-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "bin": { "imagine-kit": "bin/imagine-kit.mjs" },
+  "scripts": { "test": "node --test 'test/**/*.test.mjs'" },
+  "dependencies": { "ajv": "8.20.0", "yaml": "2.9.1" }
+}

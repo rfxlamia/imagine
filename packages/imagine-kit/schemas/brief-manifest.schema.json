@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Ajv strict mode: specify object type for required and array type for contains keywords in patternProperties",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "imagine": { "type": "array", "items": { "type": "string" } },
+      "project": { "type": "array", "items": { "type": "string" } },
+      "hyperframes": { "type": "array", "items": { "type": "string" } },
+      "on_opt_in": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } }
+    }
+  },
+  "propertyNames": { "pattern": "^[a-z0-9-]+$" },
+  "patternProperties": {
+    "^audit-": {
+      "type": "object",
+      "required": ["project"],
+      "properties": {
+        "project": {
+          "type": "array",
+          "allOf": [
+            { "contains": { "const": "bible.yaml" } },
+            { "contains": { "const": "style.md" } }
+          ]
+        }
+      }
+    }
+  }
+}
