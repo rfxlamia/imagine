@@ -1,0 +1,46 @@
+# Research clones (not submodules): production uses pinned releases
+# (hyperframes@0.8.223 via npm, pocket-tts==4.0.1 via uv).
+/packages/hyperframes/
+/packages/pocket-tts/
+
+# Planning material, not shipped
+/.internal/
+/spikes/
+# Planning docs for now; docs/ will hold user documentation only.
+/docs/
+
+# Template placeholders
+/packages/placeholder/
+/skills/placeholder/
+/agents/placeholder.md
+
+# Imagine workspaces created by the plugin at runtime
+.imagine/
+
+# Media (generated or user-supplied; never committed)
+*.wav
+*.mp3
+*.m4a
+*.aac
+*.flac
+*.ogg
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.gif
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.avif
+
+# Node / Python
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+*.log
