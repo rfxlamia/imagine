@@ -17,6 +17,8 @@ test("registry: valid", () => assert.deepEqual(checkRegistry(rules), []));
 test("registry: duplicate id", () => assert.match(checkRegistry([...rules, rules[0]]).join(), /duplicate HARD-X-ONE/));
 test("registry: bad id", () => assert.match(checkRegistry([{ id: "hard-x", source: "s", text: "t" }]).join(), /invalid id/));
 test("registry: missing text", () => assert.match(checkRegistry([{ id: "PROC-Z", source: "s" }]).join(), /missing text/));
+test("registry: bad status", () => assert.match(checkRegistry([{ id: "PROC-Z", source: "s", text: "t", status: "gone" }]).join(), /invalid status/));
+test("registry: deferred status valid", () => assert.deepEqual(checkRegistry([{ id: "PROC-Z", source: "s", text: "t", status: "deferred" }]), []));
 test("registry: bad cover", () => assert.match(checkRegistry([{ id: "PROC-Z", source: "s", text: "t", cover: "x" }]).join(), /invalid cover/));
 
 test("coverage: all covered", () => {
@@ -43,6 +45,18 @@ test("coverage: test-only id not satisfied by instruction marker", () => {
   const files = [{ path: "agents/b.md", text: "<!-- rule:AC-01 --> <!-- rule:HARD-X-ONE --> <!-- rule:PROC-Y -->" }];
   const r = checkCoverage(rules, files);
   assert.deepEqual(r.missing.sort(), ["AC-01 (tests)", "HARD-X-ONE (tests)"]);
+});
+
+test("coverage: deferred rule skipped and counted", () => {
+  const withDeferred = [...rules, { id: "CAP-OLD", source: "s", text: "t", cover: "both", status: "deferred" }];
+  const files = [
+    { path: "skills/a/SKILL.md", text: "<!-- rule:HARD-X-ONE --> <!-- rule:PROC-Y -->" },
+    { path: "tests/x.test.mjs", text: "HARD-X-ONE AC-01" },
+  ];
+  const r = checkCoverage(withDeferred, files);
+  assert.deepEqual(r.missing, []);
+  assert.equal(r.deferred, 1);
+  assert.equal(r.covered, 3);
 });
 
 test("entry guard runs main when invoked via symlink", () => {

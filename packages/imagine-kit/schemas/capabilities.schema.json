@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Deferred 2026-10-31 (Phase 1 re-plan): the capabilities command is not built in Phase 1. Schema kept on disk for the record; no Phase 1 command reads or writes it.",
   "type": "object",
   "required": ["version", "contract", "commands"],
   "additionalProperties": false,
