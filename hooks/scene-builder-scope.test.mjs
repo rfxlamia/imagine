@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { linkSync, mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, linkSync, mkdtempSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { decide } from "./scene-builder-scope.mjs";
+import { decide } from "./scene-builder-scope-lib.mjs";
 
 function fixture() {
   const cwd = mkdtempSync(join(tmpdir(), "imagine-hook-"));
@@ -217,6 +217,96 @@ test("hard link inside shadow to an outside file is denied", () => {
   writeFileSync(outside, "x");
   linkSync(outside, join(shadow, "hard.html"));
   assert.equal(sb(cwd, "Write", { file_path: join(shadow, "hard.html") }).decision, "deny");
+});
+
+function aliasFixture() {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), "imagine-alias-")));
+  const real = join(base, "real");
+  const rel = join(".imagine", "p1", "stage", "edit", "s02");
+  mkdirSync(join(real, rel), { recursive: true });
+  const alias = join(base, "alias");
+  symlinkSync(real, alias);
+  return { real, alias, rel };
+}
+
+test("real cwd with alias file_path: inside allowed, outside denied", () => {
+  const { real, alias, rel } = aliasFixture();
+  assert.equal(sb(real, "Write", { file_path: join(alias, rel, "a.html") }).decision, "allow");
+  assert.equal(sb(real, "Write", { file_path: join(alias, ".imagine", "p1", "bible.yaml") }).decision, "deny");
+});
+
+test("alias cwd with real file_path: inside allowed, outside denied", () => {
+  const { real, alias, rel } = aliasFixture();
+  assert.equal(sb(alias, "Write", { file_path: join(real, rel, "a.html") }).decision, "allow");
+  assert.equal(sb(alias, "Write", { file_path: join(real, ".imagine", "p1", "bible.yaml") }).decision, "deny");
+});
+
+test("bash shadow DIR given in alias form is allowed", () => {
+  const { real, alias, rel } = aliasFixture();
+  assert.equal(bash(real, `npx hyperframes@0.8.223 lint ${join(alias, rel)}`).decision, "allow");
+});
+
+test("symlinked .imagine directory is denied", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "imagine-hook-"));
+  const elsewhere = mkdtempSync(join(tmpdir(), "imagine-else-"));
+  mkdirSync(join(elsewhere, "p1", "stage", "edit", "s02"), { recursive: true });
+  symlinkSync(elsewhere, join(cwd, ".imagine"));
+  assert.equal(sb(cwd, "Write", { file_path: join(cwd, ".imagine", "p1", "stage", "edit", "s02", "a.html") }).decision, "deny");
+});
+
+test("symlinked project directory is denied", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "imagine-hook-"));
+  const elsewhere = mkdtempSync(join(tmpdir(), "imagine-else-"));
+  mkdirSync(join(elsewhere, "stage", "edit", "s02"), { recursive: true });
+  mkdirSync(join(cwd, ".imagine"));
+  symlinkSync(elsewhere, join(cwd, ".imagine", "p1"));
+  assert.equal(sb(cwd, "Write", { file_path: join(cwd, ".imagine", "p1", "stage", "edit", "s02", "a.html") }).decision, "deny");
+});
+
+test("symlink inside shadow pointing back to cwd is denied", () => {
+  const { cwd, shadow } = fixture();
+  symlinkSync(cwd, join(shadow, "back"));
+  assert.equal(sb(cwd, "Write", { file_path: join(shadow, "back", ".imagine", "p1", "stage", "edit", "s02", "a.html") }).decision, "deny");
+});
+
+test("hook entry run through a symlinked path still decides", () => {
+  const hooksDir = dirname(fileURLToPath(import.meta.url));
+  const linkBase = mkdtempSync(join(tmpdir(), "imagine-entry-"));
+  symlinkSync(hooksDir, join(linkBase, "hooks"));
+  const entry = join(linkBase, "hooks", "scene-builder-scope.mjs");
+  const { cwd, shadow } = fixture();
+  const run = (file_path) => spawnSync(process.execPath, [entry], {
+    input: JSON.stringify({ cwd, tool_name: "Write", tool_input: { file_path, content: "x" }, agent_type: "imagine:scene-builder" }),
+    encoding: "utf8",
+  });
+  const bad = run(join(cwd, ".imagine", "p1", "bible.yaml"));
+  assert.equal(bad.status, 0);
+  assert.match(bad.stdout, /"permissionDecision":"deny"/);
+  const good = run(join(shadow, "compositions", "ok.html"));
+  assert.equal(good.status, 0);
+  assert.match(good.stdout, /"permissionDecision":"allow"/);
+});
+
+test("non-normalised paths are denied (symlink + .. escape)", () => {
+  const { cwd, shadow } = fixture();
+  const elsewhere = mkdtempSync(join(tmpdir(), "imagine-else-"));
+  mkdirSync(join(elsewhere, "deep"));
+  symlinkSync(join(elsewhere, "deep"), join(cwd, "lnk"));
+  assert.equal(sb(cwd, "Write", { file_path: `${cwd}/lnk/../.imagine/p1/stage/edit/s02/pwn` }).decision, "deny");
+  assert.equal(sb(cwd, "Write", { file_path: `${shadow}/./a.html` }).decision, "deny");
+  assert.equal(sb(cwd, "Write", { file_path: `${shadow}//a.html` }).decision, "deny");
+  assert.equal(bash(cwd, `npx hyperframes@0.8.223 lint ${cwd}/lnk/../.imagine/p1/stage/edit/s02`).decision, "deny");
+  assert.equal(bash(cwd, `npx hyperframes@0.8.223 lint ${shadow}/`).decision, "deny");
+  assert.equal(bash(cwd, `npx hyperframes@0.8.223 snapshot ${shadow} -o ${shadow}/out/../x`).decision, "deny");
+});
+
+test("entry exits 2 when the logic module cannot load", () => {
+  const dir = mkdtempSync(join(tmpdir(), "imagine-noload-"));
+  copyFileSync(fileURLToPath(new URL("./scene-builder-scope.mjs", import.meta.url)), join(dir, "scene-builder-scope.mjs"));
+  const r = spawnSync(process.execPath, [join(dir, "scene-builder-scope.mjs")], { input: "{}", encoding: "utf8" });
+  assert.equal(r.status, 2);
+  assert.equal(r.stdout, "");
+  assert.match(r.stderr, /hook failed/);
 });
 
 
