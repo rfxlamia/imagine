@@ -147,8 +147,17 @@ export function validateStory({ story, project, units, unitDupes, bible, manifes
     if (names === null) {
       add("HARD-PREVIZ-NAMES-EXIST", "HARD_NOT_RUN", null, "names cannot be verified", "stage/names.yaml is missing; the main agent writes it from the HyperFrames listings");
     } else {
+      const malformed = new Set();
       for (const n of needNames) {
-        if (!(names[n.list] ?? []).includes(n.name)) add("HARD-PREVIZ-NAMES-EXIST", "HARD", n.shot, `${n.what}: "${n.name}" is not listed under ${n.list} in stage/names.yaml`);
+        const list = names[n.list];
+        if (list !== undefined && (!Array.isArray(list) || !list.every((x) => typeof x === "string"))) {
+          if (!malformed.has(n.list)) {
+            malformed.add(n.list);
+            add("HARD-PREVIZ-NAMES-EXIST", "HARD_NOT_RUN", null, "names cannot be verified", `stage/names.yaml ${n.list} must be a list of strings`);
+          }
+        } else if (!(list ?? []).includes(n.name)) {
+          add("HARD-PREVIZ-NAMES-EXIST", "HARD", n.shot, `${n.what}: "${n.name}" is not listed under ${n.list} in stage/names.yaml`);
+        }
       }
     }
   }

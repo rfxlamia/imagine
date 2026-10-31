@@ -89,7 +89,9 @@ export const latestAssets = (manifest) => ids(manifest).map((id) => manifest.ass
 
 export function loadNames(dir) {
   const p = join(dir, "stage", "names.yaml");
-  return existsSync(p) ? readYaml(p) ?? {} : null;
+  if (!existsSync(p)) return null;
+  const doc = readYaml(p);
+  return doc ?? null;
 }
 
 export function loadVoDurations(dir, manifest) {

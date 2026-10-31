@@ -118,7 +118,8 @@ export default {
       const watch = {};
       for (const ref of BASE_REFS) inputs[ref] = resolveRef(sctx, ref, undefined);
       if (UPSTREAM[patch.stage]) inputs[`shot:${id}.${UPSTREAM[patch.stage]}`] = blockHash(byId.get(id), UPSTREAM[patch.stage]);
-      for (const ref of need.get(id) ?? []) (staleKinds.has(ref.slice(0, ref.indexOf(":"))) ? inputs : watch)[ref] = declared.get(ref);
+      const refs = patch.stage === "storyboard" ? (need.get(id) ?? []) : declared.keys();
+      for (const ref of refs) (staleKinds.has(ref.slice(0, ref.indexOf(":"))) ? inputs : watch)[ref] = declared.get(ref);
       project.items[`shot:${id}.${patch.stage}`] = { kind: "shot-stage", status: "proposed", rev: newRev, inputs,
         ...(Object.keys(watch).length ? { watch } : {}),
         patch: { file: relative(realDir, real), sha256: sha256(text), ...(patch.brief_hash ? { brief_hash: patch.brief_hash } : {}) } };
