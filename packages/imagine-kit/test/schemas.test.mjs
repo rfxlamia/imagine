@@ -24,9 +24,26 @@ test("patch: create_shot only in storyboard", () => {
   const bad = structuredClone(patch); bad.ops = [{ create_shot: { id: "s09", after: "s08", title: "t", narrative: "n", set: {} } }];
   assert.equal(loadValidator("patch")(bad).valid, false);
 });
-test("patch: missing brief_hash invalid", () => {
-  const bad = structuredClone(patch); delete bad.brief_hash;
-  assert.equal(loadValidator("patch")(bad).valid, false);
+test("patch: brief_hash is optional but must be a hash when present", () => {
+  const v = loadValidator("patch");
+  const ok = structuredClone(patch); delete ok.brief_hash;
+  assert.equal(v(ok).valid, true);
+  const bad = structuredClone(patch); bad.brief_hash = "not-a-hash";
+  assert.equal(v(bad).valid, false);
+});
+test("patch: input maps hold hashes; clock holds label:hash", () => {
+  const v = loadValidator("patch");
+  const bad = structuredClone(patch); bad.inputs.bible = { "characters.mara": "nothash" };
+  assert.equal(v(bad).valid, false);
+  const clockOk = structuredClone(patch); clockOk.inputs.clock = { L02: `vo.v1:${"c".repeat(64)}` };
+  assert.equal(v(clockOk).valid, true);
+  const clockBad = structuredClone(patch); clockBad.inputs.clock = { L02: "c".repeat(64) };
+  assert.equal(v(clockBad).valid, false);
+});
+test("patch: create_shot may carry reasons", () => {
+  const sb = { stage: "storyboard", author: "storyboard-artist", base_story_rev: 0, inputs: {},
+    ops: [{ create_shot: { id: "s01", after: null, title: "t", narrative: "n", set: {}, reasons: { scene: "why" } } }] };
+  assert.equal(loadValidator("patch")(sb).valid, true);
 });
 
 const waivers = { waivers: [{ id: "w1", rule: "HARD-SAFE-BAND", scope: ["s03"], status: "active",
@@ -48,7 +65,7 @@ test("capabilities: unknown status rejected", () => {
   assert.equal(v({ version: "0.1.0", contract: 1, commands: { qc: { status: "maybe" } } }).valid, false);
 });
 
-const project = { slug: "keeper", created: "2026-10-31", contract: 1,
+const project = { title: "Keeper", slug: "keeper", created: "2026-10-31", contract: 1,
   g0: { status: "approved", format: "portrait", width: 1080, height: 1920, fps: 30, audio_mode: "narrated",
         language: "en", duration_s: { min: 12, max: 15 }, platform: "generic", silence: null },
   stages: {}, items: {}, blocked: [] };
@@ -57,6 +74,25 @@ test("project: fps must be 30", () => {
   assert.equal(v(project).valid, true);
   const bad = structuredClone(project); bad.g0.fps = 24;
   assert.equal(v(bad).valid, false);
+});
+test("envelope: ok is coupled to code", () => {
+  const v = loadValidator("envelope");
+  assert.equal(v({ ...envelope, ok: true, code: "HARD" }).valid, false);
+  assert.equal(v({ ...envelope, ok: false, code: null }).valid, false);
+  assert.equal(v({ ...envelope, ok: false, code: "NEEDS_USER" }).valid, true);
+});
+test("project: title required, items validated, stale never stored", () => {
+  const v = loadValidator("project");
+  const base = { ...structuredClone(project), title: "Keeper" };
+  assert.equal(v(base).valid, true);
+  const noTitle = structuredClone(base); delete noTitle.title;
+  assert.equal(v(noTitle).valid, false);
+  const item = { kind: "unit", status: "approved", gate: "G1",
+    decision: { decision: "approve", quote: "yes", at: "2026-11-01T10:00:00.000Z" },
+    inputs: { "unit:L01": "a".repeat(64), "g4": "item" } };
+  assert.equal(v({ ...base, items: { "unit:L01": item } }).valid, true);
+  assert.equal(v({ ...base, items: { "unit:L01": { ...item, status: "stale" } } }).valid, false);
+  assert.equal(v({ ...base, items: { "unit:L01": { ...item, decision: { ...item.decision, quote: "  " } } } }).valid, false);
 });
 
 test("manifest: third-party audio needs licence fields", () => {
