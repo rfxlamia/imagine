@@ -22,6 +22,10 @@
       "properties": { "rule": { "type": "string" }, "item": { "type": ["string", "null"] }, "waiver_id": { "type": "string" } } } },
     "journal_id": { "type": ["string", "null"] }
   },
-  "if": { "properties": { "ok": { "const": true } } },
-  "then": { "properties": { "errors": { "type": "array", "maxItems": 0 } } }
+  "allOf": [
+    { "if": { "properties": { "ok": { "const": true } } },
+      "then": { "properties": { "code": { "const": null }, "errors": { "type": "array", "maxItems": 0 } } } },
+    { "if": { "properties": { "ok": { "const": false } } },
+      "then": { "properties": { "code": { "type": "string" } } } }
+  ]
 }

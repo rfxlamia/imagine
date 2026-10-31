@@ -28,7 +28,7 @@ Default project: the directory named in `.imagine/ACTIVE`. Output: the **last li
 | 2 | usage | `USAGE` |
 | 3 | capability missing | `BLOCKED` |
 | 4 | inputs moved | `STALE_INPUTS`, `CONFLICT`; reserved: `BRIEF_OUTDATED` |
-| 5 | lock timeout (30 s) | reserved: `LOCKED` (no lock in Phase 1) |
+| 5 | project write lock held (fail fast; a lock older than 30 s is stale) | `LOCKED` |
 | 6 | refs not approved | `REFS_NOT_APPROVED` |
 | 7 | user decision required | `NEEDS_USER` |
 
@@ -38,12 +38,14 @@ Reserved = value stays in the enum and schema, no Phase 1 command emits it.
 
 Each row: synopsis · preconditions · effect · `data` · Phase 1 status. Status is `WP1` / `WP2` (the work package that builds it) or `deferred (<reason>)`. Counting basis: the re-plan brief counts 33 commands, of which 12 are built and 21 are cut or deferred (it counts `lock`, which has no row, and excludes `patch validate`, `res-report`, `assets check` and the non-story `validate` targets). The original table had 32 rows; this table has 34 because `validate` and `res-budget` / `res-report` are split. Four rows beyond the 21 are folded or absorbed: `patch validate` (into `patch apply`), `assets check` (into `export-hf`), `res-report` (into `qc`), `validate <script|bible|style|assets>` (deferred, with `assets` folded into `export-hf`).
 
+`gate` and `patch apply` run under `<project>/.lock`; `status` and `validate story` are lock-free and read-only.
+
 | Command | Preconditions | Effect | `data` | Phase 1 |
 |---|---|---|---|---|
 | `capabilities` | none | read-only | `{ version, contract, commands: { "<key>": { status, note? } } }` | deferred (no per-skill fallback tables; missing tools surface as `BLOCKED` at the step) |
-| `new "<title>" --format landscape\|portrait --audio-mode narrated\|music-led\|text-led --lang <bcp47> --duration <min>-<max> [--platform generic] [--silence intentional]` | no project with same slug today | creates `.imagine/<YYYY-MM-DD>-<slug>/` tree (proposal section 5), writes `project.yaml` with G0 **proposal** (status `pending`), sets `ACTIVE`, journal | `{ project, g0 }` | WP1; `--platform` values other than `generic` → `BLOCKED` |
-| `status [--item <id>]` | project | read-only; derives `stale` from recorded hashes only (proposal section 6.2). `needs_review` is not computed: the main agent records it from an impact report | `{ stage, gates, items: [{ id, kind, status, reasons[] }], blocked[] }` | WP1 |
-| `gate <G0\|G1\|G2\|G3\|G4\|G5r\|G5a\|G5b\|G6\|G7> approve\|reject [--scope <id,…>] --quote "<user words>" [--note <text>]` | quote non-empty; gate open for the scoped items | records decision per item with quote + hashes, journal | `{ gate, decision, items[] }` | WP1; missing quote → `NEEDS_USER` |
+| `new "<title>" --format landscape\|portrait --audio-mode narrated\|music-led\|text-led --lang <bcp47> --duration <min>-<max> [--platform generic] [--silence intentional]` | no project with same slug today | creates `.imagine/<YYYY-MM-DD>-<slug>/` tree (proposal section 5), writes `project.yaml` with G0 **proposal** (status `pending`), sets `ACTIVE`, journal; writes `project.yaml` with `title` and `STORY.md` skeleton (`imagine_rev: 0`) plus `.history/STORY.r0.md`; `style.md#output` generated from G0 | `{ project, g0 }` | WP1; `--platform` values other than `generic` → `BLOCKED` |
+| `status [--item <id>] [--ref <ref,…>]` | project | read-only; derives `stale` from recorded hashes only (proposal section 6.2). `needs_review` is not computed: the main agent records it from an impact report; `sources` maps every enumerable source reference to its current value (same resolver as `patch apply`) so the main agent can copy hashes into a dispatch; format: `source-formats.md` | `{ stage, gates, items: [{ id, kind, status, reasons[], watch[] }], blocked[], sources, unresolved[], decisions, review_hints }` | WP1 |
+| `gate <G0\|G1\|G2\|G3\|G4\|G5r\|G5a\|G5b\|G6\|G7> approve\|reject [--scope <id,…>] --quote "<user words>" [--note <text>]` | quote non-blank; prerequisite gates approved (G0 · G1←G0 · G2←G1 · G3←G2 · G4←G3 · G5r←G4 · G5a←G4 · G5b←G5r · G6←G5a,G5b · G7←G6); `--scope` ⊆ the gate's items (`source-formats.md` section 8) | records decision per item with quote + hashes, journal; asset gates also set the manifest entry status; `G4 approve` returns non-blocking `advice` for items whose watched sources changed | `{ gate, decision, items[] }` | WP1; missing quote → `NEEDS_USER` |
 | `review confirm <item,…> --quote "<user words>"` | items are `needs_review` | records "still true", no rev bump | `{ items[] }` | deferred (replaced by a REVIEW.md entry with the user's quote) |
 | `validate story [--stage storyboard\|previz\|fx]` | project | read-only strict `STORY.md` parser, HARD + ADVISORY run | `{ target, checked[] }` | WP1 |
 | `validate <script\|bible\|style\|assets>` | project | read-only | `{ target, checked[] }` | deferred (script/bible/style are checked by audit subagents and the main agent; `assets` folded into `export-hf`) |
@@ -54,7 +56,7 @@ Each row: synopsis · preconditions · effect · `data` · Phase 1 status. Statu
 | `waiver grant <waiver_id> --quote "<user words>" [--manual-check <text>]` | proposal exists; quote | activates, stores scope hashes | `{ waiver_id, status: "active" }` | deferred (as above; hash-bound waivers are instruction-only) |
 | `waiver revoke <waiver_id> --quote "<user words>"` · `waiver list` | — | — | `{ waivers[] }` | deferred (as above) |
 | `patch validate <file>` | patch under `stage/<stage>/` | read-only; records patch sha256 | `{ patch, sha256, ops }` | folded into `patch apply` (validation always runs inside apply) |
-| `patch apply <file>` | patch under `stage/<stage>/` | validates, re-hashes every recorded input against the sources, atomic commit (proposal section 3.2) | `{ story_rev, touched[] }` | WP1; auto-rebase `not_implemented` (always `CONFLICT`); `brief_hash` field stays in the schema but is not verified |
+| `patch apply <file>` | patch under `stage/<stage>/` | validates, re-hashes every recorded input against the sources, atomic commit (proposal section 3.2) | `{ story_rev, touched[] }` | WP1; auto-rebase `not_implemented` (always `CONFLICT`); `brief_hash` is optional and informational (recorded when present) |
 | `diff-keys <before> <after> --stage <s>` | — | read-only | `{ changed: [{ shot, key }] }` | deferred (planning subagents have no Write tool; `patch apply` enforces the key set) |
 | `guard begin <dispatch_id> --stage <s> [--shot <id>]` · `guard verify <dispatch_id>` | lock for verify-restore | hashes protected files to `.history/guard/<id>/`; verify restores + reports | `{ protected[], violations[] }` | deferred (main agent hashes protected files by instruction; scene-builder is still blocked by the PreToolUse hook) |
 | `stage-shot <id>` · `promote-shot <id>` | edit stage open; shot previz+fx approved | shadow project create; promote re-lints, copies composition, re-times and merges that shot's assertions into root `edit/index.motion.json` | `{ shot, path }` | WP2 |
@@ -77,8 +79,9 @@ Each row: synopsis · preconditions · effect · `data` · Phase 1 status. Statu
 
 ## Decisions frozen here
 
+- WP1 (2026-11-01): `brief_hash` optional; `title` in `project.yaml`; `create_shot` may carry `reasons`; hashes for `patch.inputs` come from `status`; formats in `source-formats.md`; `HARD-PREVIZ-SAFE-AREA`, `HARD-AUDIO-ID`, `HARD-STAYS-IN-FRAME` are instruction-level; project write lock instead of a `lock` command.
 - Q1 soft threshold 0.75 · Q2 conflicts always re-dispatch · Q3 fork later · Q4 `platform` default `generic` (band 168–1330 px on 1080×1920, −16 LUFS ±1.5, true peak ≤ −1 dBTP) · Q5 non-waivable list as proposal section 8.0.
 - Motion-assertion merge owner: `promote-shot`. `export-hf` never touches `index.motion.json`.
 - Loudness: the skill normalises with `npx hyperframes@0.8.223 normalize-audio` before the draft render; `qc` is the only tool that verifies it.
 - Test-only: `IMAGINE_KIT_CAPABILITY_OVERRIDES` is dropped with `capabilities` (deferred).
-- Accepted trade-off (re-plan): brief-delivery proof, hash-bound waivers, guard restore, lock, `check` strictness plus the D10 allowlist, and automatic safe-band lose tool enforcement and rely on skill instructions. Still tool-enforced: scene-builder PreToolUse hook, `gate` quotes, `patch apply` validation, `render` flags, `qc`.
+- Accepted trade-off (re-plan): brief-delivery proof, hash-bound waivers, guard restore, lock, `check` strictness plus the D10 allowlist, and automatic safe-band lose tool enforcement and rely on skill instructions. Still tool-enforced: scene-builder PreToolUse hook, `gate` quotes, `patch apply` validation, `render` flags, `qc`; the CLI cannot prove that a `--quote` is the user's words (`status data.decisions` lets the skill show every quote to the user) and `STORY.md` integrity is tamper-evident only.

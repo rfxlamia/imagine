@@ -11,6 +11,7 @@ const COVERS = new Set(["instructions", "tests", "both"]);
 const STATUSES = new Set(["active", "deferred"]);
 const MARKER_RE = /<!--\s*rule:([A-Z0-9-]+)\s*-->/g;
 const INSTRUCTION_ROOTS = ["skills/", "agents/", "hooks/"];
+// Prose under tests/ (behavioural runs, slice evidence) intentionally counts as test coverage (WP1 decision D7).
 const TEST_ROOTS = ["packages/imagine-kit/test/", "tests/"];
 
 export function parseRules(text) {

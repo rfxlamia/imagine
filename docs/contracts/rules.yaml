@@ -116,14 +116,14 @@ rules:
   - { id: HARD-PATCH-REVERIFY, source: "section 3.2", text: "apply re-hashes inputs and re-validates; mismatch STALE_INPUTS, nothing written", cover: both, replan: "lock cut; atomic temp file + rename remains" }
   - { id: HARD-PATCH-INPUTS-DECLARED, source: "section 3.2", text: "inputs declared for every bible id/anchor/unit ops reference", cover: both }
   - { id: HARD-ASSETS-APPROVED, source: "section 8.1", text: "Every asset ref exists, approved, hash matches", cover: both }
-  - { id: HARD-AUDIO-ID, source: "section 8.1", text: "Every <audio> has an id", cover: both }
+  - { id: HARD-AUDIO-ID, source: "section 8.1", text: "Every <audio> has an id", cover: instructions, replan: "check and safe-band cut; skill instructions only (WP1 decision D3)" }
   - { id: HARD-VO-PRESENT, source: "section 8.1", text: "narrated: VO present for every L##", cover: both }
   - { id: HARD-AUDIO-STREAM, source: "section 8.1", text: "Output has an audio stream (digital silence if silence chosen)", cover: both }
   - { id: HARD-NO-PLACEHOLDER, source: "section 8.1", text: "No TODO/TBD/lorem/status: outline/{{/missing src", cover: both }
   - { id: HARD-RASTER-TIER, source: "section 7.2", text: "No replan tier; soft only if accepted at G4 and G5b", cover: both }
   - { id: HARD-NO-NATIVE-CLAIM, source: "section 7.2", text: "Say native only if every raster q ≥ 1.0", cover: both }
   - { id: HARD-SAFE-BAND, source: "section 5.5", text: "9:16 readable text inside platform band, not under the action rail, ≥ 28 px; manual check at G6 recorded in REVIEW.md", cover: instructions, replan: "safe-band deferred" }
-  - { id: HARD-STAYS-IN-FRAME, source: "section 8.1", text: "Intended elements stay in frame unless allow-overflow + reason", cover: both }
+  - { id: HARD-STAYS-IN-FRAME, source: "section 8.1", text: "Intended elements stay in frame unless allow-overflow + reason", cover: instructions, replan: "check and safe-band cut; skill instructions only (WP1 decision D3)" }
   - { id: HARD-AUDIO-LICENCE, source: "section 7.4", text: "Third-party audio has licence + source + credit", cover: both }
   - { id: HARD-LOUDNESS, source: "section 8.1", text: "−16 LUFS ±1.5, true peak ≤ −1 dBTP; skipped for intentional silence", cover: both }
   - { id: HARD-GATES-RECORDED, source: "section 8.1", text: "Gates recorded with user quote before downstream work", cover: both }
@@ -136,7 +136,7 @@ rules:
   - { id: HARD-FX-WEBGL-FALLBACK, source: "section 3.5", text: "WebGL fx declare a fallback; unavailable effects marked unsupported", cover: both }
   - { id: HARD-PREVIZ-SCALE-BUDGET, source: "section 3.4", text: "Max scale per layer ≤ resolution budget", cover: instructions, replan: "res-budget deferred; skill computes from required_px, qc reports measured q" }
   - { id: HARD-PREVIZ-NAMES-EXIST, source: "section 3.4", text: "Transition/shader/registry names exist", cover: both }
-  - { id: HARD-PREVIZ-SAFE-AREA, source: "section 3.4", text: "Text-bearing moves stay in the format's safe area", cover: both }
+  - { id: HARD-PREVIZ-SAFE-AREA, source: "section 3.4", text: "Text-bearing moves stay in the format's safe area", cover: instructions, replan: "check and safe-band cut; skill instructions only (WP1 decision D3)" }
   - { id: HARD-PREVIZ-BEATS-INSIDE, source: "section 3.4", text: "Beats inside their shot", cover: both }
   - { id: HARD-STORYBOARD-ASSET-DECL, source: "section 3.3", text: "Each asset declared with kind and required_px; duration_est sum inside G0", cover: both }
   - { id: HARD-SCENE-LINT, source: "section 3.6", text: "Scene composition lint clean, fromTo in scenes, timeline registered under id", cover: both }

@@ -1,10 +1,26 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$comment": "Ajv strict mode: properties must be defined for required keywords in blocked items",
+  "definitions": {
+    "valueMap": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^(item|([a-z0-9.]+:)?[0-9a-f]{64})$" } },
+    "item": { "type": "object", "required": ["kind", "status"], "additionalProperties": false, "properties": {
+      "kind": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+      "status": { "enum": ["pending", "proposed", "approved", "rejected"] },
+      "gate": { "type": "string" },
+      "decision": { "type": "object", "required": ["decision", "quote", "at"], "additionalProperties": false, "properties": {
+        "decision": { "enum": ["approve", "reject"] }, "quote": { "type": "string", "pattern": "\\S" },
+        "note": { "type": "string" }, "at": { "type": "string" } } },
+      "rev": { "type": "integer", "minimum": 0 },
+      "inputs": { "$ref": "#/definitions/valueMap" },
+      "watch": { "$ref": "#/definitions/valueMap" },
+      "patch": { "type": "object", "required": ["file", "sha256"], "additionalProperties": false, "properties": {
+        "file": { "type": "string" }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "brief_hash": { "type": "string" } } } } }
+  },
   "type": "object",
-  "required": ["slug", "created", "contract", "g0", "stages", "items", "blocked"],
+  "required": ["title", "slug", "created", "contract", "g0", "stages", "items", "blocked"],
   "additionalProperties": false,
   "properties": {
+    "title": { "type": "string", "minLength": 1 },
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "created": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
     "contract": { "const": 1 },
@@ -30,7 +46,7 @@
       ]
     },
     "stages": { "type": "object" },
-    "items": { "type": "object" },
+    "items": { "type": "object", "additionalProperties": { "$ref": "#/definitions/item" } },
     "blocked": { "type": "array", "items": { "type": "object", "required": ["step", "command", "since"], "properties": { "step": {}, "command": {}, "since": {} } } }
   }
 }
