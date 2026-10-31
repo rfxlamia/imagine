@@ -1,4 +1,4 @@
-import { bibleEntities, latestAssets } from "./docs.mjs";
+import { assetEntry, bibleEntities, currentAsset, latestAssets } from "./docs.mjs";
 
 export const GATES = ["G0", "G1", "G2", "G3", "G4", "G5r", "G5a", "G5b", "G6", "G7"];
 export const PREREQ = { G0: [], G1: ["G0"], G2: ["G1"], G3: ["G2"], G4: ["G3"], G5r: ["G4"], G5a: ["G4"], G5b: ["G5r"], G6: ["G5a", "G5b"], G7: ["G6"] };
@@ -41,3 +41,32 @@ export function itemKind(id) {
   if (/^g\d/.test(id)) return "project";
   return id.split(":")[0];
 }
+
+const G0_REFS = ["format", "width", "height", "fps", "audio_mode", "language", "duration_s", "platform", "silence"].map((f) => `g0:${f}`);
+
+// Source references recorded as `inputs` when an item is approved or rejected (source-formats.md section 8).
+export function itemDeps(id, ctx) {
+  const kind = id.split(":")[0];
+  if (id === "g0") return G0_REFS;
+  if (kind === "unit") return [id, "g0:audio_mode"];
+  if (kind === "bible") return [id, "g0:language"];
+  if (kind === "style") return ["output", "typography"].includes(id.slice("style:".length)) ? [id, "g0:format"] : [id];
+  if (id === "g4") return ["story:sha", "g0:format", "g0:duration_s"];
+  if (id === "g5a") return ["g0:silence"];
+  if (id === "g6" || id === "g7") {
+    const downstream = Object.keys(ctx.project.items).filter((k) => /^(edit|render):/.test(k));
+    return [id === "g6" ? "g4" : "g6", "story:sha", ...downstream];
+  }
+  if (kind === "asset") {
+    const m = id.match(/^asset:(.+)\.v(\d+)$/);
+    const entry = m && assetEntry(ctx.manifest, m[1], Number(m[2]));
+    const deps = [id];
+    for (const r of entry?.refs ?? []) {
+      const cur = currentAsset(ctx.manifest, r);
+      if (cur) deps.push(`asset:${cur.id}.v${cur.v}`);
+    }
+    return deps;
+  }
+  return [id];
+}
+
