@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Ajv strict mode: ops in each stage then branch requires type array for items keyword",
+  "definitions": {
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "hashMap": { "type": "object", "additionalProperties": { "type": "string" } },
+    "storyboardKeys": { "type": "object", "additionalProperties": false, "properties": {
+      "id": {}, "title": {}, "scene": {}, "duration_est": {}, "voiceover": {}, "characters": {}, "location": {},
+      "framing": {}, "composition": {}, "layers": {}, "assets": {}, "reads": {}, "narrative": {} } },
+    "previzKeys": { "type": "object", "additionalProperties": false, "properties": {
+      "duration": {}, "camera": {}, "parallax": {}, "motion": {}, "beats": {}, "transition_in": {}, "sound": {}, "poster": {}, "motion_asserts": {} } },
+    "fxKeys": { "type": "object", "additionalProperties": false, "properties": {
+      "fx": {}, "grade": {}, "overlays": {}, "fx_notes": {} } },
+    "shotId": { "type": "string", "pattern": "^s\\d{2}$" }
+  },
+  "type": "object",
+  "required": ["stage", "author", "base_story_rev", "brief_hash", "inputs", "ops"],
+  "additionalProperties": false,
+  "properties": {
+    "stage": { "enum": ["storyboard", "previz", "fx"] },
+    "author": { "enum": ["storyboard-artist", "previz-designer", "fx-designer"] },
+    "base_story_rev": { "type": "integer", "minimum": 0 },
+    "brief_hash": { "$ref": "#/definitions/hash" },
+    "inputs": { "type": "object", "additionalProperties": false, "properties": {
+      "bible": { "$ref": "#/definitions/hashMap" }, "style": { "$ref": "#/definitions/hashMap" },
+      "units": { "$ref": "#/definitions/hashMap" }, "clock": { "$ref": "#/definitions/hashMap" },
+      "refs": { "$ref": "#/definitions/hashMap" } } },
+    "ops": { "type": "array", "minItems": 1 }
+  },
+  "allOf": [
+    { "if": { "properties": { "stage": { "const": "storyboard" } } },
+      "then": { "properties": { "author": { "const": "storyboard-artist" }, "ops": { "type": "array", "items": { "oneOf": [
+        { "type": "object", "required": ["shot", "set"], "additionalProperties": false, "properties": { "shot": { "$ref": "#/definitions/shotId" }, "set": { "$ref": "#/definitions/storyboardKeys" }, "reasons": { "type": "object" } } },
+        { "type": "object", "required": ["create_shot"], "additionalProperties": false, "properties": { "create_shot": { "type": "object", "required": ["id", "after", "title", "narrative", "set"], "properties": { "id": { "$ref": "#/definitions/shotId" }, "after": { "type": ["string", "null"] }, "title": { "type": "string" }, "narrative": { "type": "string" }, "set": { "$ref": "#/definitions/storyboardKeys" } } } } },
+        { "type": "object", "required": ["remove_shot"], "additionalProperties": false, "properties": { "remove_shot": { "$ref": "#/definitions/shotId" } } },
+        { "type": "object", "required": ["reorder"], "additionalProperties": false, "properties": { "reorder": { "type": "array", "items": { "$ref": "#/definitions/shotId" } } } } ] } } } } },
+    { "if": { "properties": { "stage": { "const": "previz" } } },
+      "then": { "properties": { "author": { "const": "previz-designer" }, "ops": { "type": "array", "items": { "type": "object", "required": ["shot", "set"], "additionalProperties": false, "properties": { "shot": { "$ref": "#/definitions/shotId" }, "set": { "$ref": "#/definitions/previzKeys" }, "reasons": { "type": "object" } } } } } } },
+    { "if": { "properties": { "stage": { "const": "fx" } } },
+      "then": { "properties": { "author": { "const": "fx-designer" }, "ops": { "type": "array", "items": { "type": "object", "required": ["shot", "set"], "additionalProperties": false, "properties": { "shot": { "$ref": "#/definitions/shotId" }, "set": { "$ref": "#/definitions/fxKeys" }, "reasons": { "type": "object" } } } } } } }
+  ]
+}

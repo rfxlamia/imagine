@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Ajv strict mode: properties must be defined in then branch for required keywords",
+  "type": "object",
+  "required": ["waivers"],
+  "additionalProperties": false,
+  "properties": { "waivers": { "type": "array", "items": {
+    "type": "object",
+    "required": ["id", "rule", "scope", "status", "reason", "consequence"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "pattern": "^w\\d+$" },
+      "rule": { "type": "string", "pattern": "^HARD-" },
+      "scope": { "type": "array", "minItems": 1, "items": { "type": "string", "not": { "enum": ["all", "*"] } } },
+      "status": { "enum": ["proposed", "active", "revoked", "invalid"] },
+      "reason": { "type": "string", "minLength": 1 },
+      "consequence": { "type": "string", "minLength": 1 },
+      "quote": { "type": "string", "minLength": 1 },
+      "manual_check": { "type": "string" },
+      "scope_hashes": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+      "granted_at": { "type": "string" },
+      "revoked_quote": { "type": "string" },
+      "invalid_reason": { "type": "string" }
+    },
+    "if": { "properties": { "status": { "const": "active" } } },
+    "then": {
+      "properties": { "quote": {}, "scope_hashes": {}, "granted_at": {} },
+      "required": ["quote", "scope_hashes", "granted_at"]
+    }
+  } } }
+}
