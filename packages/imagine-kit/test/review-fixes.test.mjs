@@ -263,3 +263,285 @@ test("HARD-PREVIZ-NAMES-EXIST: empty names.yaml is treated as missing and result
   assert.equal(errItem.code, "HARD_NOT_RUN", "must be HARD_NOT_RUN, not HARD");
   assert.ok(errItem.cause, "must have a cause");
 });
+
+test("HARD-PATCH-INPUTS-DECLARED: storyboard stage records all declared inputs under watch even when not needed by ops", async () => {
+  const { cwd, dir } = await makeProject();
+  seedCanon(dir);
+  await approveThrough(cwd, "G3");
+
+  const s0 = await srcs(cwd, "bible:characters.mara", "bible:locations.lighthouse", "bible:world", "unit:L01", "unit:L02", "unit:L03");
+  const sbPatch = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 0,
+    inputs: {
+      bible: {
+        "characters.mara": s0["bible:characters.mara"],
+        "locations.lighthouse": s0["bible:locations.lighthouse"],
+        world: s0["bible:world"],
+      },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { create_shot: { id: "s01", after: null, title: "Stairs", narrative: "Climb",
+        set: { scene: "stairs", duration_est: "5s", voiceover: ["L01"], characters: ["mara"], location: "lighthouse" } } },
+      { create_shot: { id: "s02", after: "s01", title: "Sea", narrative: "", set: { scene: "sea", duration_est: "5s", voiceover: ["L02"] } } },
+      { create_shot: { id: "s03", after: "s02", title: "Lamp", narrative: "", set: { scene: "lamp", duration_est: "3s", voiceover: ["L03"] } } },
+    ],
+  };
+  const sbRel = stagePatch(dir, "storyboard", sbPatch);
+  const applied = await apply(cwd, sbRel);
+  assert.equal(applied.exit, 0, JSON.stringify(applied.env.errors));
+
+  const item = getProject(dir).items["shot:s01.storyboard"];
+  assert.ok(item, "shot:s01.storyboard must be recorded");
+  assert.ok(item.watch, "item must have watch");
+  assert.equal(item.watch["bible:world"], s0["bible:world"], "extra declared bible:world must be recorded under watch");
+});
+
+test("PROC-ATOMIC-COMMIT: project schema supports optional top-level pending with rev and nullable prev map", async () => {
+  const { loadValidator } = await import("../src/schemas.mjs");
+  const v = loadValidator("project");
+  const base = {
+    title: "Keeper", slug: "keeper", created: "2026-10-31", contract: 1,
+    g0: { status: "approved", format: "portrait", width: 1080, height: 1920, fps: 30, audio_mode: "narrated",
+          language: "en", duration_s: { min: 12, max: 15 }, platform: "generic", silence: null },
+    stages: {}, items: {}, blocked: [],
+  };
+  assert.equal(v(base).valid, true, "base project must be valid");
+
+  const validPending = {
+    ...base,
+    pending: {
+      rev: 2,
+      prev: {
+        "shot:s01.storyboard": null,
+        "shot:s02.storyboard": {
+          kind: "shot-stage", status: "proposed", rev: 1,
+          inputs: { "g0:format": "a".repeat(64) },
+          patch: { file: "stage/storyboard/r1.patch.yaml", sha256: "b".repeat(64) },
+        },
+      },
+    },
+  };
+  assert.equal(v(validPending).valid, true, "pending with rev and nullable items must be valid");
+
+  const badRev = { ...validPending, pending: { ...validPending.pending, rev: -1 } };
+  assert.equal(v(badRev).valid, false, "pending with negative rev must be invalid");
+
+  const badExtra = { ...validPending, pending: { ...validPending.pending, extra: true } };
+  assert.equal(v(badExtra).valid, false, "pending with additional properties must be invalid");
+
+  const badItemVal = { ...validPending, pending: { ...validPending.pending, prev: { "shot:s01": "not-item" } } };
+  assert.equal(v(badItemVal).valid, false, "pending prev with non-item string must be invalid");
+});
+
+test("PROC-ATOMIC-COMMIT: crash between project.yaml and STORY.md does not lose modified shot records", async () => {
+  const { cwd, dir } = await makeProject();
+  seedCanon(dir);
+  await approveThrough(cwd, "G3");
+
+  const s0 = await srcs(cwd, "bible:characters.mara", "bible:locations.lighthouse", "unit:L01", "unit:L02", "unit:L03");
+  const patchA = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 0,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { create_shot: { id: "s01", after: null, title: "Stairs", narrative: "Climb",
+        set: { scene: "stairs", duration_est: "7s", voiceover: ["L01"], characters: ["mara"], location: "lighthouse" } } },
+      { create_shot: { id: "s02", after: "s01", title: "Sea", narrative: "Wait",
+        set: { scene: "sea", duration_est: "7s", voiceover: ["L02", "L03"] } } },
+    ],
+  };
+  const relA = stagePatch(dir, "storyboard", patchA, "patchA.patch.yaml");
+  assert.equal((await apply(cwd, relA)).exit, 0);
+
+  const s01Rev1Record = structuredClone(getProject(dir).items["shot:s01.storyboard"]);
+  assert.ok(s01Rev1Record, "shot:s01.storyboard rev 1 must exist");
+
+  // Patch B modifies s01 with an injected crash between project.yaml save and STORY.md rename
+  const patchB = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 1,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { shot: "s01", set: { scene: "stairs-mod" } },
+    ],
+  };
+  const relB = stagePatch(dir, "storyboard", patchB, "patchB.patch.yaml");
+  const { run } = await import("../src/cli.mjs");
+  const crashed = await run(["patch", "apply", relB], {
+    cwd,
+    now: () => NOW,
+    hooks: { beforeStoryRename() { throw new Error("crash between project.yaml and STORY.md rename"); } },
+  });
+  assert.equal(crashed.exit, 1);
+
+  // STORY.md is still rev 1
+  const storyAfterCrash = readFileSync(join(dir, "STORY.md"), "utf8");
+  assert.match(storyAfterCrash, /imagine_rev: 1/);
+
+  // Patch C touches only s02
+  const patchC = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 1,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { shot: "s02", set: { scene: "sea-mod" } },
+    ],
+  };
+  const relC = stagePatch(dir, "storyboard", patchC, "patchC.patch.yaml");
+  const appliedC = await apply(cwd, relC);
+  assert.equal(appliedC.exit, 0, JSON.stringify(appliedC.env.errors));
+
+  const projectAfter = getProject(dir);
+  assert.deepEqual(projectAfter.items["shot:s01.storyboard"], s01Rev1Record, "shot:s01 record must equal rev 1 record from before crash");
+  const storyAfter = readFileSync(join(dir, "STORY.md"), "utf8");
+  assert.match(storyAfter, /imagine_rev: 2/);
+});
+
+test("PROC-ATOMIC-COMMIT: crash between project.yaml and STORY.md does not lose removed shot records", async () => {
+  const { cwd, dir } = await makeProject();
+  seedCanon(dir);
+  await approveThrough(cwd, "G3");
+
+  const s0 = await srcs(cwd, "bible:characters.mara", "bible:locations.lighthouse", "unit:L01", "unit:L02", "unit:L03");
+  const patchA = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 0,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { create_shot: { id: "s01", after: null, title: "Stairs", narrative: "Climb",
+        set: { scene: "stairs", duration_est: "7s", voiceover: ["L01"], characters: ["mara"], location: "lighthouse" } } },
+      { create_shot: { id: "s02", after: "s01", title: "Sea", narrative: "Wait",
+        set: { scene: "sea", duration_est: "7s", voiceover: ["L02", "L03"] } } },
+    ],
+  };
+  const relA = stagePatch(dir, "storyboard", patchA, "patchA.patch.yaml");
+  assert.equal((await apply(cwd, relA)).exit, 0);
+
+  const s01Rev1Record = structuredClone(getProject(dir).items["shot:s01.storyboard"]);
+  assert.ok(s01Rev1Record);
+
+  // Patch B removes s01 with an injected crash
+  const patchB = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 1,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { remove_shot: "s01" },
+      { shot: "s02", set: { duration_est: "14s", voiceover: ["L01", "L02", "L03"] } },
+    ],
+  };
+  const relB = stagePatch(dir, "storyboard", patchB, "patchB.patch.yaml");
+  const { run } = await import("../src/cli.mjs");
+  const crashed = await run(["patch", "apply", relB], {
+    cwd,
+    now: () => NOW,
+    hooks: { beforeStoryRename() { throw new Error("crash between project.yaml and STORY.md rename"); } },
+  });
+  assert.equal(crashed.exit, 1);
+
+  // Patch C touches only s02
+  const patchC = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 1,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { shot: "s02", set: { scene: "sea-mod" } },
+    ],
+  };
+  const relC = stagePatch(dir, "storyboard", patchC, "patchC.patch.yaml");
+  const appliedC = await apply(cwd, relC);
+  assert.equal(appliedC.exit, 0, JSON.stringify(appliedC.env.errors));
+
+  const projectAfter = getProject(dir);
+  assert.deepEqual(projectAfter.items["shot:s01.storyboard"], s01Rev1Record, "shot:s01 record must be restored after crash on removal");
+});
+
+test("PROC-ATOMIC-COMMIT: successful apply leaves pending with rev equal to committed rev and next apply replaces it", async () => {
+  const { cwd, dir } = await makeProject();
+  seedCanon(dir);
+  await approveThrough(cwd, "G3");
+
+  const s0 = await srcs(cwd, "bible:characters.mara", "bible:locations.lighthouse", "unit:L01", "unit:L02", "unit:L03");
+  const patchA = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 0,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { create_shot: { id: "s01", after: null, title: "Stairs", narrative: "Climb",
+        set: { scene: "stairs", duration_est: "7s", voiceover: ["L01"], characters: ["mara"], location: "lighthouse" } } },
+      { create_shot: { id: "s02", after: "s01", title: "Sea", narrative: "Wait",
+        set: { scene: "sea", duration_est: "7s", voiceover: ["L02", "L03"] } } },
+    ],
+  };
+  const relA = stagePatch(dir, "storyboard", patchA, "patchA.patch.yaml");
+  assert.equal((await apply(cwd, relA)).exit, 0);
+
+  const proj1 = getProject(dir);
+  assert.ok(proj1.pending, "pending must exist after apply");
+  assert.equal(proj1.pending.rev, 1, "pending rev must equal committed rev (1)");
+
+  const patchB = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 1,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { shot: "s02", set: { scene: "sea-calm" } },
+    ],
+  };
+  const relB = stagePatch(dir, "storyboard", patchB, "patchB.patch.yaml");
+  const appliedB = await apply(cwd, relB);
+  assert.equal(appliedB.exit, 0, JSON.stringify(appliedB.env.errors));
+  assert.equal(appliedB.env.advice.some((a) => a.rule === "PROC-ATOMIC-COMMIT"), false, "must not restore anything");
+
+  const proj2 = getProject(dir);
+  assert.ok(proj2.pending, "pending must exist after second apply");
+  assert.equal(proj2.pending.rev, 2, "pending rev must equal committed rev (2)");
+});
+
+test("HARD-GATES-RECORDED: gate whose only remaining item is a rejected latest asset version remains open and blocks downstream gates", async () => {
+  const { cwd, dir } = await makeProject();
+  seedCanon(dir);
+  await approveThrough(cwd, "G4");
+
+  // Manifest with img asset a1 v1 approved via gate G5b approve
+  setManifest(dir, (m) => {
+    m.assets.push(asset("a1", "img", 1, { status: "pending" }));
+  });
+  const app1 = await cli(cwd, "gate", "G5b", "approve", "--quote", "approve v1");
+  assert.equal(app1.exit, 0);
+
+  // v2 added as proposed, then rejected
+  setManifest(dir, (m) => {
+    m.assets.push(asset("a1", "img", 2, { status: "pending" }));
+  });
+  const rej2 = await cli(cwd, "gate", "G5b", "reject", "--scope", "asset:a1.v2", "--quote", "reject v2");
+  assert.equal(rej2.exit, 0);
+
+  // Query status: gate G5b state must remain open (not approved, not empty)
+  const st = await cli(cwd, "status");
+  assert.equal(st.exit, 0);
+  assert.equal(st.env.data.gates.G5b.state, "open", "gate state must be open, never empty or approved");
+  assert.equal(st.env.data.stage, "G5b", "current stage must stay blocked at G5b");
+
+  // Attempting to re-approve the rejected version fails
+  const app2 = await cli(cwd, "gate", "G5b", "approve", "--quote", "re-approve v2");
+  assert.equal(app2.exit, 1);
+  assert.equal(app2.env.errors[0].rule, "HARD-GATES-RECORDED");
+});

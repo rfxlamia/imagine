@@ -47,6 +47,23 @@
     },
     "stages": { "type": "object" },
     "items": { "type": "object", "additionalProperties": { "$ref": "#/definitions/item" } },
-    "blocked": { "type": "array", "items": { "type": "object", "required": ["step", "command", "since"], "properties": { "step": {}, "command": {}, "since": {} } } }
+    "blocked": { "type": "array", "items": { "type": "object", "required": ["step", "command", "since"], "properties": { "step": {}, "command": {}, "since": {} } } },
+    "pending": {
+      "type": "object",
+      "required": ["rev", "prev"],
+      "additionalProperties": false,
+      "properties": {
+        "rev": { "type": "integer", "minimum": 0 },
+        "prev": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              { "$ref": "#/definitions/item" },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    }
   }
 }

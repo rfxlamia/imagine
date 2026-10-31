@@ -105,29 +105,55 @@ export default {
 
     // Commit order: history snapshot, project.yaml, then STORY.md (the commit point).
     const project = sctx.project;
-    // Items left by a patch whose STORY.md commit never happened (rev above the committed revision) are dropped with this commit.
-    const orphans = Object.entries(project.items).filter(([, r]) => r.kind === "shot-stage" && Number.isInteger(r.rev) && r.rev > integrity.rev).map(([id]) => id);
-    for (const id of orphans) delete project.items[id];
-    for (const id of applied.removed) for (const st of STAGES) delete project.items[`shot:${id}.${st}`];
+    const committedRev = integrity.rev;
+    const restored = [];
+    if (project.pending && Number.isInteger(project.pending.rev) && project.pending.rev > committedRev) {
+      for (const [id, prevRecord] of Object.entries(project.pending.prev ?? {})) {
+        if (prevRecord === null) delete project.items[id];
+        else project.items[id] = prevRecord;
+        restored.push(id);
+      }
+      delete project.pending;
+    }
+
+    const prev = {};
+    for (const id of restored) {
+      prev[id] = project.items[id] ? structuredClone(project.items[id]) : null;
+    }
+    for (const id of applied.removed) {
+      for (const st of STAGES) {
+        const itemId = `shot:${id}.${st}`;
+        if (!Object.hasOwn(prev, itemId)) {
+          prev[itemId] = project.items[itemId] ? structuredClone(project.items[itemId]) : null;
+        }
+        delete project.items[itemId];
+      }
+    }
     const staleKinds = new Set(STALE_KINDS[patch.stage]);
     const byId = new Map(applied.shots.map((s) => [s.id, s]));
     const touched = [...applied.touched].filter((id) => !applied.removed.has(id));
     const realDir = realpathSync(dir);
     for (const id of touched) {
+      const itemId = `shot:${id}.${patch.stage}`;
+      if (!Object.hasOwn(prev, itemId)) {
+        prev[itemId] = project.items[itemId] ? structuredClone(project.items[itemId]) : null;
+      }
       const inputs = {};
       const watch = {};
       for (const ref of BASE_REFS) inputs[ref] = resolveRef(sctx, ref, undefined);
       if (UPSTREAM[patch.stage]) inputs[`shot:${id}.${UPSTREAM[patch.stage]}`] = blockHash(byId.get(id), UPSTREAM[patch.stage]);
-      const refs = patch.stage === "storyboard" ? (need.get(id) ?? []) : declared.keys();
+      const refs = declared.keys();
       for (const ref of refs) (staleKinds.has(ref.slice(0, ref.indexOf(":"))) ? inputs : watch)[ref] = declared.get(ref);
-      project.items[`shot:${id}.${patch.stage}`] = { kind: "shot-stage", status: "proposed", rev: newRev, inputs,
+      project.items[itemId] = { kind: "shot-stage", status: "proposed", rev: newRev, inputs,
         ...(Object.keys(watch).length ? { watch } : {}),
         patch: { file: relative(realDir, real), sha256: sha256(text), ...(patch.brief_hash ? { brief_hash: patch.brief_hash } : {}) } };
     }
+    project.pending = { rev: newRev, prev };
+
     commitStory({ dir, front: newStory.front, shots: applied.shots, between: () => saveProject(dir, project), hooks: ctx.hooks });
     const journal_id = appendJournal(dir, { command: "patch apply", summary: `${patch.stage} ${relative(realDir, real)} -> STORY.md rev ${newRev}; touched ${touched.join(",") || "-"}`, now: ctx.now() });
-    const advice = [...result.advice, ...(orphans.length
-      ? [{ rule: "PROC-ATOMIC-COMMIT", item: null, source: "project.yaml", message: `removed ${orphans.length} item(s) left by an uncommitted patch: ${orphans.join(", ")}` }] : [])];
+    const advice = [...result.advice, ...(restored.length
+      ? [{ rule: "PROC-ATOMIC-COMMIT", item: null, source: "project.yaml", message: `restored ${restored.length} item(s) left by an uncommitted patch: ${restored.join(", ")}` }] : [])];
     return { project: rel, journal_id, advice, not_run: result.not_run, data: { story_rev: newRev, touched } };
   },
 };

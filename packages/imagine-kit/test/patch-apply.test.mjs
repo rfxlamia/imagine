@@ -65,7 +65,7 @@ test("patch apply: a storyboard patch bumps the revision, records proposed items
   const item = getProject(dir).items["shot:s01.storyboard"];
   assert.deepEqual([item.kind, item.status, item.rev], ["shot-stage", "proposed", 1]);
   assert.deepEqual(Object.keys(item.inputs).sort(), ["g0:audio_mode", "g0:duration_s", "g0:format"]);
-  assert.deepEqual(Object.keys(item.watch).sort(), ["bible:characters.mara", "bible:locations.lighthouse", "unit:L01"]);
+  assert.deepEqual(Object.keys(item.watch).sort(), ["bible:characters.mara", "bible:locations.lighthouse", "unit:L01", "unit:L02", "unit:L03"]);
   assert.equal(item.patch.file, rel);
   assert.equal(item.patch.brief_hash, undefined);
   assert.match(readFileSync(join(dir, "journal.md"), "utf8"), /patch apply: storyboard/);
