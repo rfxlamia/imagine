@@ -1,7 +1,8 @@
 import { err } from "../envelope.mjs";
 import { UsageError } from "../errors.mjs";
 import { deriveAll, reviewHints } from "../derive.mjs";
-import { GATES, ancestors, gateItems, gateSatisfied, isBlankQuote, itemDeps, itemKind } from "../gates.mjs";
+import { saveManifest } from "../docs.mjs";
+import { GATES, ancestors, applyAssetDecision, gateItems, gateSatisfied, isBlankQuote, itemDeps, itemKind } from "../gates.mjs";
 import { appendJournal } from "../journal.mjs";
 import { resolveProject, saveProject } from "../project.mjs";
 import { SUPERSEDED, createContext, resolveRef } from "../sources.mjs";
@@ -59,6 +60,12 @@ export default {
     const project = sctx.project;
     Object.assign(project.items, records);
     if (gate === "G0") project.g0.status = decision === "approve" ? "approved" : "pending";
+    const assetIds = ids.filter((id) => id.startsWith("asset:"));
+    if (assetIds.length) {
+      const manifest = sctx.manifest;
+      for (const id of assetIds) applyAssetDecision(manifest, id, decision);
+      saveManifest(dir, manifest);
+    }
     saveProject(dir, project);
     const journal_id = appendJournal(dir, { command: "gate", summary: `${gate} ${decision} ${ids.join(",")} quote=${JSON.stringify(quote)}`, now: ctx.now() });
     const advice = gate === "G4" && decision === "approve"
