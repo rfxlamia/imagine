@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Ajv strict mode: specify array type for maxItems in then branch and define properties for required keys in item objects",
+  "type": "object",
+  "required": ["ok", "command", "kit_version", "contract", "project", "code", "data", "errors", "advice", "not_run", "waived", "journal_id"],
+  "additionalProperties": false,
+  "properties": {
+    "ok": { "type": "boolean" },
+    "command": { "type": "string" },
+    "kit_version": { "type": "string" },
+    "contract": { "const": 1 },
+    "project": { "type": ["string", "null"] },
+    "code": { "enum": [null, "HARD", "HARD_NOT_RUN", "KEY_NOT_OWNED", "PLACEHOLDER", "GUARD_VIOLATION", "INVALID_WAIVER", "USAGE", "BLOCKED", "STALE_INPUTS", "CONFLICT", "BRIEF_OUTDATED", "LOCKED", "REFS_NOT_APPROVED", "NEEDS_USER"] },
+    "data": { "type": "object" },
+    "errors": { "type": "array", "items": { "type": "object", "required": ["rule", "code", "item", "message"],
+      "properties": { "rule": { "type": "string" }, "code": { "type": "string" }, "item": { "type": ["string", "null"] }, "message": { "type": "string" }, "cause": { "type": "string" } }, "additionalProperties": false } },
+    "advice": { "type": "array", "items": { "type": "object", "required": ["rule", "item", "message", "source"],
+      "properties": { "rule": { "type": "string" }, "item": { "type": ["string", "null"] }, "message": { "type": "string" }, "source": { "type": "string" } } } },
+    "not_run": { "type": "array", "items": { "type": "object", "required": ["rule", "item", "cause"],
+      "properties": { "rule": { "type": "string" }, "item": { "type": ["string", "null"] }, "cause": { "type": "string" } } } },
+    "waived": { "type": "array", "items": { "type": "object", "required": ["rule", "item", "waiver_id"],
+      "properties": { "rule": { "type": "string" }, "item": { "type": ["string", "null"] }, "waiver_id": { "type": "string" } } } },
+    "journal_id": { "type": ["string", "null"] }
+  },
+  "if": { "properties": { "ok": { "const": true } } },
+  "then": { "properties": { "errors": { "type": "array", "maxItems": 0 } } }
+}
