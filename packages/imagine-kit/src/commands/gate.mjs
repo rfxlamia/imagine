@@ -60,13 +60,14 @@ export default {
     const project = sctx.project;
     Object.assign(project.items, records);
     if (gate === "G0") project.g0.status = decision === "approve" ? "approved" : "pending";
+    saveProject(dir, project);
     const assetIds = ids.filter((id) => id.startsWith("asset:"));
     if (assetIds.length) {
+      ctx.hooks?.betweenWrites?.();
       const manifest = sctx.manifest;
       for (const id of assetIds) applyAssetDecision(manifest, id, decision);
       saveManifest(dir, manifest);
     }
-    saveProject(dir, project);
     const journal_id = appendJournal(dir, { command: "gate", summary: `${gate} ${decision} ${ids.join(",")} quote=${JSON.stringify(quote)}`, now: ctx.now() });
     const advice = gate === "G4" && decision === "approve"
       ? reviewHints(items).map((h) => ({ rule: "DAG-STALE-VS-REVIEW", item: h.item, source: "project.yaml watch",

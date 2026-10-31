@@ -4,7 +4,7 @@ export const GATES = ["G0", "G1", "G2", "G3", "G4", "G5r", "G5a", "G5b", "G6", "
 export const PREREQ = { G0: [], G1: ["G0"], G2: ["G1"], G3: ["G2"], G4: ["G3"], G5r: ["G4"], G5a: ["G4"], G5b: ["G5r"], G6: ["G5a", "G5b"], G7: ["G6"] };
 // A quote is blank when nothing visible remains after removing whitespace, separators and invisible format characters
 // (zero-width space/joiner included), so a hidden-character quote cannot satisfy GATE-QUOTE.
-export const isBlankQuote = (q) => String(q ?? "").replace(/[\p{Cf}\p{Z}\s]/gu, "") === "";
+export const isBlankQuote = (q) => String(q ?? "").replace(/[\p{Cf}\p{Z}\s\p{Mn}\p{Cc}\u2800\u3164\u115F\u1160\uFFA0]/gu, "") === "";
 export function ancestors(gate) {
   const out = new Set();
   const walk = (g) => { for (const p of PREREQ[g]) if (!out.has(p)) { out.add(p); walk(p); } };

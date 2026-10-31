@@ -86,7 +86,8 @@ function itemToString(key, x) {
   if (typeof x === "string") return x.trim();
   if (typeof x === "number" && key === "beats") return `${x}s`;
   if (x && typeof x === "object" && key === "fx" && typeof x.id === "string" && typeof x.tool === "string") {
-    return [`${x.id}=${x.tool}`, ...FX_ATTRS.filter((a) => x[a] !== undefined).map((a) => `${a}=${x[a]}`)].join(";");
+    const head = x.name ? `${x.id}=${x.tool}:${x.name}` : `${x.id}=${x.tool}`;
+    return [head, ...FX_ATTRS.filter((a) => x[a] !== undefined).map((a) => `${a}=${x[a]}`)].join(";");
   }
   if (x && typeof x === "object" && key === "voiceover" && typeof x.unit === "string") return x.offset ? `${x.unit}@${x.offset}` : x.unit;
   return String(x);
