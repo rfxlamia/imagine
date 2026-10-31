@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Verifies the rule registry and that every rule is enforced by an instruction
 // marker (<!-- rule:ID -->) and/or referenced by a test, per its `cover` field.
+// Rules with `status: deferred` are kept in the registry but skipped by coverage.
 import { readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ID_RE = /^(HARD|ADV|GATE|DAG|PROC|CAP|AC)-[A-Z0-9]+(-[A-Z0-9]+)*$/;
 const COVERS = new Set(["instructions", "tests", "both"]);
+const STATUSES = new Set(["active", "deferred"]);
 const MARKER_RE = /<!--\s*rule:([A-Z0-9-]+)\s*-->/g;
 const INSTRUCTION_ROOTS = ["skills/", "agents/", "hooks/"];
 const TEST_ROOTS = ["packages/imagine-kit/test/", "tests/"];
@@ -36,6 +38,7 @@ export function checkRegistry(rules) {
     if (!r.source) problems.push(`${r.id}: missing source`);
     if (!r.text) problems.push(`${r.id}: missing text`);
     if (r.cover !== undefined && !COVERS.has(r.cover)) problems.push(`${r.id}: invalid cover ${r.cover}`);
+    if (r.status !== undefined && !STATUSES.has(r.status)) problems.push(`${r.id}: invalid status ${r.status}`);
   }
   return problems;
 }
@@ -57,7 +60,9 @@ export function checkCoverage(rules, files) {
   const tests = testText.join("\n");
   const missing = [];
   let covered = 0;
+  let deferred = 0;
   for (const r of rules) {
+    if (r.status === "deferred") { deferred += 1; continue; }
     const cover = r.cover ?? "instructions";
     const needI = cover !== "tests";
     const needT = cover !== "instructions";
@@ -67,7 +72,7 @@ export function checkCoverage(rules, files) {
     if (!okT) missing.push(`${r.id} (tests)`);
     if (okI && okT) covered += 1;
   }
-  return { missing, orphans, covered };
+  return { missing, orphans, covered, deferred };
 }
 
 function walk(root, dir, out) {
@@ -90,17 +95,17 @@ function main() {
   console.log(`registry ok: ${rules.length} rules`);
   if (process.argv.includes("--registry-only")) return;
   const files = [...INSTRUCTION_ROOTS, ...TEST_ROOTS].flatMap((d) => walk(root, join(root, d), []));
-  const { missing, orphans, covered } = checkCoverage(rules, files);
+  const { missing, orphans, covered, deferred } = checkCoverage(rules, files);
   const reportIdx = process.argv.indexOf("--report");
   if (reportIdx > 0) {
-    const lines = ["# Traceability report", "", `Covered ${covered}/${rules.length}`, "", "| Rule | Cover | Instruction markers | Test refs |", "|---|---|---|---|"];
+    const lines = ["# Traceability report", "", `Covered ${covered}/${rules.length - deferred} active (${deferred} deferred)`, "", "| Rule | Cover | Instruction markers | Test refs |", "|---|---|---|---|"];
     const markersByFile = files
       .filter((f) => INSTRUCTION_ROOTS.some((p) => f.path.startsWith(p)))
       .map((f) => ({ path: f.path, ids: new Set([...f.text.matchAll(MARKER_RE)].map((m) => m[1])) }));
     for (const r of rules) {
       const marks = markersByFile.filter((f) => f.ids.has(r.id)).map((f) => f.path);
       const tests = files.filter((f) => TEST_ROOTS.some((p) => f.path.startsWith(p)) && new RegExp(`\\b${r.id}\\b`).test(f.text)).map((f) => f.path);
-      lines.push(`| ${r.id} | ${r.cover ?? "instructions"} | ${marks.join("<br>")} | ${tests.join("<br>")} |`);
+      lines.push(`| ${r.id} | ${r.status === "deferred" ? "deferred" : r.cover ?? "instructions"} | ${marks.join("<br>")} | ${tests.join("<br>")} |`);
     }
     writeFileSync(join(root, process.argv[reportIdx + 1]), lines.join("\n") + "\n");
   }
@@ -108,7 +113,7 @@ function main() {
     console.error([...missing.map((m) => `missing ${m}`), ...orphans.map((o) => `orphan ${o}`)].join("\n"));
     process.exit(1);
   }
-  console.log(`coverage ok: ${covered}/${rules.length}`);
+  console.log(`coverage ok: ${covered}/${rules.length - deferred} active (${deferred} deferred)`);
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main();
