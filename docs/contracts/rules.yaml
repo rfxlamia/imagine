@@ -1,207 +1,207 @@
-# Stable rule IDs for Imagine. Source = architecture-proposal.md section.
+# Stable rule IDs for Imagine. source = section number in docs/architecture-proposal.md.
 # cover: instructions (marker in skills/agents/hooks) | tests (ID in a test) | both
 rules:
   # Process
-  - { id: PROC-BRIEF-START, source: "§2.6", text: "Run imagine-kit brief before every stage, again after resume or compaction; stage start needs the current brief_hash", cover: both }
-  - { id: PROC-BRIEF-EMBED, source: "§2.6", text: "Subagent dispatch embeds the brief output; output echoes brief_hash" }
-  - { id: PROC-BRIEF-AUDIT-CANON, source: "§2.6", text: "Every audit/review stage lists bible.yaml and style.md as mandatory project references", cover: both }
-  - { id: PROC-BRIEF-LIMIT, source: "§2.6", text: "Brief proves delivery, not understanding; audits and validators check comprehension" }
-  - { id: PROC-LOCK-HASHED-WRITES, source: "§3.2", text: "Every write to a hashed source goes through imagine-kit under the project lock; no raw file writes", cover: both }
-  - { id: PROC-ATOMIC-COMMIT, source: "§3.2", text: "Commits are temp file + rename; a crash before rename leaves the target untouched", cover: tests }
-  - { id: PROC-JOURNAL, source: "§5", text: "Every state change appends a journal entry", cover: both }
-  - { id: PROC-DISPATCH-GUARD, source: "§3.2", text: "guard begin before every dispatch, guard verify after; violations restored and rejected", cover: both }
-  - { id: PROC-PATCH-VERBATIM, source: "§3.2", text: "Store the subagent patch verbatim in stage/<stage>/r<n>.patch.yaml" }
-  - { id: PROC-PATCH-ROUNDS, source: "§3.2", text: "Rejected patch goes back to the same subagent, round n+1, max 3, then blocked" }
-  - { id: PROC-AUDIT-REREAD, source: "§3.2", text: "Main-agent semantic audit re-reads bible.yaml and style.md from disk before every audit" }
-  - { id: PROC-IMPACT-CONFIRM, source: "§6.2", text: "Before editing an approved doc show which gates/items re-open and get a yes" }
-  - { id: PROC-NEEDS-REVIEW-REPORT, source: "§6.2", text: "needs_review is resolved by an impact report and the user's confirm or edit" }
-  - { id: PROC-UPSTREAM-BLOCKED, source: "§6.2", text: "Upstream discovery (missing bible fact) is blocked, then bible edit, then cascade" }
-  - { id: PROC-SUBAGENT-NO-USER, source: "§3.1", text: "Subagents never ask the user; unknowns become blocked + question" }
-  - { id: PROC-SUBAGENT-PROPOSAL-ONLY, source: "§3.1", text: "Subagents never approve their own work; output is a proposal" }
-  - { id: PROC-STYLE-FIRST, source: "§3.1", text: "style.md decides artistic choices; advisory defaults fill silence only" }
-  - { id: PROC-ADV-REASON, source: "§3.1", text: "Departing from an advisory default carries a one-line reason" }
-  - { id: PROC-HARD-OVER-STYLE, source: "§3.1", text: "HARD rules are never traded for style" }
-  - { id: PROC-CANON-CITE, source: "§3.1", text: "Subagents read bible.yaml and style.md in full and cite ids/anchors with hashes in inputs" }
-  - { id: PROC-NOT-HEARD, source: "§8.3", text: "Claude reports measured audio facts and states it did not hear the audio" }
-  - { id: PROC-NO-DESCRIBE, source: "§1.2", text: "Never use hyperframes snapshot --describe" }
-  - { id: PROC-TELEMETRY-OFF, source: "§1.2", text: "HYPERFRAMES_NO_TELEMETRY=1 for every hyperframes call", cover: both }
-  - { id: PROC-SCRATCH-NOT-ASSET, source: "§7.3", text: "Scratch VO and auditions live in tmp/ and are never approved assets", cover: both }
-  - { id: PROC-ONE-LINE-PER-WAV, source: "§7.3", text: "TTS synthesises one script line per WAV", cover: both }
+  - { id: PROC-BRIEF-START, source: "section 2.6", text: "Run imagine-kit brief before every stage, again after resume or compaction; stage start needs the current brief_hash", cover: both }
+  - { id: PROC-BRIEF-EMBED, source: "section 2.6", text: "Subagent dispatch embeds the brief output; output echoes brief_hash" }
+  - { id: PROC-BRIEF-AUDIT-CANON, source: "section 2.6", text: "Every audit/review stage lists bible.yaml and style.md as mandatory project references", cover: both }
+  - { id: PROC-BRIEF-LIMIT, source: "section 2.6", text: "Brief proves delivery, not understanding; audits and validators check comprehension" }
+  - { id: PROC-LOCK-HASHED-WRITES, source: "section 3.2", text: "Every write to a hashed source goes through imagine-kit under the project lock; no raw file writes", cover: both }
+  - { id: PROC-ATOMIC-COMMIT, source: "section 3.2", text: "Commits are temp file + rename; a crash before rename leaves the target untouched", cover: tests }
+  - { id: PROC-JOURNAL, source: "section 5", text: "Every state change appends a journal entry", cover: both }
+  - { id: PROC-DISPATCH-GUARD, source: "section 3.2", text: "guard begin before every dispatch, guard verify after; violations restored and rejected", cover: both }
+  - { id: PROC-PATCH-VERBATIM, source: "section 3.2", text: "Store the subagent patch verbatim in stage/<stage>/r<n>.patch.yaml" }
+  - { id: PROC-PATCH-ROUNDS, source: "section 3.2", text: "Rejected patch goes back to the same subagent, round n+1, max 3, then blocked" }
+  - { id: PROC-AUDIT-REREAD, source: "section 3.2", text: "Main-agent semantic audit re-reads bible.yaml and style.md from disk before every audit" }
+  - { id: PROC-IMPACT-CONFIRM, source: "section 6.2", text: "Before editing an approved doc show which gates/items re-open and get a yes" }
+  - { id: PROC-NEEDS-REVIEW-REPORT, source: "section 6.2", text: "needs_review is resolved by an impact report and the user's confirm or edit" }
+  - { id: PROC-UPSTREAM-BLOCKED, source: "section 6.2", text: "Upstream discovery (missing bible fact) is blocked, then bible edit, then cascade" }
+  - { id: PROC-SUBAGENT-NO-USER, source: "section 3.1", text: "Subagents never ask the user; unknowns become blocked + question" }
+  - { id: PROC-SUBAGENT-PROPOSAL-ONLY, source: "section 3.1", text: "Subagents never approve their own work; output is a proposal" }
+  - { id: PROC-STYLE-FIRST, source: "section 3.1", text: "style.md decides artistic choices; advisory defaults fill silence only" }
+  - { id: PROC-ADV-REASON, source: "section 3.1", text: "Departing from an advisory default carries a one-line reason" }
+  - { id: PROC-HARD-OVER-STYLE, source: "section 3.1", text: "HARD rules are never traded for style" }
+  - { id: PROC-CANON-CITE, source: "section 3.1", text: "Subagents read bible.yaml and style.md in full and cite ids/anchors with hashes in inputs" }
+  - { id: PROC-NOT-HEARD, source: "section 8.3", text: "Claude reports measured audio facts and states it did not hear the audio" }
+  - { id: PROC-NO-DESCRIBE, source: "section 1.2", text: "Never use hyperframes snapshot --describe" }
+  - { id: PROC-TELEMETRY-OFF, source: "section 1.2", text: "HYPERFRAMES_NO_TELEMETRY=1 for every hyperframes call", cover: both }
+  - { id: PROC-SCRATCH-NOT-ASSET, source: "section 7.3", text: "Scratch VO and auditions live in tmp/ and are never approved assets", cover: both }
+  - { id: PROC-ONE-LINE-PER-WAV, source: "section 7.3", text: "TTS synthesises one script line per WAV", cover: both }
   - { id: PROC-CLONING-OPT-IN, source: "D11", text: "English voices built-in by default; cloning only after explicit user opt-in via voice-cloning.md" }
   - { id: PROC-NO-GATED-LOGIN, source: "D11", text: "Imagine never accepts gated model terms or logs in to HF for the user" }
   - { id: PROC-VOICE-CONSENT, source: "D11", text: "Cloned voice needs the voice owner's written consent recorded in the bible" }
   - { id: PROC-ID-EXPERIMENTAL, source: "D9", text: "Indonesian TTS is EXPERIMENTAL; voice prompts judged per clip at casting" }
-  - { id: PROC-REMOTE-LISTEN, source: "§7.3", text: "On another device, send WAVs with SendUserFile instead of the page path" }
-  - { id: PROC-REVISED-PROMPT, source: "§7.1", text: "Record the image tool's revised prompt beside the compiled prompt", cover: both }
-  - { id: PROC-FRAMING-IN-PROMPT, source: "§7.1", text: "Every batch prompt states framing explicitly", cover: both }
-  - { id: PROC-IMG-RETRY, source: "§7.1", text: "Image post-check failure retries at most 2 times, then blocked", cover: both }
-  - { id: PROC-RESUME-IDEMPOTENT, source: "§6.1", text: "Adapters are idempotent per (id, v); partials in tmp/; resume never duplicates approved assets", cover: both }
-  - { id: PROC-VERSIONS-IMMUTABLE, source: "§6.1", text: "Assets are .vN and never overwritten; approved takes immutable", cover: both }
-  - { id: PROC-PRONUNCIATION-LEVERS, source: "§7.3", text: "Pronunciation levers are lexicon, punctuation, voice, seed, temperature; no SSML/phoneme/speed/pitch/emotion" }
-  - { id: PROC-FORMAT-ONE-PER-PROJECT, source: "§5.5", text: "One project, one format; other format = separate project" }
-  - { id: PROC-AUDIO-MODE-LOCKED, source: "§4.1", text: "audio_mode changes only by user at project level; re-opens G1 and the plan" }
-  - { id: PROC-MODE-NA-RECORDED, source: "§4.1", text: "Casting/TTS in non-narrated modes are recorded N/A, not skipped" }
-  - { id: PROC-MUSIC-SOURCE, source: "§7.4", text: "Music user-supplied with licence or none; MusicGen only opt-in non-commercial" }
-  - { id: PROC-NO-UPSCALER, source: "§7.2", text: "No upscaler assumed; lanczos never counts toward q" }
-  - { id: PROC-CAMERA-WRAPPER, source: "§3.4", text: "Ken Burns tweens a wrapper transform, never the timed media" }
-  - { id: PROC-CONTINUITY-PRIORITY, source: "§3.7", text: "Continuity findings are P0/P1/P2 with location, problem, exact change; P0 cites bible id or style anchor" }
-  - { id: PROC-CANNOT-OPEN, source: "§3.7", text: "A reviewer that cannot open an image says so; never assumes it passed" }
-  - { id: PROC-CONTINUITY-MODES, source: "§3.7", text: "Continuity review runs in three modes: canonical refs before G5r, batch assets before G5b (also vs their refs), snapshot sheets in edit" }
-  - { id: PROC-CLOCK-PER-MODE, source: "§4.1, D3", text: "Previz clock = scratch VO (narrated, measured before previz, never an asset) | beat grid (music-led) | read-time plan (text-led)", cover: both }
-  - { id: PROC-STORYBOARD-NO-DROP, source: "§3.3", text: "Impossible duration → propose cuts to the main agent; never drop script units silently" }
-  - { id: PROC-PREVIZ-NO-STRETCH, source: "§3.4", text: "VO longer than plan by > 20 % → flag a storyboard issue; never stretch silently" }
-  - { id: PROC-SCENE-LINT-BLOCKED, source: "§3.6", text: "Scene cannot pass lint in 3 tries → blocked with the lint JSON" }
-  - { id: PROC-CONFLICT-REDISPATCH, source: "§10.2 Q2", text: "Patch CONFLICT always re-dispatches with a new brief (auto-rebase not implemented)", cover: both }
+  - { id: PROC-REMOTE-LISTEN, source: "section 7.3", text: "On another device, send WAVs with SendUserFile instead of the page path" }
+  - { id: PROC-REVISED-PROMPT, source: "section 7.1", text: "Record the image tool's revised prompt beside the compiled prompt", cover: both }
+  - { id: PROC-FRAMING-IN-PROMPT, source: "section 7.1", text: "Every batch prompt states framing explicitly", cover: both }
+  - { id: PROC-IMG-RETRY, source: "section 7.1", text: "Image post-check failure retries at most 2 times, then blocked", cover: both }
+  - { id: PROC-RESUME-IDEMPOTENT, source: "section 6.1", text: "Adapters are idempotent per (id, v); partials in tmp/; resume never duplicates approved assets", cover: both }
+  - { id: PROC-VERSIONS-IMMUTABLE, source: "section 6.1", text: "Assets are .vN and never overwritten; approved takes immutable", cover: both }
+  - { id: PROC-PRONUNCIATION-LEVERS, source: "section 7.3", text: "Pronunciation levers are lexicon, punctuation, voice, seed, temperature; no SSML/phoneme/speed/pitch/emotion" }
+  - { id: PROC-FORMAT-ONE-PER-PROJECT, source: "section 5.5", text: "One project, one format; other format = separate project" }
+  - { id: PROC-AUDIO-MODE-LOCKED, source: "section 4.1", text: "audio_mode changes only by user at project level; re-opens G1 and the plan" }
+  - { id: PROC-MODE-NA-RECORDED, source: "section 4.1", text: "Casting/TTS in non-narrated modes are recorded N/A, not skipped" }
+  - { id: PROC-MUSIC-SOURCE, source: "section 7.4", text: "Music user-supplied with licence or none; MusicGen only opt-in non-commercial" }
+  - { id: PROC-NO-UPSCALER, source: "section 7.2", text: "No upscaler assumed; lanczos never counts toward q" }
+  - { id: PROC-CAMERA-WRAPPER, source: "section 3.4", text: "Ken Burns tweens a wrapper transform, never the timed media" }
+  - { id: PROC-CONTINUITY-PRIORITY, source: "section 3.7", text: "Continuity findings are P0/P1/P2 with location, problem, exact change; P0 cites bible id or style anchor" }
+  - { id: PROC-CANNOT-OPEN, source: "section 3.7", text: "A reviewer that cannot open an image says so; never assumes it passed" }
+  - { id: PROC-CONTINUITY-MODES, source: "section 3.7", text: "Continuity review runs in three modes: canonical refs before G5r, batch assets before G5b (also vs their refs), snapshot sheets in edit" }
+  - { id: PROC-CLOCK-PER-MODE, source: "section 4.1, D3", text: "Previz clock = scratch VO (narrated, measured before previz, never an asset) | beat grid (music-led) | read-time plan (text-led)", cover: both }
+  - { id: PROC-STORYBOARD-NO-DROP, source: "section 3.3", text: "Impossible duration → propose cuts to the main agent; never drop script units silently" }
+  - { id: PROC-PREVIZ-NO-STRETCH, source: "section 3.4", text: "VO longer than plan by > 20 % → flag a storyboard issue; never stretch silently" }
+  - { id: PROC-SCENE-LINT-BLOCKED, source: "section 3.6", text: "Scene cannot pass lint in 3 tries → blocked with the lint JSON" }
+  - { id: PROC-CONFLICT-REDISPATCH, source: "section 10.2 Q2", text: "Patch CONFLICT always re-dispatches with a new brief (auto-rebase not implemented)", cover: both }
   - { id: PROC-BIBLE-REFS-STYLE, source: "D4", text: "bible.yaml states what is true; it references style.md anchors (style.md#palette) and never duplicates grading, lens or grain" }
-  - { id: PROC-CAPTION-ORIGINAL, source: "§5.1", text: "Captions keep the original spelling; the lexicon changes only tts_text", cover: both }
-  - { id: PROC-CAPTIONS-FROM-UNITS, source: "§4.1", text: "narrated captions derive from L##; in other modes T## are the on-screen text and caption rules apply to them" }
-  - { id: PROC-G5A-PARALLEL, source: "§4", text: "Final VO and G5a may run while batch images generate; neither waits for the other" }
-  - { id: PROC-G6-LISTEN, source: "§8.3", text: "G6 includes listening to the draft rough mix (ducking, SFX timing)" }
-  - { id: PROC-REVIEW-MD, source: "§8.3", text: "Findings, advice kept with reasons, waivers and soft tiers go into review/REVIEW.md using HyperFrames review.md P0/P1/P2" }
-  - { id: PROC-ATEMPO-WARN, source: "§7.3", text: "ffmpeg atempo ±10 % only on user request, with an audible-quality warning" }
-  - { id: PROC-TTS-FALLBACK, source: "§7.3", text: "TTS fallbacks: Kokoro via hyperframes tts (no Indonesian) or user-recorded WAV per line, only as listed" }
-  - { id: PROC-SFX-SOURCE, source: "§7.4", text: "SFX via HyperFrames media-use: Openverse CC0/CC-BY with credits, then bundled offline library" }
-  - { id: PROC-REPLAN-USER-CHOICE, source: "§7.2", text: "On replan the user chooses: less scale/travel, less crop, layered rasters, vector ground, or lower delivery size" }
-  - { id: PROC-OFFLINE-MIRROR, source: "§7.5", text: "Offline render needs a GSAP/CDN mirror (HYPERFRAMES_GSAP_BASE_URL)" }
-  - { id: PROC-CUTOUT-FALLBACK, source: "§7.1", text: "Transparency via hyperframes remove-background; generator alpha unverified" }
-  - { id: PROC-OPT-IN-MANDATORY, source: "§2.6, D11", text: "On-demand references become mandatory in the brief once the user opts in (voice-cloning.md for casting)", cover: both }
+  - { id: PROC-CAPTION-ORIGINAL, source: "section 5.1", text: "Captions keep the original spelling; the lexicon changes only tts_text", cover: both }
+  - { id: PROC-CAPTIONS-FROM-UNITS, source: "section 4.1", text: "narrated captions derive from L##; in other modes T## are the on-screen text and caption rules apply to them" }
+  - { id: PROC-G5A-PARALLEL, source: "section 4", text: "Final VO and G5a may run while batch images generate; neither waits for the other" }
+  - { id: PROC-G6-LISTEN, source: "section 8.3", text: "G6 includes listening to the draft rough mix (ducking, SFX timing)" }
+  - { id: PROC-REVIEW-MD, source: "section 8.3", text: "Findings, advice kept with reasons, waivers and soft tiers go into review/REVIEW.md using HyperFrames review.md P0/P1/P2" }
+  - { id: PROC-ATEMPO-WARN, source: "section 7.3", text: "ffmpeg atempo ±10 % only on user request, with an audible-quality warning" }
+  - { id: PROC-TTS-FALLBACK, source: "section 7.3", text: "TTS fallbacks: Kokoro via hyperframes tts (no Indonesian) or user-recorded WAV per line, only as listed" }
+  - { id: PROC-SFX-SOURCE, source: "section 7.4", text: "SFX via HyperFrames media-use: Openverse CC0/CC-BY with credits, then bundled offline library" }
+  - { id: PROC-REPLAN-USER-CHOICE, source: "section 7.2", text: "On replan the user chooses: less scale/travel, less crop, layered rasters, vector ground, or lower delivery size" }
+  - { id: PROC-OFFLINE-MIRROR, source: "section 7.5", text: "Offline render needs a GSAP/CDN mirror (HYPERFRAMES_GSAP_BASE_URL)" }
+  - { id: PROC-CUTOUT-FALLBACK, source: "section 7.1", text: "Transparency via hyperframes remove-background; generator alpha unverified" }
+  - { id: PROC-OPT-IN-MANDATORY, source: "section 2.6, D11", text: "On-demand references become mandatory in the brief once the user opts in (voice-cloning.md for casting)", cover: both }
   - { id: PROC-EN-BASELINE, source: "D1", text: "English is the baseline language" }
   - { id: ADV-STYLISED-FIRST, source: "D7", text: "Stylised/illustrated looks first" }
-  - { id: ADV-LAYERED-PLATES, source: "§3.3, §7.2", text: "Layered plates (bg/mid/character/fg) for parallax, reuse and resolution; 9:16 recomposed, not squeezed" }
+  - { id: ADV-LAYERED-PLATES, source: "section 3.3, section 7.2", text: "Layered plates (bg/mid/character/fg) for parallax, reuse and resolution; 9:16 recomposed, not squeezed" }
   # Capability gating
-  - { id: CAP-READ, source: "§2.5", text: "Read capabilities --json once per session and after upgrades" }
-  - { id: CAP-FALLBACK-TABLE, source: "§2.5", text: "not_implemented/experimental → only the fallback listed for that exact step" }
-  - { id: CAP-BLOCKED-STOP, source: "§2.5", text: "No allowed fallback → stop with BLOCKED, record in project.yaml + journal, tell the user", cover: both }
-  - { id: CAP-HARD-NO-FALLBACK, source: "§2.5", text: "HARD validators have no fallback; only exit is a user waiver", cover: both }
-  - { id: CAP-ADV-NOT-RUN, source: "§2.5", text: "Unimplemented advisory checks reported not_run, never pass", cover: both }
-  - { id: CAP-NO-FABRICATION, source: "§2.5", text: "Never fabricate command output or treat a missing capability as available" }
+  - { id: CAP-READ, source: "section 2.5", text: "Read capabilities --json once per session and after upgrades" }
+  - { id: CAP-FALLBACK-TABLE, source: "section 2.5", text: "not_implemented/experimental → only the fallback listed for that exact step" }
+  - { id: CAP-BLOCKED-STOP, source: "section 2.5", text: "No allowed fallback → stop with BLOCKED, record in project.yaml + journal, tell the user", cover: both }
+  - { id: CAP-HARD-NO-FALLBACK, source: "section 2.5", text: "HARD validators have no fallback; only exit is a user waiver", cover: both }
+  - { id: CAP-ADV-NOT-RUN, source: "section 2.5", text: "Unimplemented advisory checks reported not_run, never pass", cover: both }
+  - { id: CAP-NO-FABRICATION, source: "section 2.5", text: "Never fabricate command output or treat a missing capability as available" }
   # Gates
-  - { id: GATE-G0, source: "§4", text: "G0: format, platform, audio_mode, language, duration, silence choice" }
-  - { id: GATE-G1, source: "§4", text: "G1: locked script units per unit" }
-  - { id: GATE-G2, source: "§4", text: "G2: bible per entity incl. voice cast after audition and lexicon" }
-  - { id: GATE-G3, source: "§4", text: "G3: style per anchor" }
-  - { id: GATE-G4, source: "§4", text: "G4: production plan, prompts, ref list, tiers, estimate, music licence" }
-  - { id: GATE-G5R, source: "§4", text: "G5r: each canonical ref after continuity review, before any batch" }
-  - { id: GATE-G5A, source: "§4", text: "G5a: audio by ear per line/cue; N/A if silence chosen" }
-  - { id: GATE-G5B, source: "§4", text: "G5b: every batch image incl. soft tiers" }
-  - { id: GATE-G6, source: "§4", text: "G6: picture lock with draft MP4 full mix by ear" }
-  - { id: GATE-G7, source: "§4", text: "G7: final MP4 accepted" }
-  - { id: GATE-QUOTE, source: "§2.4", text: "A gate is recorded only after an explicit user answer, with the verbatim quote", cover: both }
-  - { id: GATE-PER-ITEM, source: "§4", text: "Approvals per item; invalidation re-opens affected items only", cover: both }
+  - { id: GATE-G0, source: "section 4", text: "G0: format, platform, audio_mode, language, duration, silence choice" }
+  - { id: GATE-G1, source: "section 4", text: "G1: locked script units per unit" }
+  - { id: GATE-G2, source: "section 4", text: "G2: bible per entity incl. voice cast after audition and lexicon" }
+  - { id: GATE-G3, source: "section 4", text: "G3: style per anchor" }
+  - { id: GATE-G4, source: "section 4", text: "G4: production plan, prompts, ref list, tiers, estimate, music licence" }
+  - { id: GATE-G5R, source: "section 4", text: "G5r: each canonical ref after continuity review, before any batch" }
+  - { id: GATE-G5A, source: "section 4", text: "G5a: audio by ear per line/cue; N/A if silence chosen" }
+  - { id: GATE-G5B, source: "section 4", text: "G5b: every batch image incl. soft tiers" }
+  - { id: GATE-G6, source: "section 4", text: "G6: picture lock with draft MP4 full mix by ear" }
+  - { id: GATE-G7, source: "section 4", text: "G7: final MP4 accepted" }
+  - { id: GATE-QUOTE, source: "section 2.4", text: "A gate is recorded only after an explicit user answer, with the verbatim quote", cover: both }
+  - { id: GATE-PER-ITEM, source: "section 4", text: "Approvals per item; invalidation re-opens affected items only", cover: both }
   # Waivers
-  - { id: HARD-WAIVER-USER-ONLY, source: "§8.0", text: "Only the user grants waivers; agents may propose; subagents neither", cover: both }
-  - { id: HARD-WAIVER-SCOPED, source: "§8.0", text: "Waiver = one rule + explicit item ids, never all", cover: both }
-  - { id: HARD-WAIVER-REASONED, source: "§8.0", text: "Waiver carries user reason and manual check", cover: both }
-  - { id: HARD-WAIVER-HASH-BOUND, source: "§8.0", text: "Waiver invalid when a scoped item's hash changes", cover: both }
-  - { id: HARD-WAIVER-LISTED, source: "§8.0", text: "Waivers recorded in waivers.yaml + journal, listed in REVIEW.md and delivery note", cover: both }
-  - { id: HARD-NON-WAIVABLE, source: "§8.0", text: "Non-waivable: gate quotes, patch/key isolation/base rev, guard, asset approval+hash incl refs, audio licence, placeholders, playable MP4 at G0 spec", cover: both }
-  - { id: HARD-NO-SELF-JUDGEMENT, source: "§8.0", text: "Agent judgement never substitutes a HARD tool result" }
+  - { id: HARD-WAIVER-USER-ONLY, source: "section 8.0", text: "Only the user grants waivers; agents may propose; subagents neither", cover: both }
+  - { id: HARD-WAIVER-SCOPED, source: "section 8.0", text: "Waiver = one rule + explicit item ids, never all", cover: both }
+  - { id: HARD-WAIVER-REASONED, source: "section 8.0", text: "Waiver carries user reason and manual check", cover: both }
+  - { id: HARD-WAIVER-HASH-BOUND, source: "section 8.0", text: "Waiver invalid when a scoped item's hash changes", cover: both }
+  - { id: HARD-WAIVER-LISTED, source: "section 8.0", text: "Waivers recorded in waivers.yaml + journal, listed in REVIEW.md and delivery note", cover: both }
+  - { id: HARD-NON-WAIVABLE, source: "section 8.0", text: "Non-waivable: gate quotes, patch/key isolation/base rev, guard, asset approval+hash incl refs, audio licence, placeholders, playable MP4 at G0 spec", cover: both }
+  - { id: HARD-NO-SELF-JUDGEMENT, source: "section 8.0", text: "Agent judgement never substitutes a HARD tool result" }
   # HARD rules
-  - { id: HARD-HF-STRICT, source: "§8.1", text: "check --json --strict clean (errors and warnings, motion assertions)", cover: both }
+  - { id: HARD-HF-STRICT, source: "section 8.1", text: "check --json --strict clean (errors and warnings, motion assertions)", cover: both }
   - { id: HARD-HF-ALLOWLIST, source: "D10", text: "Only contrast_aa_failure inside a shader-transition window is demoted to advisory", cover: both }
-  - { id: HARD-FPS-SIZE, source: "§8.1", text: "30 fps; W×H/aspect = G0", cover: both }
-  - { id: HARD-DURATION, source: "§8.1", text: "Duration inside G0 range", cover: both }
-  - { id: HARD-STORY-IDS, source: "§8.1", text: "Unique sNN shot ids; heading count = parsed shots", cover: both }
-  - { id: HARD-STORY-UNIT-ONCE, source: "§8.1", text: "Every L##/T## placed exactly once (J/L cuts allowed)", cover: both }
-  - { id: HARD-VO-NO-OVERLAP, source: "§8.1", text: "No unintended VO overlap; total VO fits root duration", cover: both }
-  - { id: HARD-TEXTLED-READTIME, source: "§4.1", text: "text-led: every T## on screen ≥ its read time", cover: both }
-  - { id: HARD-MUSICLED-ASSET, source: "§4.1", text: "music-led: music asset present and licensed", cover: both }
-  - { id: HARD-MUSICLED-BEAT, source: "§4.1", text: "music-led: on_beat cuts within ±1 frame of the grid", cover: both }
-  - { id: HARD-REFS-APPROVED, source: "§4", text: "Batch images only from G5r-approved refs at current version (REFS_NOT_APPROVED)", cover: both }
-  - { id: HARD-ENTITIES-EXIST, source: "§8.1", text: "Referenced bible entities and style anchors exist", cover: both }
-  - { id: HARD-PATCH-KEYS, source: "§3.2", text: "Patch keys ⊆ stage key set; only storyboard writes narrative", cover: both }
-  - { id: HARD-PATCH-BASE-REV, source: "§3.2", text: "base_story_rev matches or CONFLICT", cover: both }
-  - { id: HARD-PATCH-REVERIFY, source: "§3.2", text: "apply re-hashes inputs and re-validates under lock; mismatch STALE_INPUTS, nothing written", cover: both }
-  - { id: HARD-PATCH-INPUTS-DECLARED, source: "§3.2", text: "inputs declared for every bible id/anchor/unit ops reference", cover: both }
-  - { id: HARD-ASSETS-APPROVED, source: "§8.1", text: "Every asset ref exists, approved, hash matches", cover: both }
-  - { id: HARD-AUDIO-ID, source: "§8.1", text: "Every <audio> has an id", cover: both }
-  - { id: HARD-VO-PRESENT, source: "§8.1", text: "narrated: VO present for every L##", cover: both }
-  - { id: HARD-AUDIO-STREAM, source: "§8.1", text: "Output has an audio stream (digital silence if silence chosen)", cover: both }
-  - { id: HARD-NO-PLACEHOLDER, source: "§8.1", text: "No TODO/TBD/lorem/status: outline/{{/missing src", cover: both }
-  - { id: HARD-RASTER-TIER, source: "§7.2", text: "No replan tier; soft only if accepted at G4 and G5b", cover: both }
-  - { id: HARD-NO-NATIVE-CLAIM, source: "§7.2", text: "Say native only if every raster q ≥ 1.0", cover: both }
-  - { id: HARD-SAFE-BAND, source: "§5.5", text: "9:16 readable text inside platform band, not under the action rail, ≥ 28 px", cover: both }
-  - { id: HARD-STAYS-IN-FRAME, source: "§8.1", text: "Intended elements stay in frame unless allow-overflow + reason", cover: both }
-  - { id: HARD-AUDIO-LICENCE, source: "§7.4", text: "Third-party audio has licence + source + credit", cover: both }
-  - { id: HARD-LOUDNESS, source: "§8.1", text: "−16 LUFS ±1.5, true peak ≤ −1 dBTP; skipped for intentional silence", cover: both }
-  - { id: HARD-GATES-RECORDED, source: "§8.1", text: "Gates recorded with user quote before downstream work", cover: both }
-  - { id: HARD-BRIEF-CURRENT, source: "§2.6", text: "Stage started with current brief_hash; patch echoes it", cover: both }
-  - { id: HARD-WAIVERS-VALID, source: "§8.1", text: "Waivers valid: scope hashes match, quote present", cover: both }
-  - { id: HARD-GUARD, source: "§3.2", text: "Protected files unchanged across a dispatch", cover: both }
-  - { id: HARD-SHADOW-ONLY, source: "§3.6", text: "scene-builder writes only inside stage/edit/<id>/ (hook + guard)", cover: both }
-  - { id: HARD-NO-CSS-FILTER-RASTER, source: "§3.5", text: "No CSS filter on rasters; use media-treatment", cover: both }
-  - { id: HARD-FX-TOOL-ENUM, source: "§3.5", text: "fx tool ∈ shader|vfx-chain|media-treatment|registry:<name>|css-blend|css-mask; names exist", cover: both }
-  - { id: HARD-FX-WEBGL-FALLBACK, source: "§3.5", text: "WebGL fx declare a fallback; unavailable effects marked unsupported", cover: both }
-  - { id: HARD-PREVIZ-SCALE-BUDGET, source: "§3.4", text: "Max scale per layer ≤ resolution budget", cover: both }
-  - { id: HARD-PREVIZ-NAMES-EXIST, source: "§3.4", text: "Transition/shader/registry names exist", cover: both }
-  - { id: HARD-PREVIZ-SAFE-AREA, source: "§3.4", text: "Text-bearing moves stay in the format's safe area", cover: both }
-  - { id: HARD-PREVIZ-BEATS-INSIDE, source: "§3.4", text: "Beats inside their shot", cover: both }
-  - { id: HARD-STORYBOARD-ASSET-DECL, source: "§3.3", text: "Each asset declared with kind and required_px; duration_est sum inside G0", cover: both }
-  - { id: HARD-SCENE-LINT, source: "§3.6", text: "Scene composition lint clean, fromTo in scenes, timeline registered under id", cover: both }
-  - { id: HARD-NO-BEST-EFFORT, source: "§7.5", text: "Renders use --no-best-effort", cover: both }
-  - { id: HARD-ROOT-MOTION, source: "§7.5", text: "Assertions live in root index.motion.json with film-absolute seconds", cover: both }
-  - { id: HARD-SCENE-CLASS, source: "§7.5", text: "Scene hosts use data-composition-src and class=scene", cover: both }
-  - { id: HARD-HAS-VOICE-CLONING, source: "§7.3", text: "File voice requires has_voice_cloning = true", cover: both }
-  - { id: HARD-REAL-RASTER, source: "§7.1", text: "Image is a real raster: PNG, not uniform, measured dims; prompt forbids scripting a PNG", cover: both }
-  - { id: HARD-TTS-EOS, source: "§7.3", text: "KPOCKET_TTS_ERROR_WITHOUT_EOS=1", cover: both }
-  - { id: HARD-STYLE-OUTPUT-READONLY, source: "§5.2", text: "style.md#output is generated from G0 and read-only", cover: both }
-  - { id: HARD-STORY-WRITERS, source: "§5.3", text: "STORY.md written only by patch apply (planning keys) and imagine-kit (edit keys); HyperFrames editStoryboard never used", cover: both }
-  - { id: HARD-STATUS-DERIVED, source: "§6.1", text: "stale/needs_review are derived by status, never hand-edited", cover: both }
+  - { id: HARD-FPS-SIZE, source: "section 8.1", text: "30 fps; W×H/aspect = G0", cover: both }
+  - { id: HARD-DURATION, source: "section 8.1", text: "Duration inside G0 range", cover: both }
+  - { id: HARD-STORY-IDS, source: "section 8.1", text: "Unique sNN shot ids; heading count = parsed shots", cover: both }
+  - { id: HARD-STORY-UNIT-ONCE, source: "section 8.1", text: "Every L##/T## placed exactly once (J/L cuts allowed)", cover: both }
+  - { id: HARD-VO-NO-OVERLAP, source: "section 8.1", text: "No unintended VO overlap; total VO fits root duration", cover: both }
+  - { id: HARD-TEXTLED-READTIME, source: "section 4.1", text: "text-led: every T## on screen ≥ its read time", cover: both }
+  - { id: HARD-MUSICLED-ASSET, source: "section 4.1", text: "music-led: music asset present and licensed", cover: both }
+  - { id: HARD-MUSICLED-BEAT, source: "section 4.1", text: "music-led: on_beat cuts within ±1 frame of the grid", cover: both }
+  - { id: HARD-REFS-APPROVED, source: "section 4", text: "Batch images only from G5r-approved refs at current version (REFS_NOT_APPROVED)", cover: both }
+  - { id: HARD-ENTITIES-EXIST, source: "section 8.1", text: "Referenced bible entities and style anchors exist", cover: both }
+  - { id: HARD-PATCH-KEYS, source: "section 3.2", text: "Patch keys ⊆ stage key set; only storyboard writes narrative", cover: both }
+  - { id: HARD-PATCH-BASE-REV, source: "section 3.2", text: "base_story_rev matches or CONFLICT", cover: both }
+  - { id: HARD-PATCH-REVERIFY, source: "section 3.2", text: "apply re-hashes inputs and re-validates under lock; mismatch STALE_INPUTS, nothing written", cover: both }
+  - { id: HARD-PATCH-INPUTS-DECLARED, source: "section 3.2", text: "inputs declared for every bible id/anchor/unit ops reference", cover: both }
+  - { id: HARD-ASSETS-APPROVED, source: "section 8.1", text: "Every asset ref exists, approved, hash matches", cover: both }
+  - { id: HARD-AUDIO-ID, source: "section 8.1", text: "Every <audio> has an id", cover: both }
+  - { id: HARD-VO-PRESENT, source: "section 8.1", text: "narrated: VO present for every L##", cover: both }
+  - { id: HARD-AUDIO-STREAM, source: "section 8.1", text: "Output has an audio stream (digital silence if silence chosen)", cover: both }
+  - { id: HARD-NO-PLACEHOLDER, source: "section 8.1", text: "No TODO/TBD/lorem/status: outline/{{/missing src", cover: both }
+  - { id: HARD-RASTER-TIER, source: "section 7.2", text: "No replan tier; soft only if accepted at G4 and G5b", cover: both }
+  - { id: HARD-NO-NATIVE-CLAIM, source: "section 7.2", text: "Say native only if every raster q ≥ 1.0", cover: both }
+  - { id: HARD-SAFE-BAND, source: "section 5.5", text: "9:16 readable text inside platform band, not under the action rail, ≥ 28 px", cover: both }
+  - { id: HARD-STAYS-IN-FRAME, source: "section 8.1", text: "Intended elements stay in frame unless allow-overflow + reason", cover: both }
+  - { id: HARD-AUDIO-LICENCE, source: "section 7.4", text: "Third-party audio has licence + source + credit", cover: both }
+  - { id: HARD-LOUDNESS, source: "section 8.1", text: "−16 LUFS ±1.5, true peak ≤ −1 dBTP; skipped for intentional silence", cover: both }
+  - { id: HARD-GATES-RECORDED, source: "section 8.1", text: "Gates recorded with user quote before downstream work", cover: both }
+  - { id: HARD-BRIEF-CURRENT, source: "section 2.6", text: "Stage started with current brief_hash; patch echoes it", cover: both }
+  - { id: HARD-WAIVERS-VALID, source: "section 8.1", text: "Waivers valid: scope hashes match, quote present", cover: both }
+  - { id: HARD-GUARD, source: "section 3.2", text: "Protected files unchanged across a dispatch", cover: both }
+  - { id: HARD-SHADOW-ONLY, source: "section 3.6", text: "scene-builder writes only inside stage/edit/<id>/ (hook + guard)", cover: both }
+  - { id: HARD-NO-CSS-FILTER-RASTER, source: "section 3.5", text: "No CSS filter on rasters; use media-treatment", cover: both }
+  - { id: HARD-FX-TOOL-ENUM, source: "section 3.5", text: "fx tool ∈ shader|vfx-chain|media-treatment|registry:<name>|css-blend|css-mask; names exist", cover: both }
+  - { id: HARD-FX-WEBGL-FALLBACK, source: "section 3.5", text: "WebGL fx declare a fallback; unavailable effects marked unsupported", cover: both }
+  - { id: HARD-PREVIZ-SCALE-BUDGET, source: "section 3.4", text: "Max scale per layer ≤ resolution budget", cover: both }
+  - { id: HARD-PREVIZ-NAMES-EXIST, source: "section 3.4", text: "Transition/shader/registry names exist", cover: both }
+  - { id: HARD-PREVIZ-SAFE-AREA, source: "section 3.4", text: "Text-bearing moves stay in the format's safe area", cover: both }
+  - { id: HARD-PREVIZ-BEATS-INSIDE, source: "section 3.4", text: "Beats inside their shot", cover: both }
+  - { id: HARD-STORYBOARD-ASSET-DECL, source: "section 3.3", text: "Each asset declared with kind and required_px; duration_est sum inside G0", cover: both }
+  - { id: HARD-SCENE-LINT, source: "section 3.6", text: "Scene composition lint clean, fromTo in scenes, timeline registered under id", cover: both }
+  - { id: HARD-NO-BEST-EFFORT, source: "section 7.5", text: "Renders use --no-best-effort", cover: both }
+  - { id: HARD-ROOT-MOTION, source: "section 7.5", text: "Assertions live in root index.motion.json with film-absolute seconds", cover: both }
+  - { id: HARD-SCENE-CLASS, source: "section 7.5", text: "Scene hosts use data-composition-src and class=scene", cover: both }
+  - { id: HARD-HAS-VOICE-CLONING, source: "section 7.3", text: "File voice requires has_voice_cloning = true", cover: both }
+  - { id: HARD-REAL-RASTER, source: "section 7.1", text: "Image is a real raster: PNG, not uniform, measured dims; prompt forbids scripting a PNG", cover: both }
+  - { id: HARD-TTS-EOS, source: "section 7.3", text: "KPOCKET_TTS_ERROR_WITHOUT_EOS=1", cover: both }
+  - { id: HARD-STYLE-OUTPUT-READONLY, source: "section 5.2", text: "style.md#output is generated from G0 and read-only", cover: both }
+  - { id: HARD-STORY-WRITERS, source: "section 5.3", text: "STORY.md written only by patch apply (planning keys) and imagine-kit (edit keys); HyperFrames editStoryboard never used", cover: both }
+  - { id: HARD-STATUS-DERIVED, source: "section 6.1", text: "stale/needs_review are derived by status, never hand-edited", cover: both }
   # Advisory
-  - { id: ADV-READ-WINDOW, source: "§8.2", text: "Holds 0.5 s + 0.3 s/word for non-copy text" }
-  - { id: ADV-EASE-ROLE, source: "§8.2", text: "Ease by role" }
-  - { id: ADV-HERO-MOVE, source: "§8.2", text: "One hero move per shot" }
-  - { id: ADV-EXIT-ENTRANCE, source: "§8.2", text: "Exits shorter than entrances" }
-  - { id: ADV-TRANSITION-KINDS, source: "§8.2", text: "3–5 transition kinds" }
-  - { id: ADV-HARD-CUTS, source: "§8.2", text: "≤ ⅓ hard cuts between beats" }
-  - { id: ADV-SHOT-LENGTH, source: "§8.2", text: "Shot length averages; shot vs its VO (lead/trail allowed)" }
-  - { id: ADV-HERO-40, source: "§3.3", text: "Hero ≥ 40 % of frame; one idea per shot" }
-  - { id: ADV-NEW-EVERY, source: "§3.3", text: "Something new every 2–4 s" }
-  - { id: ADV-VERTICAL, source: "§5.5", text: "9:16 pacing 1–2 s shots, titles ×1.35, ≤ ~5 words per claim line" }
-  - { id: ADV-BANNED, source: "§3.5", text: "style.md#banned and HyperFrames BANNED defaults unless style allows" }
-  - { id: ADV-CHECK-WARNINGS, source: "§8.2", text: "line_unread/dead_stretch/text_below_floor reported as advice" }
-  - { id: ADV-FILM-SILENT, source: "§4.1", text: "film_silent suppressed with reason when G0 silence intentional" }
+  - { id: ADV-READ-WINDOW, source: "section 8.2", text: "Holds 0.5 s + 0.3 s/word for non-copy text" }
+  - { id: ADV-EASE-ROLE, source: "section 8.2", text: "Ease by role" }
+  - { id: ADV-HERO-MOVE, source: "section 8.2", text: "One hero move per shot" }
+  - { id: ADV-EXIT-ENTRANCE, source: "section 8.2", text: "Exits shorter than entrances" }
+  - { id: ADV-TRANSITION-KINDS, source: "section 8.2", text: "3–5 transition kinds" }
+  - { id: ADV-HARD-CUTS, source: "section 8.2", text: "≤ ⅓ hard cuts between beats" }
+  - { id: ADV-SHOT-LENGTH, source: "section 8.2", text: "Shot length averages; shot vs its VO (lead/trail allowed)" }
+  - { id: ADV-HERO-40, source: "section 3.3", text: "Hero ≥ 40 % of frame; one idea per shot" }
+  - { id: ADV-NEW-EVERY, source: "section 3.3", text: "Something new every 2–4 s" }
+  - { id: ADV-VERTICAL, source: "section 5.5", text: "9:16 pacing 1–2 s shots, titles ×1.35, ≤ ~5 words per claim line" }
+  - { id: ADV-BANNED, source: "section 3.5", text: "style.md#banned and HyperFrames BANNED defaults unless style allows" }
+  - { id: ADV-CHECK-WARNINGS, source: "section 8.2", text: "line_unread/dead_stretch/text_below_floor reported as advice" }
+  - { id: ADV-FILM-SILENT, source: "section 4.1", text: "film_silent suppressed with reason when G0 silence intentional" }
   # Dependency DAG
-  - { id: DAG-G0-FORMAT, source: "§6.2", text: "G0.format → style#output,#typography needs_review → all shots, images, edit, render stale", cover: tests }
-  - { id: DAG-G0-LANGUAGE, source: "§6.2", text: "G0.language → voices needs_review → all VO stale", cover: tests }
-  - { id: DAG-G0-AUDIO-MODE, source: "§6.2", text: "G0.audio_mode → G1 re-opens → clock → all previz stale", cover: tests }
-  - { id: DAG-SCRIPT-L-VO, source: "§6.2", text: "L## → its VO stale → previz/edit of shots voicing it stale", cover: tests }
-  - { id: DAG-SCRIPT-L-STORYBOARD, source: "§6.2", text: "L## → storyboard of shots voicing it needs_review", cover: tests }
-  - { id: DAG-SCRIPT-CANON, source: "§6.2", text: "L##/T## → bible and style needs_review with impact list", cover: tests }
-  - { id: DAG-SCRIPT-T-PREVIZ, source: "§6.2", text: "T## → previz of shots placing it stale; text-led read time recomputed", cover: tests }
-  - { id: DAG-BIBLE-ENTITY, source: "§6.2", text: "bible entity → images and refs citing it stale; shots featuring it storyboard needs_review", cover: tests }
-  - { id: DAG-BIBLE-VOICE, source: "§6.2", text: "voice → that speaker's VO stale → previz of those shots stale", cover: tests }
-  - { id: DAG-BIBLE-LEXICON, source: "§6.2", text: "lexicon term → VO lines containing it stale", cover: tests }
-  - { id: DAG-VO-RETIME, source: "§6.2", text: "New VO version: |Δ| ≤ 0.1 s auto re-time + journal; > 0.1 s re-opens that shot's previz", cover: tests }
-  - { id: DAG-BIBLE-WORLD, source: "§6.2", text: "bible.world → style, all storyboards, all images needs_review", cover: tests }
-  - { id: DAG-STYLE-ANCHOR, source: "§6.2", text: "style anchor → every artifact that recorded it stale (refs re-open G5r)", cover: tests }
-  - { id: DAG-SHOT-STORYBOARD, source: "§6.2", text: "s.storyboard → previz stale → fx needs_review → edit stale; added/removed assets pending/orphaned", cover: tests }
-  - { id: DAG-SHOT-PREVIZ, source: "§6.2", text: "s.previz → fx needs_review, edit stale, budget recomputed", cover: tests }
-  - { id: DAG-SHOT-FX, source: "§6.2", text: "s.fx → edit stale", cover: tests }
-  - { id: DAG-MUSIC-GRID, source: "§6.2", text: "music vN → beat grid → all previz → all edit stale", cover: tests }
-  - { id: DAG-READTIME, source: "§6.2", text: "readtime.T## → previz of shots placing it stale", cover: tests }
-  - { id: DAG-REF-VERSION, source: "§6.2", text: "ref vN → its G5r re-opens; batch images from it stale", cover: tests }
-  - { id: DAG-ASSET-APPROVED, source: "§6.2", text: "asset approved vN → compositions using it → render stale", cover: tests }
-  - { id: DAG-EDIT-RENDER, source: "§6.2", text: "any edit change → render stale → G6/G7 re-open", cover: tests }
-  - { id: DAG-WAIVER-SCOPE, source: "§6.2", text: "waiver scope hash change → waiver invalid", cover: tests }
-  - { id: DAG-BRIEF-CHANGE, source: "§6.2", text: "manifest/ref file change → open dispatches' brief_hash outdated", cover: tests }
-  - { id: DAG-MEASURED-BUDGET, source: "§7.2", text: "After G5b the budget is re-validated with measured dims; failure re-opens that shot's previz", cover: tests }
-  - { id: DAG-STALE-VS-REVIEW, source: "§6.2", text: "stale = hash mismatch, redo + re-approve that item; needs_review = semantic, user confirms or edits", cover: both }
-  # Acceptance criteria (§11 1c)
-  - { id: AC-01, source: "§11", text: "Script → post/*.mp4 both formats; qc passes", cover: tests }
-  - { id: AC-02, source: "§11", text: "Forbidden patch key rejected before STORY.md changes", cover: tests }
-  - { id: AC-03, source: "§11", text: "Protected-file write detected by guard verify and restored", cover: tests }
-  - { id: AC-04, source: "§11", text: "bible hair edit: mara ref + citing images stale; storyboard needs_review; compositions stale only after new image approved", cover: tests }
-  - { id: AC-05, source: "§11", text: "Narration line edit: VO + shot timing stale; bible/style needs_review with impact list", cover: tests }
-  - { id: AC-06, source: "§11", text: "G5a page; one line redone by seed; Δ > 0.1 s re-opens only that shot's previz", cover: tests }
-  - { id: AC-07, source: "§11", text: "res-report q per raster; q < 1 in delivery note", cover: tests }
-  - { id: AC-08, source: "§11", text: "Interrupted batch resumes without duplicating approved assets", cover: tests }
-  - { id: AC-09, source: "§11", text: "Portrait safe-band blocks a misplaced caption", cover: tests }
-  - { id: AC-10, source: "§11", text: "Capability gating: BLOCKED or listed fallback; never fabricated", cover: tests }
-  - { id: AC-11, source: "§11", text: "Pressure tests on production instructions refused or BLOCKED", cover: tests }
-  - { id: AC-12, source: "§11", text: "Apply after bible edit returns STALE_INPUTS, STORY.md unchanged, dispatch re-opens", cover: tests }
-  - { id: AC-13, source: "§11", text: "safe-band HARD_NOT_RUN blocks; scoped waiver passes; edit invalidates; self-grant refused", cover: tests }
-  - { id: AC-14, source: "§11", text: "text-led reaches MP4 with no TTS; T## ≥ read time; G5a on music/SFX", cover: tests }
-  - { id: AC-15, source: "§11", text: "img --batch before G5r REFS_NOT_APPROVED; after, proceeds; new ref version stales dependents", cover: tests }
-  - { id: AC-16, source: "§11", text: "stage start without brief refused; outdated brief_hash patch rejected", cover: tests }
-  - { id: AC-17, source: "§11", text: "Plugin hook denies scene-builder writes outside its shadow dir; other agents unaffected", cover: tests }
+  - { id: DAG-G0-FORMAT, source: "section 6.2", text: "G0.format → style#output,#typography needs_review → all shots, images, edit, render stale", cover: tests }
+  - { id: DAG-G0-LANGUAGE, source: "section 6.2", text: "G0.language → voices needs_review → all VO stale", cover: tests }
+  - { id: DAG-G0-AUDIO-MODE, source: "section 6.2", text: "G0.audio_mode → G1 re-opens → clock → all previz stale", cover: tests }
+  - { id: DAG-SCRIPT-L-VO, source: "section 6.2", text: "L## → its VO stale → previz/edit of shots voicing it stale", cover: tests }
+  - { id: DAG-SCRIPT-L-STORYBOARD, source: "section 6.2", text: "L## → storyboard of shots voicing it needs_review", cover: tests }
+  - { id: DAG-SCRIPT-CANON, source: "section 6.2", text: "L##/T## → bible and style needs_review with impact list", cover: tests }
+  - { id: DAG-SCRIPT-T-PREVIZ, source: "section 6.2", text: "T## → previz of shots placing it stale; text-led read time recomputed", cover: tests }
+  - { id: DAG-BIBLE-ENTITY, source: "section 6.2", text: "bible entity → images and refs citing it stale; shots featuring it storyboard needs_review", cover: tests }
+  - { id: DAG-BIBLE-VOICE, source: "section 6.2", text: "voice → that speaker's VO stale → previz of those shots stale", cover: tests }
+  - { id: DAG-BIBLE-LEXICON, source: "section 6.2", text: "lexicon term → VO lines containing it stale", cover: tests }
+  - { id: DAG-VO-RETIME, source: "section 6.2", text: "New VO version: |Δ| ≤ 0.1 s auto re-time + journal; > 0.1 s re-opens that shot's previz", cover: tests }
+  - { id: DAG-BIBLE-WORLD, source: "section 6.2", text: "bible.world → style, all storyboards, all images needs_review", cover: tests }
+  - { id: DAG-STYLE-ANCHOR, source: "section 6.2", text: "style anchor → every artifact that recorded it stale (refs re-open G5r)", cover: tests }
+  - { id: DAG-SHOT-STORYBOARD, source: "section 6.2", text: "s.storyboard → previz stale → fx needs_review → edit stale; added/removed assets pending/orphaned", cover: tests }
+  - { id: DAG-SHOT-PREVIZ, source: "section 6.2", text: "s.previz → fx needs_review, edit stale, budget recomputed", cover: tests }
+  - { id: DAG-SHOT-FX, source: "section 6.2", text: "s.fx → edit stale", cover: tests }
+  - { id: DAG-MUSIC-GRID, source: "section 6.2", text: "music vN → beat grid → all previz → all edit stale", cover: tests }
+  - { id: DAG-READTIME, source: "section 6.2", text: "readtime.T## → previz of shots placing it stale", cover: tests }
+  - { id: DAG-REF-VERSION, source: "section 6.2", text: "ref vN → its G5r re-opens; batch images from it stale", cover: tests }
+  - { id: DAG-ASSET-APPROVED, source: "section 6.2", text: "asset approved vN → compositions using it → render stale", cover: tests }
+  - { id: DAG-EDIT-RENDER, source: "section 6.2", text: "any edit change → render stale → G6/G7 re-open", cover: tests }
+  - { id: DAG-WAIVER-SCOPE, source: "section 6.2", text: "waiver scope hash change → waiver invalid", cover: tests }
+  - { id: DAG-BRIEF-CHANGE, source: "section 6.2", text: "manifest/ref file change → open dispatches' brief_hash outdated", cover: tests }
+  - { id: DAG-MEASURED-BUDGET, source: "section 7.2", text: "After G5b the budget is re-validated with measured dims; failure re-opens that shot's previz", cover: tests }
+  - { id: DAG-STALE-VS-REVIEW, source: "section 6.2", text: "stale = hash mismatch, redo + re-approve that item; needs_review = semantic, user confirms or edits", cover: both }
+  # Acceptance criteria (section 11 1c)
+  - { id: AC-01, source: "section 11", text: "Script → post/*.mp4 both formats; qc passes", cover: tests }
+  - { id: AC-02, source: "section 11", text: "Forbidden patch key rejected before STORY.md changes", cover: tests }
+  - { id: AC-03, source: "section 11", text: "Protected-file write detected by guard verify and restored", cover: tests }
+  - { id: AC-04, source: "section 11", text: "bible hair edit: mara ref + citing images stale; storyboard needs_review; compositions stale only after new image approved", cover: tests }
+  - { id: AC-05, source: "section 11", text: "Narration line edit: VO + shot timing stale; bible/style needs_review with impact list", cover: tests }
+  - { id: AC-06, source: "section 11", text: "G5a page; one line redone by seed; Δ > 0.1 s re-opens only that shot's previz", cover: tests }
+  - { id: AC-07, source: "section 11", text: "res-report q per raster; q < 1 in delivery note", cover: tests }
+  - { id: AC-08, source: "section 11", text: "Interrupted batch resumes without duplicating approved assets", cover: tests }
+  - { id: AC-09, source: "section 11", text: "Portrait safe-band blocks a misplaced caption", cover: tests }
+  - { id: AC-10, source: "section 11", text: "Capability gating: BLOCKED or listed fallback; never fabricated", cover: tests }
+  - { id: AC-11, source: "section 11", text: "Pressure tests on production instructions refused or BLOCKED", cover: tests }
+  - { id: AC-12, source: "section 11", text: "Apply after bible edit returns STALE_INPUTS, STORY.md unchanged, dispatch re-opens", cover: tests }
+  - { id: AC-13, source: "section 11", text: "safe-band HARD_NOT_RUN blocks; scoped waiver passes; edit invalidates; self-grant refused", cover: tests }
+  - { id: AC-14, source: "section 11", text: "text-led reaches MP4 with no TTS; T## ≥ read time; G5a on music/SFX", cover: tests }
+  - { id: AC-15, source: "section 11", text: "img --batch before G5r REFS_NOT_APPROVED; after, proceeds; new ref version stales dependents", cover: tests }
+  - { id: AC-16, source: "section 11", text: "stage start without brief refused; outdated brief_hash patch rejected", cover: tests }
+  - { id: AC-17, source: "section 11", text: "Plugin hook denies scene-builder writes outside its shadow dir; other agents unaffected", cover: tests }

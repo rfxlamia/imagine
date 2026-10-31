@@ -8,9 +8,9 @@ import { spawnSync } from "node:child_process";
 import { checkRegistry, checkCoverage } from "./check-traceability.mjs";
 
 const rules = [
-  { id: "HARD-X-ONE", source: "§8.1", text: "t", cover: "both" },
-  { id: "PROC-Y", source: "§2.6", text: "t" },
-  { id: "AC-01", source: "§11", text: "t", cover: "tests" },
+  { id: "HARD-X-ONE", source: "section 8.1", text: "t", cover: "both" },
+  { id: "PROC-Y", source: "section 2.6", text: "t" },
+  { id: "AC-01", source: "section 11", text: "t", cover: "tests" },
 ];
 
 test("registry: valid", () => assert.deepEqual(checkRegistry(rules), []));

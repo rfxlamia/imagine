@@ -29,4 +29,4 @@ Loaded plugins: `imagine` (via `--plugin-dir`) plus the three builtin plugins `c
 
 ## Consequence for the design
 
-AC17 premise holds: a plugin `PreToolUse` hook sees subagent calls with a stable `agent_type` and its deny is enforced in headless `claude -p` with `--permission-mode acceptEdits`. Fallback options B and C (§3.2) are not needed.
+AC17 premise holds: a plugin `PreToolUse` hook sees subagent calls with a stable `agent_type` and its deny is enforced in headless `claude -p` with `--permission-mode acceptEdits`. Fallback options B and C (proposal section 3.2) are not needed.
