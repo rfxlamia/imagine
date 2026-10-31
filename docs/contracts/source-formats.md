@@ -91,6 +91,8 @@ unit:L01:
 
 Item ids: `g0`, `unit:<id>`, `bible:<path>`, `style:<anchor>`, `g4`, `g5a`, `g6`, `g7`, `asset:<id>.v<N>`, `shot:<sNN>.<stage>` (written by `patch apply`); WP2 adds `vo:<line>`, `edit:<sNN>`, `render:<name>` using the same record shape.
 
+- Optional top-level `pending`: `{ rev: <N+1>, prev: { <id>: <record or null> } }`, written atomically with new records during `patch apply`; if a crash occurs before the STORY.md commit, the next apply restores `prev` entries (PROC-ATOMIC-COMMIT).
+
 ## 7. Derived status
 
 `status` never writes. An item whose recorded status is `approved` or `proposed` is **stale** when (a) any `inputs` entry resolves to a different value than recorded (an unresolvable source counts as `missing`), or (b) any `inputs` key is itself the id of a stale item (propagation, transitive). `watch` mismatches are listed as hints and never change the status. Gate state: `approved` (all items approved), `reopened` (some item stale), `empty` (no items yet), else `open`.
