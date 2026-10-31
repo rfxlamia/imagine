@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const here = join(fileURLToPath(import.meta.url), "..");
 const root = join(here, "..");
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
-const SKIP_PATHS = new Set(["packages/hyperframes", "packages/pocket-tts", "tools/forbidden-names.b64", "spikes"]);
+const SKIP_PATHS = new Set(["packages/hyperframes", "packages/pocket-tts", "tools/forbidden-names.b64", "spikes", ".obsidian"]);
 
 export function loadPatterns() {
   return readFileSync(join(here, "forbidden-names.b64"), "utf8")

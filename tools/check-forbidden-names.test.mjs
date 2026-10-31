@@ -64,3 +64,27 @@ test("checker scans tests/spikes but skips repo-root spikes", () => {
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test("checker skips repo-root .obsidian but scans nested .obsidian", () => {
+  const toolsDir = fileURLToPath(new URL(".", import.meta.url));
+  const docsDir = fileURLToPath(new URL("../docs", import.meta.url));
+  const tmp = realpathSync(mkdtempSync(join(tmpdir(), "imagine-obsidian-")));
+  try {
+    cpSync(toolsDir, join(tmp, "tools"), { recursive: true });
+    cpSync(docsDir, join(tmp, "docs"), { recursive: true });
+
+    mkdirSync(join(tmp, ".obsidian", "plugins", "x"), { recursive: true });
+    writeFileSync(join(tmp, ".obsidian", "plugins", "x", "data.json"), `bad: ${word}\n`);
+    const r1 = spawnSync(process.execPath, [join(tmp, "tools", "check-forbidden-names.mjs")], { encoding: "utf8" });
+    assert.equal(r1.status, 0);
+    assert.match(r1.stdout, /forbidden names: clean/);
+
+    mkdirSync(join(tmp, "notes", ".obsidian"), { recursive: true });
+    writeFileSync(join(tmp, "notes", ".obsidian", "x.json"), `bad: ${word}\n`);
+    const r2 = spawnSync(process.execPath, [join(tmp, "tools", "check-forbidden-names.mjs")], { encoding: "utf8" });
+    assert.equal(r2.status, 1);
+    assert.match(r2.stderr, /notes\/\.obsidian\/x\.json:1/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
