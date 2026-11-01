@@ -54,8 +54,23 @@ export function seedCanon(dir, { copy = false } = {}) {
   put(dir, "style.md", readFileSync(join(dir, "style.md"), "utf8") + STYLE_BODY);
 }
 
+// G4 approval now validates the story (a story without shots is refused), so tests that only need G4 behind them seed
+// one shot that places every script unit and fills the G0 duration range.
+export async function seedMinimalStory(dir) {
+  const { createContext } = await import("../../src/sources.mjs");
+  const sctx = createContext(dir);
+  if (sctx.story.shots.length > 0) return;
+  const units = Object.keys(sctx.units.units);
+  await writeStory(dir, sctx.story.front?.imagine_rev ?? 0, [
+    shot("s01", { scene: "main", duration_est: `${sctx.project.g0.duration_s.max}s`, voiceover: `[${units.join(", ")}]` }, "Main")]);
+}
+
 export async function approveThrough(cwd, last = "G3") {
   for (const g of ["G0", "G1", "G2", "G3", "G4"]) {
+    if (g === "G4") {
+      const { resolveProject } = await import("../../src/project.mjs");
+      await seedMinimalStory(resolveProject(cwd).dir);
+    }
     const r = await cli(cwd, "gate", g, "approve", "--quote", `ok ${g}`);
     if (!r.env.ok) throw new Error(`${g}: ${JSON.stringify(r.env)}`);
     if (g === last) return;
@@ -85,3 +100,6 @@ export async function snapshot(dir, id, refs, { status = "approved", watch = [],
       inputs: record(refs), ...(watch.length ? { watch: record(watch) } : {}) };
   });
 }
+
+// Like `cli` but with ctx overrides (tools, env) for commands that run external programs.
+export const cliWith = (cwd, ctx, ...args) => run(args, { cwd, now: () => NOW, ...ctx });

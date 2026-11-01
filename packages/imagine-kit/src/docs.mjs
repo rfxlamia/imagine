@@ -39,6 +39,17 @@ export function bibleLookup(bible, path) {
   return cur;
 }
 
+// Entity ids are path segments of `bible:<section>.<id>`, so a dot would split them (source-formats.md section 3).
+export const BIBLE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+export function badBibleIds(bible) {
+  const bad = [];
+  for (const [key, val] of Object.entries(bible ?? {})) {
+    if (!Array.isArray(val)) continue;
+    for (const e of val) if (e && typeof e === "object" && typeof e.id === "string" && !BIBLE_ID.test(e.id)) bad.push(`${key}.${e.id}`);
+  }
+  return bad;
+}
+
 export function bibleEntities(bible) {
   const out = [];
   for (const [key, val] of Object.entries(bible ?? {})) {
