@@ -103,7 +103,7 @@ test("PROC-CLOCK-PER-MODE: tts is for narrated projects only; unknown lines are 
 });
 
 test("a failing, short or malformed worker is BLOCKED and leaves no asset behind", async () => {
-  for (const mode of ["fail", "short", "badwav"]) {
+  for (const mode of ["fail", "short", "badwav", "noresults", "badwav-second"]) {
     const p = await ttsProject();
     const r = await p.run({ FAKE_UV_MODE: mode }, "tts", "L01,L02");
     assert.equal(r.exit, 3, `${mode}: ${JSON.stringify(r.env.errors)}`);
@@ -114,6 +114,22 @@ test("a failing, short or malformed worker is BLOCKED and leaves no asset behind
   const { cliWith } = await import("./helpers/fixture.mjs");
   const none = await cliWith(p.cwd, { tools: { uv: ["/nonexistent/uv"] } }, "tts", "L01");
   assert.equal(none.exit, 3);
+});
+
+test("a worker exiting 0 with { ok: true } but no results returns BLOCKED and writes no asset", async () => {
+  const p = await ttsProject();
+  const r = await p.run({ FAKE_UV_MODE: "noresults" }, "tts", "L01");
+  assert.equal(r.exit, 3, JSON.stringify(r.env.errors));
+  assert.equal(r.env.code, "BLOCKED");
+  assert.equal(getManifest(p.dir).assets.length, 0);
+});
+
+test("a worker returning success with valid first WAV and malformed second WAV returns BLOCKED and leaves manifest with neither asset", async () => {
+  const p = await ttsProject();
+  const r = await p.run({ FAKE_UV_MODE: "badwav-second" }, "tts", "L01,L02");
+  assert.equal(r.exit, 3, JSON.stringify(r.env.errors));
+  assert.equal(r.env.code, "BLOCKED");
+  assert.equal(getManifest(p.dir).assets.length, 0);
 });
 
 test("HARD-HAS-VOICE-CLONING: a file voice outside the project or missing is HARD; Indonesian needs a file voice", async () => {
