@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
+import { join, sep } from "node:path";
 import { hashValue, sha256, sha256File } from "./hash.mjs";
 import { readText, readYaml } from "./fsx.mjs";
 import { G0_FIELDS, loadProject } from "./project.mjs";
@@ -9,6 +9,17 @@ import { parseStory } from "./story/parse.mjs";
 import { blockHash } from "./story/block.mjs";
 
 export const SUPERSEDED = "superseded";
+
+// `file:<relpath>` (source-formats.md section 1): only these project files can be hashed, and only inside the project.
+const FILE_REF = /^(assets\/plan\.yaml|edit\/index\.html|edit\/index\.motion\.json|edit\/compositions\/[A-Za-z0-9][A-Za-z0-9._-]*\.html)$/;
+function fileValue(dir, rel) {
+  if (!FILE_REF.test(rel)) return null;
+  const p = join(dir, rel);
+  if (!existsSync(p)) return null;
+  const real = realpathSync(p);
+  const root = realpathSync(dir);
+  return real.startsWith(root + sep) ? sha256File(real) : null;
+}
 
 export function createContext(dir) {
   const cache = new Map();
@@ -97,6 +108,7 @@ export function resolveRef(ctx, ref, recorded) {
       return m ? assetValue(ctx, m[1], Number(m[2])) : null;
     }
     case "clock": return clockValue(ctx, rest, recorded);
+    case "file": return fileValue(ctx.dir, rest);
     default: return undefined;
   }
 }
@@ -112,6 +124,9 @@ export function enumerateSources(ctx) {
   for (const p of bibleEntities(ctx.bible)) add(`bible:${p}`);
   for (const a of Object.keys(ctx.style)) add(`style:${a}`);
   add("story:sha");
+  for (const f of ["assets/plan.yaml", "edit/index.html", "edit/index.motion.json"]) add(`file:${f}`);
+  const compositions = join(ctx.dir, "edit", "compositions");
+  if (existsSync(compositions)) for (const n of readdirSync(compositions).sort()) add(`file:edit/compositions/${n}`);
   for (const s of ctx.story.shots) for (const st of ["storyboard", "previz", "fx"]) add(`shot:${s.id}.${st}`);
   for (const a of currentAssets(ctx.manifest)) {
     add(`asset:${a.id}.v${a.v}`);

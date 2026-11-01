@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { assetEntry, bibleEntities, currentAsset, latestAssets } from "./docs.mjs";
 
 export const GATES = ["G0", "G1", "G2", "G3", "G4", "G5r", "G5a", "G5b", "G6", "G7"];
@@ -51,7 +53,7 @@ export function itemDeps(id, ctx) {
   if (kind === "unit") return [id, "g0:audio_mode"];
   if (kind === "bible") return [id, "g0:language"];
   if (kind === "style") return ["output", "typography"].includes(id.slice("style:".length)) ? [id, "g0:format"] : [id];
-  if (id === "g4") return ["story:sha", "g0:format", "g0:duration_s"];
+  if (id === "g4") return ["story:sha", "g0:format", "g0:duration_s", ...(existsSync(join(ctx.dir, "assets", "plan.yaml")) ? ["file:assets/plan.yaml"] : [])];
   if (id === "g5a") return ["g0:silence"];
   if (id === "g6" || id === "g7") {
     const downstream = Object.keys(ctx.project.items).filter((k) => /^(edit|render):/.test(k));
