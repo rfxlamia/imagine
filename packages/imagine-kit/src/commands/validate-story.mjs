@@ -13,7 +13,12 @@ export default {
     const sctx = createContext(dir);
     const errors = [];
     const integrity = checkStoryIntegrity(dir);
-    if (!integrity.ok) errors.push(err("HARD-STORY-WRITERS", "KEY_NOT_OWNED", null, "STORY.md was changed outside patch apply", integrity.reason));
+    if (!integrity.ok) {
+      errors.push(err("HARD-STORY-WRITERS", "KEY_NOT_OWNED", null, "STORY.md was changed outside patch apply", integrity.reason));
+      if (integrity.reason === "STORY.md is missing") {
+        return { project: rel, errors, data: { target: "story", checked: [] } };
+      }
+    }
     if (sctx.story.errors.length) {
       for (const e of sctx.story.errors) errors.push(err("HARD-STORY-IDS", "HARD", null, `STORY.md line ${e.line}: ${e.message}`));
       return { project: rel, errors, data: { target: "story", checked: [] } };

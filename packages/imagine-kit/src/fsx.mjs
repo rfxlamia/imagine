@@ -24,6 +24,16 @@ export function writeAtomic(path, text, hooks = {}) {
     try { unlinkSync(tmp); } catch { /* already gone */ }
     throw e;
   }
+  try {
+    const dfd = openSync(dirname(path), "r");
+    try {
+      fsyncSync(dfd);
+    } finally {
+      closeSync(dfd);
+    }
+  } catch (e) {
+    if (!["EISDIR", "EPERM", "EACCES", "EINVAL", "ENOTSUP"].includes(e.code)) throw e;
+  }
 }
 
 // Fail-fast exclusive project write lock (a directory, so creation is atomic). A lock older than staleMs is treated as left by a dead process.
