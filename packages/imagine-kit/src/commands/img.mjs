@@ -1,9 +1,188 @@
-import { KitError } from "../errors.mjs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { err } from "../envelope.mjs";
+import { KitError, UsageError } from "../errors.mjs";
+import { deriveAll } from "../derive.mjs";
+import { currentAsset } from "../docs.mjs";
+import { sha256, sha256File } from "../hash.mjs";
+import { isUniformImage, pngInfo } from "../media.mjs";
+import { resolveProject } from "../project.mjs";
+import { rasterQ, round2, tierOf } from "../raster.mjs";
+import { createContext, resolveRef } from "../sources.mjs";
+import { compilePrompt, generate, revisedPrompt } from "../img/adapter.mjs";
+import { commitAsset, recordBlocked, safePath } from "../img/commit.mjs";
+import { loadPlan } from "../img/plan.mjs";
 
-// Placeholder registered by the WP2 foundation task; the task that owns "img" replaces this file.
+const RETRIES = 2;
+
+// A leftover image is reusable only when meta.json (written after the checks passed) names this prompt stamp and the file's own hash.
+function adoptable(work, finalPath, stamp) {
+  const metaPath = join(work, "meta.json");
+  if (!existsSync(metaPath)) return null;
+  let meta;
+  try { meta = JSON.parse(readFileSync(metaPath, "utf8")); } catch { return null; }
+  if (meta.prompt_sha256 !== stamp) return null;
+  for (const file of [finalPath, join(work, "out.png")]) {
+    if (existsSync(file) && sha256File(file) === meta.png_sha256 && pngInfo(readFileSync(file))) return { file, revised: meta.revised_prompt ?? null };
+  }
+  return null;
+}
+const DIR_OF = { ref: "refs", img: "img" };
+const report = (a) => ({ id: a.id, v: a.v, w: a.w ?? null, h: a.h ?? null, q: a.q ?? null, tier: a.tier ?? null, sha256: a.sha256, revised_prompt: a.revised_prompt ?? null });
+
+// HARD-REFS-APPROVED: every referenced ref is the current version, approved in the manifest and in the project, and its file hash still matches.
+function refsGate(dir, sctx, planned, byId, derived) {
+  const problems = [];
+  for (const p of planned) {
+    for (const r of p.refs ?? []) {
+      const cur = currentAsset(sctx.manifest, r);
+      const item = cur && derived.items.find((i) => i.id === `asset:${cur.id}.v${cur.v}`);
+      const safe = cur ? safePath(dir, cur.path) : null;
+      if (!cur || cur.kind !== "ref") problems.push(`${p.id}: ref "${r}" has no generated version${byId.get(r) ? "; run img --ref " + r : " and is not in assets/plan.yaml"}`);
+      else if (cur.status !== "approved" || item?.status !== "approved") problems.push(`${p.id}: ref "${r}" v${cur.v} is not approved at G5r (${item?.status ?? cur.status})`);
+      else if (!safe) problems.push(`${p.id}: ref "${r}" v${cur.v} is outside the project`);
+      else if (!existsSync(safe) || sha256File(safe) !== cur.sha256) problems.push(`${p.id}: ref "${r}" v${cur.v} no longer matches its recorded hash`);
+    }
+  }
+  return problems;
+}
+
+async function makeOne(ctx, dir, sctx, p, v, note, advice) {
+  const kind = p.kind;
+  const rel = `assets/${DIR_OF[kind]}/${p.id}.v${v}.png`;
+  const finalPath = safePath(dir, rel);
+  if (!finalPath) throw new KitError("HARD", `${rel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+
+  const workRel = `tmp/img/${p.id}.v${v}`;
+  const work = safePath(dir, workRel);
+  if (!work) throw new KitError("HARD", `${workRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+
+  const outRel = `${workRel}/out.png`;
+  const outFile = safePath(dir, outRel);
+  if (!outFile) throw new KitError("HARD", `${outRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+
+  const metaRel = `${workRel}/meta.json`;
+  const metaFile = safePath(dir, metaRel);
+  if (!metaFile) throw new KitError("HARD", `${metaRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+
+  const refEntries = (p.refs ?? []).map((r) => currentAsset(sctx.manifest, r));
+  const refPaths = refEntries.map((e) => {
+    const s = safePath(dir, e.path);
+    if (!s) throw new KitError("HARD", `${e.path} is outside the project`, { rule: "HARD-REFS-APPROVED", item: p.id });
+    return s;
+  });
+  const text = compilePrompt({ prompt: p.prompt, framing: p.framing, size: p.size, refs: p.refs ?? [] });
+  const base = { id: p.id, kind, v, path: rel, status: "pending", ...(p.refs?.length ? { refs: refEntries.map((e) => e.id) } : {}),
+    ...(p.required_px ? { required_px: p.required_px } : {}), prompt: text, ...(note ? { note } : {}) };
+
+  // Crash recovery: a finished file that never reached the manifest is adopted, not regenerated, but only when meta.json proves
+  // it was made from this exact prompt and these exact ref files and the file is still the bytes that were checked.
+  const stamp = sha256(`${text}\n${refEntries.map((e) => e.sha256).join(",")}`);
+  const adopted = finalPath;
+  const found = adoptable(work, adopted, stamp);
+  let png = found?.file ?? null;
+  let revised = found?.revised ?? null;
+  if (png) {
+    advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${p.id}.v${v}`, source: "assets", message: `adopted ${png === adopted ? rel : "tmp/img/" + p.id + ".v" + v + "/out.png"} left by an interrupted run; nothing was regenerated` });
+  } else {
+    if (!safePath(dir, workRel)) throw new KitError("HARD", `${workRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+    mkdirSync(work, { recursive: true });
+    let lastWhy = "";
+    for (let attempt = 0; attempt <= RETRIES && !png; attempt += 1) {
+      const curOut = safePath(dir, outRel);
+      if (!curOut) throw new KitError("HARD", `${outRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+      rmSync(curOut, { force: true });
+
+      const curWork = safePath(dir, workRel);
+      if (!curWork) throw new KitError("HARD", `${workRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+      for (const e of refEntries) {
+        if (!safePath(dir, e.path)) throw new KitError("HARD", `${e.path} is outside the project`, { rule: "HARD-REFS-APPROVED", item: p.id });
+      }
+
+      const r = await generate(ctx, { workDir: curWork, text, refPaths });
+      const out = safePath(dir, outRel);
+      if (!out) throw new KitError("HARD", `${outRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+      const info = r.ok && existsSync(out) ? pngInfo(readFileSync(out)) : null;
+      if (!r.ok) lastWhy = `codex exited with an error ${r.stderr}`.trim();
+      else if (!existsSync(out)) lastWhy = "codex produced no out.png";
+      else if (!info) lastWhy = "out.png is not a real PNG";
+      else if (await isUniformImage(ctx, out)) lastWhy = "out.png is a uniform (blank) image";
+      else { png = out; revised = revisedPrompt(ctx, r.stdout); }
+    }
+    if (!png) {
+      await recordBlocked(ctx, dir, { step: `img:${p.id}.v${v}`, command: `img --batch ${p.id}` });
+      throw new KitError("BLOCKED", `${p.id}: no usable image after ${RETRIES + 1} attempts (${lastWhy})`, { rule: "PROC-IMG-RETRY", item: p.id });
+    }
+    const curMeta = safePath(dir, metaRel);
+    if (!curMeta) throw new KitError("HARD", `${metaRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+    writeFileSync(curMeta, JSON.stringify({ revised_prompt: revised, prompt_sha256: stamp, png_sha256: sha256File(png) }));
+  }
+  const curFinal = safePath(dir, rel);
+  if (!curFinal) throw new KitError("HARD", `${rel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+  const info = pngInfo(readFileSync(png));
+  const q = p.required_px ? rasterQ(info.w, info.h, p.required_px) : null;
+  const entry = { ...base, w: info.w, h: info.h, ...(q === null ? {} : { q: round2(q), tier: tierOf(q) }), ...(revised ? { revised_prompt: revised } : {}), sha256: "0".repeat(64) };
+  if (!revised) advice.push({ rule: "PROC-REVISED-PROMPT", item: `${p.id}.v${v}`, source: "codex session log", message: "the revised prompt was not found in the Codex session log; only the compiled prompt is recorded" });
+  if (entry.tier === "replan") advice.push({ rule: "HARD-RASTER-TIER", item: `${p.id}.v${v}`, source: "assets/plan.yaml", message: `q ${entry.q} is below 0.75 (replan tier); regenerate larger or re-plan the shot, export-hf will refuse it` });
+  const done = await commitAsset(ctx, dir, { entry, source: png === adopted ? null : png, clearBlocked: `img:${p.id}.v${v}`,
+    summary: { command: "img", text: `${p.id}.v${v} ${info.w}x${info.h}${q === null ? "" : ` q=${round2(q)} ${tierOf(q)}`}` } });
+  return done.kept ? null : entry;
+}
+
 export default {
-  options: {},
-  async run() {
-    throw new KitError("BLOCKED", "img is not built yet", { rule: "CAP-BLOCKED-STOP" });
+  locks: false,   // the project lock is held only around each commit (cli-contract "Decisions frozen" WP2)
+  options: { ref: { type: "string" }, batch: { type: "string" }, redo: { type: "string" }, note: { type: "string" } },
+  async run({ values }, ctx) {
+    if ((values.ref === undefined) === (values.batch === undefined)) throw new UsageError("usage: img --ref <ref_id> | img --batch <asset_id,...> [--redo <asset_id> --note <text>]");
+    if ((values.redo === undefined) !== (values.note === undefined)) throw new UsageError("--redo and --note go together");
+    const { dir, rel } = resolveProject(ctx.cwd, values.project);
+    const wanted = values.ref !== undefined ? [values.ref] : values.batch.split(",").map((s) => s.trim()).filter(Boolean);
+    if (wanted.length === 0) throw new UsageError("--batch needs at least one asset id");
+    if (values.redo !== undefined && !wanted.includes(values.redo)) throw new UsageError("--redo must name one of the requested ids");
+
+    const sctx = createContext(dir);
+    const derived = deriveAll(sctx);
+    if (derived.gates.G4.state !== "approved") {
+      return { project: rel, data: { assets: [] }, errors: [err("HARD-GATES-RECORDED", "HARD", "G4", `gate G4 must be approved before img (state: ${derived.gates.G4.state})`)] };
+    }
+    const plan = loadPlan(dir);
+    // G4 approval freezes assets/plan.yaml only when the file existed at that moment; a plan written or changed later is not approved.
+    const frozen = sctx.project.items.g4?.inputs?.["file:assets/plan.yaml"];
+    if (frozen !== resolveRef(sctx, "file:assets/plan.yaml", undefined)) {
+      return { project: rel, data: { assets: [] }, errors: [err("HARD-ASSETS-APPROVED", "HARD", "G4", frozen === undefined
+        ? "assets/plan.yaml was written after G4 was approved; approve G4 again so the asset list is covered by the approval"
+        : "assets/plan.yaml changed after G4 was approved; approve G4 again") ] };
+    }
+    const byId = new Map(plan.map((a) => [a.id, a]));
+    const want = values.ref !== undefined ? "ref" : "img";
+    const planned = wanted.map((id) => {
+      const p = byId.get(id);
+      if (!p) throw new UsageError(`"${id}" is not in assets/plan.yaml`);
+      if (p.kind !== want) throw new UsageError(`"${id}" is a ${p.kind} asset; use ${p.kind === "ref" ? "--ref" : "--batch"}`);
+      return p;
+    });
+
+    const problems = refsGate(dir, sctx, planned, byId, derived);
+    if (problems.length) {
+      return { project: rel, code: "REFS_NOT_APPROVED", data: { assets: [] }, errors: problems.map((m) => err("HARD-REFS-APPROVED", "REFS_NOT_APPROVED", null, m)) };
+    }
+
+    const advice = [];
+    const out = [];
+    for (const p of planned) {
+      const fresh = createContext(dir);
+      const all = fresh.manifest.assets.filter((a) => a.id === p.id);
+      const latest = all.reduce((b, a) => (!b || a.v > b.v ? a : b), null);
+      const cur = currentAsset(fresh.manifest, p.id);
+      const redo = values.redo === p.id;
+      if (cur && !redo) {
+        advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${p.id}.v${cur.v}`, source: "assets/manifest.yaml", message: `${p.id} v${cur.v} already exists; nothing was regenerated (use --redo ${p.id} --note <why> for a new version)` });
+        out.push(report(cur));
+        continue;
+      }
+      const made = await makeOne(ctx, dir, fresh, p, (latest?.v ?? 0) + 1, redo ? values.note : undefined, advice);
+      if (made) out.push(report(made));
+    }
+    return { project: rel, advice, data: { assets: out } };
   },
 };
