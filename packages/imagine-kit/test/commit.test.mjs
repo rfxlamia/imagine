@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -66,6 +66,21 @@ test("safePath keeps paths inside the project: no absolute, no .., no symlink th
   assert.equal(safePath(p.dir, join(outside, "secret.png")), null);
   assert.equal(safePath(p.dir, "assets/img/link.png"), null);
   assert.equal(safePath(p.dir, "assets/linked-dir/new.png"), null);
+});
+
+test("safePath rejects dangling symlink escapes pointing outside the project", async () => {
+  const p = await makeProject();
+  const outside = mkdtempSync(join(tmpdir(), "imagine-outside-"));
+  const outsideTarget = join(outside, "ghost.png");
+  mkdirSync(join(p.dir, "assets/img"), { recursive: true });
+  symlinkSync(outsideTarget, join(p.dir, "assets/img/dangling.png"));
+  assert.equal(existsSync(outsideTarget), false);
+  const resolved = safePath(p.dir, "assets/img/dangling.png");
+  assert.equal(resolved, null);
+  if (resolved) {
+    writeFileSync(resolved, "escape");
+  }
+  assert.equal(existsSync(outsideTarget), false);
 });
 
 test("manifest schema: ids are plain names and paths stay under assets/ without .. segments", () => {
