@@ -1,0 +1,61 @@
+import { copyFileSync, existsSync, mkdirSync, realpathSync, renameSync, unlinkSync } from "node:fs";
+import { dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { withLock } from "../fsx.mjs";
+import { saveManifest } from "../docs.mjs";
+import { appendJournal } from "../journal.mjs";
+import { saveProject } from "../project.mjs";
+import { sha256File } from "../hash.mjs";
+import { createContext } from "../sources.mjs";
+import { KitError } from "../errors.mjs";
+
+// Resolves a project-relative path to an absolute one, or null when it is absolute, contains "..", or its real location
+// (following symlinks, also through the nearest existing parent for a file that does not exist yet) leaves the project.
+export function safePath(dir, rel) {
+  if (typeof rel !== "string" || rel === "" || isAbsolute(rel) || rel.split(/[\\/]/).includes("..")) return null;
+  const root = realpathSync(dir);
+  const abs = resolve(dir, rel);
+  let probe = abs;
+  while (!existsSync(probe)) probe = dirname(probe);
+  const real = realpathSync(probe);
+  return real === root || real.startsWith(root + sep) ? abs : null;
+}
+
+// Copies a finished file into the project without ever exposing a half-written file at the final path.
+export function placeFile(src, dest) {
+  mkdirSync(dirname(dest), { recursive: true });
+  const tmp = `${dest}.tmp-${process.pid}`;
+  copyFileSync(src, tmp);
+  renameSync(tmp, dest);
+}
+
+// Short critical section: re-read project and manifest under the lock, add one pending version, write manifest then project.
+// A version that appeared meanwhile (another process, or a crash we are resuming) is kept and nothing is overwritten.
+export async function commitAsset(ctx, dir, { entry, source, summary, clearBlocked }) {
+  return withLock(dir, async () => {
+    const fresh = createContext(dir);
+    const manifest = fresh.manifest;
+    const dest = safePath(dir, entry.path);
+    if (!dest) throw new KitError("HARD", `${entry.path} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${entry.id}.v${entry.v}` });
+    if (manifest.assets.some((a) => a.id === entry.id && a.v === entry.v)) return { kept: true };
+    if (source) {
+      if (existsSync(dest)) unlinkSync(dest);
+      placeFile(source, dest);
+    }
+    entry.sha256 = sha256File(dest);
+    manifest.assets.push(entry);
+    saveManifest(dir, manifest);
+    const project = fresh.project;
+    if (clearBlocked) project.blocked = project.blocked.filter((b) => b.step !== clearBlocked);
+    saveProject(dir, project);
+    return { kept: false, journal_id: appendJournal(dir, { command: summary.command, summary: summary.text, now: ctx.now() }) };
+  });
+}
+
+export async function recordBlocked(ctx, dir, { step, command }) {
+  return withLock(dir, async () => {
+    const project = createContext(dir).project;
+    project.blocked = project.blocked.filter((b) => b.step !== step);
+    project.blocked.push({ step, command, since: ctx.now().toISOString() });
+    saveProject(dir, project);
+  });
+}
