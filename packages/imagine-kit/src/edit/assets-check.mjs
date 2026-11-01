@@ -1,10 +1,11 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { err } from "../envelope.mjs";
 import { currentAsset, currentAssets } from "../docs.mjs";
 import { sha256File } from "../hash.mjs";
 import { safePath } from "../img/commit.mjs";
 import { parseValue } from "../story/keys.mjs";
+import { pngInfo } from "../media.mjs";
 import { rasterQ, round2, tierOf } from "../raster.mjs";
 
 // Kinds that the edit project uses; refs only steer image generation.
@@ -18,6 +19,7 @@ export function checkAssets(dir, sctx, derived, { checkCopies = false } = {}) {
   const errors = [];
   const status = new Map(derived.items.map((i) => [i.id, i.status]));
   const used = currentAssets(sctx.manifest).filter((a) => EXPORT_KINDS.includes(a.kind));
+  const parsedPngs = new Map();
 
   // Check every STORY.md shot-declared asset for a current matching-kind, usable, approved version.
   for (const shot of sctx.story?.shots ?? []) {
@@ -68,8 +70,26 @@ export function checkAssets(dir, sctx, derived, { checkCopies = false } = {}) {
     }
     if (["music", "sfx"].includes(a.kind) && [a.license, a.source, a.credit].some(blank)) errors.push(err("HARD-AUDIO-LICENCE", "HARD", item, `${item} needs non-empty license, source and credit`));
     if (a.kind === "img") {
-      const validDims = Number.isFinite(a.w) && a.w > 0 && Number.isFinite(a.h) && a.h > 0;
-      if (!validDims) {
+      let real = null;
+      if (file && existsSync(file)) {
+        try {
+          real = pngInfo(readFileSync(file));
+        } catch {
+          real = null;
+        }
+        if (!real) {
+          errors.push(err("HARD-REAL-RASTER", "HARD", item, `${a.path} cannot be parsed as PNG`));
+        } else if (real.w !== a.w || real.h !== a.h) {
+          errors.push(err("HARD-REAL-RASTER", "HARD", item, `${a.path} is ${real.w}x${real.h} but the manifest records ${a.w}x${a.h}`));
+        }
+      }
+      if (real) parsedPngs.set(item, real);
+
+      const actualW = real ? real.w : a.w;
+      const actualH = real ? real.h : a.h;
+      const validManifestDims = Number.isFinite(a.w) && a.w > 0 && Number.isFinite(a.h) && a.h > 0;
+      const validActualDims = Number.isFinite(actualW) && actualW > 0 && Number.isFinite(actualH) && actualH > 0;
+      if (!validManifestDims || !validActualDims) {
         errors.push(err("HARD-RASTER-TIER", "HARD", item, `${item} has missing or non-positive dimensions`));
       }
       const req = a.required_px;
@@ -79,8 +99,8 @@ export function checkAssets(dir, sctx, derived, { checkCopies = false } = {}) {
       }
       let q = null;
       let tier = null;
-      if (validDims && validReq) {
-        const rawQ = rasterQ(a.w, a.h, req);
+      if (validActualDims && validReq) {
+        const rawQ = rasterQ(actualW, actualH, req);
         if (Number.isFinite(rawQ) && rawQ > 0) {
           q = round2(rawQ);
           tier = tierOf(rawQ);
@@ -104,16 +124,19 @@ export function checkAssets(dir, sctx, derived, { checkCopies = false } = {}) {
   }
   const safeUsed = used.map((a) => {
     if (a.kind !== "img") return a;
+    const real = parsedPngs.get(`${a.id}.v${a.v}`);
+    const actualW = real ? real.w : a.w;
+    const actualH = real ? real.h : a.h;
     const req = a.required_px;
-    const validDims = Number.isFinite(a.w) && a.w > 0 && Number.isFinite(a.h) && a.h > 0;
+    const validActualDims = Number.isFinite(actualW) && actualW > 0 && Number.isFinite(actualH) && actualH > 0;
     const validReq = req && typeof req === "object" && Number.isFinite(req.w) && req.w > 0 && Number.isFinite(req.h) && req.h > 0;
-    if (validDims && validReq) {
-      const rawQ = rasterQ(a.w, a.h, req);
+    if (validActualDims && validReq) {
+      const rawQ = rasterQ(actualW, actualH, req);
       if (Number.isFinite(rawQ) && rawQ > 0) {
-        return { ...a, q: round2(rawQ), tier: tierOf(rawQ) };
+        return { ...a, w: actualW, h: actualH, q: round2(rawQ), tier: tierOf(rawQ) };
       }
     }
-    return { ...a, q: undefined, tier: undefined };
+    return { ...a, ...(real ? { w: real.w, h: real.h } : {}), q: undefined, tier: undefined };
   });
   return { errors, used: safeUsed };
 }

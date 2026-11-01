@@ -283,3 +283,49 @@ t("render --final inherits checkAssets: rejects replan tier even if forged to na
   assert.equal(r3.exit, 1);
   assert.ok(r3.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
 });
+
+t("HARD-REAL-RASTER: render --final rejects forged manifest dimensions and malformed PNG bytes", async () => {
+  // Case 1: forged manifest dimensions (64x64 file claimed as 1536x1024)
+  {
+    const p = await renderProject();
+    await cli(p.cwd, "gate", "G6", "approve", "--quote", "edit ok");
+    const { setManifest } = await import("./helpers/fixture.mjs");
+    setManifest(p.dir, (m) => {
+      Object.assign(m.assets.find((a) => a.id === "bg"), {
+        w: 1536,
+        h: 1024,
+        required_px: { w: 1536, h: 1024 },
+        tier: "native",
+        q: 1.0,
+      });
+    });
+    const r = await p.render({}, "render", "--final");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-REAL-RASTER" && e.item === "bg.v1"));
+    assert.match(r.env.errors.find((e) => e.rule === "HARD-REAL-RASTER").message, /64x64 but the manifest records 1536x1024/);
+    const postFiles = existsSync(join(p.dir, "post")) ? readdirSync(join(p.dir, "post")) : [];
+    assert.equal(postFiles.length, 0, "no MP4 published on forged dimensions");
+  }
+
+  // Case 2: malformed PNG bytes
+  {
+    const p = await renderProject();
+    await cli(p.cwd, "gate", "G6", "approve", "--quote", "edit ok");
+    const { setManifest } = await import("./helpers/fixture.mjs");
+    const bgPath = join(p.dir, "assets/img/bg.v1.png");
+    writeFileSync(bgPath, Buffer.from("not a valid png file header at all"));
+    const copyPath = join(p.dir, "edit/assets/bg.v1.png");
+    if (existsSync(copyPath)) writeFileSync(copyPath, Buffer.from("not a valid png file header at all"));
+    setManifest(p.dir, (m) => {
+      const bg = m.assets.find((a) => a.id === "bg");
+      bg.sha256 = sha256File(bgPath);
+    });
+    await cli(p.cwd, "gate", "G5b", "approve", "--scope", "asset:bg.v1", "--quote", "ok");
+    const r = await p.render({}, "render", "--final");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-REAL-RASTER" && e.item === "bg.v1"));
+    assert.match(r.env.errors.find((e) => e.rule === "HARD-REAL-RASTER").message, /cannot be parsed as PNG/);
+    const postFiles = existsSync(join(p.dir, "post")) ? readdirSync(join(p.dir, "post")) : [];
+    assert.equal(postFiles.length, 0, "no MP4 published on malformed PNG");
+  }
+});

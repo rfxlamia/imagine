@@ -291,3 +291,39 @@ test("HARD-ASSETS-APPROVED: export-hf validates every STORY.md shot-declared ass
   assert.equal(r4.exit, 0, JSON.stringify(r4.env.errors));
   assert.equal(existsSync(join(p4.dir, "edit/assets/mara_ref.v1.png")), false, "refs remain inputs and are not copied into edit/assets");
 });
+
+test("HARD-REAL-RASTER: export-hf rejects forged manifest dimensions when actual PNG dimensions differ", async () => {
+  const p = await editProject();
+  await addAudio(p);
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    bg.w = 1536;
+    bg.h = 1024;
+    bg.required_px = { w: 1536, h: 1024 };
+    bg.tier = "native";
+    bg.q = 1.0;
+  });
+  const r = await p.run({}, "export-hf");
+  assert.equal(r.exit, 1);
+  assert.ok(r.env.errors.some((e) => e.rule === "HARD-REAL-RASTER" && e.item === "bg.v1"));
+  assert.match(r.env.errors.find((e) => e.rule === "HARD-REAL-RASTER").message, /64x64 but the manifest records 1536x1024/);
+  assert.equal(existsSync(join(p.dir, "edit/assets/bg.v1.png")), false, "forged asset must not be exported");
+});
+
+test("HARD-REAL-RASTER: export-hf rejects malformed PNG bytes even if hash matches manifest", async () => {
+  const p = await editProject();
+  await addAudio(p);
+  const bgPath = join(p.dir, "assets/img/bg.v1.png");
+  writeFileSync(bgPath, Buffer.from("not a valid png file header at all"));
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    bg.sha256 = sha256File(bgPath);
+  });
+  const g5b = await cli(p.cwd, "gate", "G5b", "approve", "--scope", "asset:bg.v1", "--quote", "ok");
+  assert.equal(g5b.exit, 0);
+  const r = await p.run({}, "export-hf");
+  assert.equal(r.exit, 1);
+  assert.ok(r.env.errors.some((e) => e.rule === "HARD-REAL-RASTER" && e.item === "bg.v1"));
+  assert.match(r.env.errors.find((e) => e.rule === "HARD-REAL-RASTER").message, /cannot be parsed as PNG/);
+  assert.equal(existsSync(join(p.dir, "edit/assets/bg.v1.png")), false, "malformed PNG must not be exported");
+});
