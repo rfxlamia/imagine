@@ -65,8 +65,8 @@ test("AC-06: redoing one voice line by seed re-opens only the previz of the shot
 
 t("AC-08: a batch that stops half way resumes without regenerating or duplicating the finished asset", async () => {
   const plan = { assets: [
-    { id: "a", kind: "img", prompt: "First plate", framing: "wide", size: "1536x1024" },
-    { id: "b", kind: "img", prompt: "Second plate", framing: "wide", size: "1536x1024" },
+    { id: "a", kind: "img", prompt: "First plate", framing: "wide", size: "1536x1024", required_px: { w: 1536, h: 1024 } },
+    { id: "b", kind: "img", prompt: "Second plate", framing: "wide", size: "1536x1024", required_px: { w: 1536, h: 1024 } },
   ] };
   const p = await imgProject(plan);
   const broken = await p.run({ FAKE_CODEX_MODES: "ok,fail" }, "img", "--batch", "a,b");

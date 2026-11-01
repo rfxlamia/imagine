@@ -22,7 +22,7 @@ export async function editProject({ shots = SHOTS(), mode = "narrated" } = {}) {
   await writeStory(p.dir, 1, shots);
   await approveThrough(p.cwd, "G4");
   makePng(join(p.dir, "assets/img/bg.v1.png"), 64, 64);
-  setManifest(p.dir, (m) => { m.assets.push(asset("bg", "img", 1, { path: "assets/img/bg.v1.png", sha256: sha256File(join(p.dir, "assets/img/bg.v1.png")), w: 64, h: 64 })); });
+  setManifest(p.dir, (m) => { m.assets.push(asset("bg", "img", 1, { path: "assets/img/bg.v1.png", sha256: sha256File(join(p.dir, "assets/img/bg.v1.png")), w: 64, h: 64, required_px: { w: 64, h: 64 }, q: 1, tier: "native" })); });
   const g5b = await cliWith(p.cwd, {}, "gate", "G5b", "approve", "--quote", "bg ok");
   if (g5b.exit !== 0) throw new Error(JSON.stringify(g5b.env.errors));
   for (const s of shots) {

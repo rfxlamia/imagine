@@ -4,9 +4,10 @@ import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync,
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sha256File } from "../src/hash.mjs";
-import { asset, cli, getManifest, put, setManifest, shot } from "./helpers/fixture.mjs";
+import { asset, cli, getManifest, put, setManifest, shot, snapshot } from "./helpers/fixture.mjs";
 import { addAudio, editProject } from "./helpers/edit.mjs";
 import { encodeWav } from "./helpers/wav.mjs";
+import { makePng } from "./helpers/media.mjs";
 
 test("export-hf syncs approved assets into edit/assets and writes STORYBOARD.md; data is {shots, assets}", async () => {
   const p = await editProject();
@@ -128,4 +129,165 @@ test("HARD-ASSETS-APPROVED: symlinking edit/ outside the project fails before cr
   assert.ok(r2.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED" && /outside the project/.test(e.message)));
   assert.equal(existsSync(join(outside2, "assets")), false, "outside assets directory must not be created in no-asset project");
   assert.equal(existsSync(join(outside2, "STORYBOARD.md")), false, "outside STORYBOARD.md must not be created in no-asset project");
+});
+
+test("HARD-RASTER-TIER: export-hf recomputes q and rejects replan tier even when stored tier is forged to native", async () => {
+  const p = await editProject();
+  await addAudio(p, { music: false });
+  setManifest(p.dir, (m) => {
+    Object.assign(m.assets.find((a) => a.id === "bg"), {
+      w: 64,
+      h: 64,
+      required_px: { w: 2172, h: 1188 },
+      tier: "native",
+      q: 1.0,
+    });
+  });
+  const r = await p.run({}, "export-hf");
+  assert.equal(r.exit, 1);
+  assert.ok(r.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+});
+
+test("HARD-RASTER-TIER: export-hf rejects missing required_px even if manifest tier is forged to native", async () => {
+  const p = await editProject();
+  await addAudio(p, { music: false });
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    delete bg.required_px;
+    bg.tier = "native";
+    bg.q = 1.0;
+  });
+  const r = await p.run({}, "export-hf");
+  assert.equal(r.exit, 1);
+  assert.ok(r.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+  assert.match(r.env.errors.find((e) => e.rule === "HARD-RASTER-TIER").message, /missing or non-positive required_px/);
+});
+
+test("HARD-RASTER-TIER: export-hf rejects zero or non-finite required_px even if manifest tier is forged to native", async () => {
+  const p = await editProject();
+  await addAudio(p, { music: false });
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    bg.required_px = { w: 0, h: 0 };
+    bg.tier = "native";
+    bg.q = 1.0;
+  });
+  const r = await p.run({}, "export-hf");
+  assert.equal(r.exit, 1);
+  assert.ok(r.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+  assert.match(r.env.errors.find((e) => e.rule === "HARD-RASTER-TIER").message, /missing or non-positive required_px/);
+
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    bg.required_px = { w: -1, h: 64 };
+    bg.tier = "native";
+    bg.q = 1.0;
+  });
+  const r2 = await p.run({}, "export-hf");
+  assert.equal(r2.exit, 1);
+  assert.ok(r2.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+  assert.match(r2.env.errors.find((e) => e.rule === "HARD-RASTER-TIER").message, /missing or non-positive required_px/);
+
+  // Directly verify checkAssets handles non-finite values (NaN / Infinity) without throwing
+  const { checkAssets } = await import("../src/edit/assets-check.mjs");
+  const { createContext } = await import("../src/sources.mjs");
+  const { deriveAll } = await import("../src/derive.mjs");
+  const sctx = createContext(p.dir);
+  const derived = deriveAll(sctx);
+  const bgAsset = sctx.manifest.assets.find((a) => a.id === "bg");
+  bgAsset.required_px = { w: NaN, h: 64 };
+  bgAsset.tier = "native";
+  bgAsset.q = 1.0;
+  const checkResult = checkAssets(p.dir, sctx, derived);
+  assert.ok(checkResult.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+  const usedBg = checkResult.used.find((a) => a.id === "bg");
+  assert.equal(usedBg.q, undefined);
+  assert.equal(usedBg.tier, undefined);
+});
+
+test("HARD-RASTER-TIER: export-hf rejects non-positive or missing dimensions even if manifest tier is forged to native", async () => {
+  const p = await editProject();
+  await addAudio(p, { music: false });
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    bg.w = 0;
+    bg.tier = "native";
+    bg.q = 1.0;
+  });
+  const r = await p.run({}, "export-hf");
+  assert.equal(r.exit, 1);
+  assert.ok(r.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+});
+
+test("export-hf writes computed q and tier to STORYBOARD.md, ignoring forged manifest q and tier", async () => {
+  const p = await editProject();
+  await addAudio(p);
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    bg.required_px = { w: 83, h: 83 }; // 64 / 83 = 0.771 -> soft
+    bg.tier = "native"; // forged
+    bg.q = 1.0; // forged
+  });
+  const r = await p.run({}, "export-hf");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  const doc = readFileSync(join(p.dir, "edit/STORYBOARD.md"), "utf8");
+  assert.match(doc, /\| bg \| img \| v1 \| edit\/assets\/bg\.v1\.png \| 0\.77 soft \|/);
+  assert.doesNotMatch(doc, /\| bg \| img \| v1 \| edit\/assets\/bg\.v1\.png \| 1 native \|/);
+});
+
+test("HARD-ASSETS-APPROVED: export-hf validates every STORY.md shot-declared asset and refs are not copied", async () => {
+  // Case 1: shot declares an asset missing from manifest
+  const missingShot = [
+    shot("s01", { scene: "stairs", duration_est: "6s", duration: "6s", voiceover: "[L01, L02@2.5]", assets: "[bg:img:1536x1024, ghost:img:1024x1024]", framing: "wide" }, "Stairs"),
+    shot("s02", { scene: "lamp", duration_est: "7s", duration: "7s", voiceover: "[L03]" }, "Lamp"),
+  ];
+  const p1 = await editProject({ shots: missingShot });
+  await addAudio(p1);
+  const r1 = await p1.run({}, "export-hf");
+  assert.equal(r1.exit, 1);
+  assert.ok(r1.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED" && e.item === "ghost"));
+
+  // Case 2: shot declares an asset whose only version is rejected
+  const rejectedShot = [
+    shot("s01", { scene: "stairs", duration_est: "6s", duration: "6s", voiceover: "[L01, L02@2.5]", assets: "[bg:img:1536x1024, rej:img:1024x1024]", framing: "wide" }, "Stairs"),
+    shot("s02", { scene: "lamp", duration_est: "7s", duration: "7s", voiceover: "[L03]" }, "Lamp"),
+  ];
+  const p2 = await editProject({ shots: rejectedShot });
+  await addAudio(p2);
+  setManifest(p2.dir, (m) => {
+    m.assets.push(asset("rej", "img", 1, { status: "rejected" }));
+  });
+  await snapshot(p2.dir, "asset:rej.v1", [], { status: "approved", kind: "asset" });
+  const r2 = await p2.run({}, "export-hf");
+  assert.equal(r2.exit, 1);
+  assert.ok(r2.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED" && e.item === "rej"));
+
+  // Case 3: shot declares an asset kind mismatch
+  const mismatchShot = [
+    shot("s01", { scene: "stairs", duration_est: "6s", duration: "6s", voiceover: "[L01, L02@2.5]", assets: "[bg:vo]", framing: "wide" }, "Stairs"),
+    shot("s02", { scene: "lamp", duration_est: "7s", duration: "7s", voiceover: "[L03]" }, "Lamp"),
+  ];
+  const p3 = await editProject({ shots: mismatchShot });
+  await addAudio(p3);
+  const r3 = await p3.run({}, "export-hf");
+  assert.equal(r3.exit, 1);
+  assert.ok(r3.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED" && e.item === "bg"));
+
+  // Case 4: shot declares a valid ref asset - passes and ref is NOT copied to edit/assets/
+  const refShot = [
+    shot("s01", { scene: "stairs", duration_est: "6s", duration: "6s", voiceover: "[L01, L02@2.5]", assets: "[bg:img:1536x1024, mara_ref:ref:1024x1536]", framing: "wide" }, "Stairs"),
+    shot("s02", { scene: "lamp", duration_est: "7s", duration: "7s", voiceover: "[L03]" }, "Lamp"),
+  ];
+  const p4 = await editProject({ shots: refShot });
+  await addAudio(p4);
+  const refFile = join(p4.dir, "assets/refs/mara_ref.v1.png");
+  makePng(refFile, 64, 64);
+  setManifest(p4.dir, (m) => {
+    m.assets.push(asset("mara_ref", "ref", 1, { path: "assets/refs/mara_ref.v1.png", sha256: sha256File(refFile), status: "approved" }));
+  });
+  const g5r = await cli(p4.cwd, "gate", "G5r", "approve", "--quote", "ref ok");
+  assert.equal(g5r.exit, 0);
+  const r4 = await p4.run({}, "export-hf");
+  assert.equal(r4.exit, 0, JSON.stringify(r4.env.errors));
+  assert.equal(existsSync(join(p4.dir, "edit/assets/mara_ref.v1.png")), false, "refs remain inputs and are not copied into edit/assets");
 });

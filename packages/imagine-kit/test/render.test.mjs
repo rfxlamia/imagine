@@ -241,3 +241,45 @@ t("unique temp render output per invocation and cleanup on failure", async () =>
     assert.deepEqual(tmpFiles, [], "temp render files must be cleaned up");
   }
 });
+
+t("render --final inherits checkAssets: rejects replan tier even if forged to native, and rejects missing shot-declared assets", async () => {
+  const p = await renderProject();
+  await cli(p.cwd, "gate", "G6", "approve", "--quote", "edit ok");
+
+  // Replan raster with forged native tier fails render --final
+  const { setManifest } = await import("./helpers/fixture.mjs");
+  setManifest(p.dir, (m) => {
+    Object.assign(m.assets.find((a) => a.id === "bg"), {
+      w: 64,
+      h: 64,
+      required_px: { w: 2172, h: 1188 },
+      tier: "native",
+      q: 1.0,
+    });
+  });
+  const r1 = await p.render({}, "render", "--final");
+  assert.equal(r1.exit, 1);
+  assert.ok(r1.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+
+  // Missing required_px with forged native tier fails render --final
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    delete bg.required_px;
+    bg.tier = "native";
+    bg.q = 1.0;
+  });
+  const r2 = await p.render({}, "render", "--final");
+  assert.equal(r2.exit, 1);
+  assert.ok(r2.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+
+  // Zero required_px with forged native tier fails render --final
+  setManifest(p.dir, (m) => {
+    const bg = m.assets.find((a) => a.id === "bg");
+    bg.required_px = { w: 0, h: 0 };
+    bg.tier = "native";
+    bg.q = 1.0;
+  });
+  const r3 = await p.render({}, "render", "--final");
+  assert.equal(r3.exit, 1);
+  assert.ok(r3.env.errors.some((e) => e.rule === "HARD-RASTER-TIER" && e.item === "bg.v1"));
+});
