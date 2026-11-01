@@ -125,8 +125,12 @@ export default {
     }
     await runWorker(ctx, plan.map((p) => ({ id: p.id, model: p.voice.model, config: p.voice.config, temperature: p.voice.temperature, eos_threshold: p.voice.eos_threshold,
       voice: p.voice.voice, voice_is_file: p.voice.voice_is_file, text: p.text, seed: p.seed, out: p.out })));
+    const validated = [];
     for (const p of plan) {
       const info = checkWav(p.out, p.id);
+      validated.push({ p, info });
+    }
+    for (const { p, info } of validated) {
       const entry = { id: p.id, kind: "vo", v: p.v, path: `assets/vo/${p.id}.v${p.v}.wav`, sha256: "0".repeat(64), status: "pending", line: p.id,
         text: p.u.text, tts_text: p.text, voice: p.voice.source, seed: p.seed, take: p.v, params_hash: paramsHash(p.voice, p.seed, p.text),
         duration_s: info.duration_s, listen_status: "pending", ...(values.redo === p.id ? { note: values.note } : {}) };
