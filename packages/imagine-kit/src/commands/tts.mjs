@@ -9,7 +9,7 @@ import { sha256, sha256File } from "../hash.mjs";
 import { wavInfo } from "../media.mjs";
 import { resolveProject } from "../project.mjs";
 import { createContext } from "../sources.mjs";
-import { commitAsset } from "../img/commit.mjs";
+import { commitAsset, safePath } from "../img/commit.mjs";
 import { applyLexicon, resolveVoice, voiceConfig } from "../tts/voices.mjs";
 import { runWorker } from "../tts/worker.mjs";
 
@@ -57,7 +57,9 @@ export default {
         const v = resolveVoice(dir, { ...base, source }, { language, item: values.line });
         const label = basename(source.replace(/^[a-z]+:/, ""), extname(source)).replace(/[^A-Za-z0-9_-]/g, "-");
         const seed = v.seed_base;
-        const out = join(dir, "tmp", "audition", `${speakerOf(u)}-${label}.wav`);
+        const relOut = join("tmp", "audition", `${speakerOf(u)}-${label}.wav`);
+        const out = safePath(dir, relOut);
+        if (!out) throw new KitError("HARD", `${relOut} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: values.line });
         jobs.push({ id: `${values.line}:${label}`, model: v.model, config: v.config, temperature: v.temperature, eos_threshold: v.eos_threshold, voice: v.voice, voice_is_file: v.voice_is_file, text: lexicon(u), seed, out });
         meta.push({ v, seed, out, text: lexicon(u) });
       }
@@ -75,12 +77,17 @@ export default {
     if (values.redo !== undefined && !ids.includes(known(values.redo))) throw new UsageError("--redo must name one of the requested lines");
 
     if (values.scratch) {
+      const relDurations = join("tmp", "scratch-vo", "durations.yaml");
+      const safeDurations = safePath(dir, relDurations);
+      if (!safeDurations) throw new KitError("HARD", `${relDurations} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: "durations.yaml" });
       const jobs = [];
       const meta = [];
       for (const id of ids) {
         const u = units[id];
         const v = resolveVoice(dir, voiceConfig(sctx.bible, u.speaker) ?? DEFAULT_VOICE, { language, item: id });
-        const out = join(dir, "tmp", "scratch-vo", `${id}.wav`);
+        const relOut = join("tmp", "scratch-vo", `${id}.wav`);
+        const out = safePath(dir, relOut);
+        if (!out) throw new KitError("HARD", `${relOut} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: id });
         jobs.push({ id, model: v.model, config: v.config, temperature: v.temperature, eos_threshold: v.eos_threshold, voice: v.voice, voice_is_file: v.voice_is_file, text: lexicon(u), seed: v.seed_base, out });
         meta.push({ id, v, seed: v.seed_base, out, text: lexicon(u) });
       }
@@ -90,7 +97,8 @@ export default {
         return report(m.id, 0, m.seed, info.duration_s, sha256File(m.out), paramsHash(m.v, m.seed, m.text));
       });
       await withLock(dir, async () => {
-        const file = join(dir, "tmp", "scratch-vo", "durations.yaml");
+        const file = safePath(dir, relDurations);
+        if (!file) throw new KitError("HARD", `${relDurations} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: "durations.yaml" });
         const merged = existsSync(file) ? readYaml(file) ?? {} : {};
         for (const t of takes) merged[t.line] = t.duration_s;
         writeYamlAtomic(file, Object.fromEntries(Object.entries(merged).sort(([a], [b]) => a.localeCompare(b))));
@@ -121,7 +129,13 @@ export default {
       }
       const v = (latest?.v ?? 0) + 1;
       const seed = voice.seed_base + v;
-      plan.push({ id, u, voice, v, seed, text: lexicon(u), out: join(dir, "tmp", "tts", `${id}.v${v}.wav`) });
+      const relOut = join("tmp", "tts", `${id}.v${v}.wav`);
+      const out = safePath(dir, relOut);
+      if (!out) throw new KitError("HARD", `${relOut} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${id}.v${v}` });
+      const finalRel = `assets/vo/${id}.v${v}.wav`;
+      const finalPath = safePath(dir, finalRel);
+      if (!finalPath) throw new KitError("HARD", `${finalRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${id}.v${v}` });
+      plan.push({ id, u, voice, v, seed, text: lexicon(u), out });
     }
     await runWorker(ctx, plan.map((p) => ({ id: p.id, model: p.voice.model, config: p.voice.config, temperature: p.voice.temperature, eos_threshold: p.voice.eos_threshold,
       voice: p.voice.voice, voice_is_file: p.voice.voice_is_file, text: p.text, seed: p.seed, out: p.out })));

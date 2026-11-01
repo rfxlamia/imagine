@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import YAML from "yaml";
 import { sha256File } from "../src/hash.mjs";
 import { wavInfo } from "../src/media.mjs";
@@ -146,4 +147,164 @@ test("HARD-HAS-VOICE-CLONING: a file voice outside the project or missing is HAR
   const ok = await p.run({}, "tts", "L01");
   assert.equal(ok.exit, 0, JSON.stringify(ok.env.errors));
   assert.equal(p.calls().at(-1).request.jobs[0].voice_is_file, true);
+});
+
+test("Finding A: symlink escapes at tmp, subdirectories, and leaves fail closed with HARD-ASSETS-APPROVED without calling worker or mutating external files", async () => {
+  // Case 1: tmp is a symlink to an external directory
+  {
+    const p = await ttsProject({ upTo: "G1" });
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-tmp-"));
+    const sentinel = join(outside, "sentinel.txt");
+    writeFileSync(sentinel, "original-sentinel");
+    rmSync(join(p.dir, "tmp"), { recursive: true, force: true });
+    symlinkSync(outside, join(p.dir, "tmp"));
+
+    const r = await p.run({}, "tts", "--all", "--scratch");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "fake worker must not be called");
+    assert.equal(readFileSync(sentinel, "utf8"), "original-sentinel", "external sentinel must not be mutated");
+    assert.equal(existsSync(join(outside, "scratch-vo")), false, "outside scratch-vo directory must not be created");
+  }
+
+  // Case 2a: tmp/scratch-vo symlink escape
+  {
+    const p = await ttsProject({ upTo: "G1" });
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-scratch-"));
+    const sentinel = join(outside, "sentinel.txt");
+    writeFileSync(sentinel, "original-sentinel");
+    mkdirSync(join(p.dir, "tmp"), { recursive: true });
+    rmSync(join(p.dir, "tmp", "scratch-vo"), { recursive: true, force: true });
+    symlinkSync(outside, join(p.dir, "tmp", "scratch-vo"));
+
+    const r = await p.run({}, "tts", "--scratch", "L01");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "fake worker must not be called");
+    assert.equal(readFileSync(sentinel, "utf8"), "original-sentinel", "external sentinel must not be mutated");
+    assert.equal(existsSync(join(outside, "L01.wav")), false);
+    assert.equal(existsSync(join(outside, "durations.yaml")), false);
+  }
+
+  // Case 2b: tmp/audition symlink escape
+  {
+    const p = await ttsProject();
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-audition-"));
+    const sentinel = join(outside, "sentinel.txt");
+    writeFileSync(sentinel, "original-sentinel");
+    mkdirSync(join(p.dir, "tmp"), { recursive: true });
+    rmSync(join(p.dir, "tmp", "audition"), { recursive: true, force: true });
+    symlinkSync(outside, join(p.dir, "tmp", "audition"));
+
+    const r = await p.run({}, "tts", "--audition", "--voices", "eve", "--line", "L01");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "fake worker must not be called");
+    assert.equal(readFileSync(sentinel, "utf8"), "original-sentinel", "external sentinel must not be mutated");
+    assert.equal(existsSync(join(outside, "narrator-eve.wav")), false);
+  }
+
+  // Case 2c: tmp/tts symlink escape
+  {
+    const p = await ttsProject();
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-tts-"));
+    const sentinel = join(outside, "sentinel.txt");
+    writeFileSync(sentinel, "original-sentinel");
+    mkdirSync(join(p.dir, "tmp"), { recursive: true });
+    rmSync(join(p.dir, "tmp", "tts"), { recursive: true, force: true });
+    symlinkSync(outside, join(p.dir, "tmp", "tts"));
+
+    const r = await p.run({}, "tts", "L01");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "fake worker must not be called");
+    assert.equal(readFileSync(sentinel, "utf8"), "original-sentinel", "external sentinel must not be mutated");
+    assert.equal(existsSync(join(outside, "L01.v1.wav")), false);
+  }
+
+  // Case 3a: tmp/scratch-vo/durations.yaml leaf symlink escape
+  {
+    const p = await ttsProject({ upTo: "G1" });
+    mkdirSync(join(p.dir, "tmp", "scratch-vo"), { recursive: true });
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-dur-leaf-"));
+    const sentinel = join(outside, "sentinel.yaml");
+    writeFileSync(sentinel, "safe: original");
+    rmSync(join(p.dir, "tmp", "scratch-vo", "durations.yaml"), { force: true });
+    symlinkSync(sentinel, join(p.dir, "tmp", "scratch-vo", "durations.yaml"));
+
+    const r = await p.run({}, "tts", "--scratch", "L01");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "fake worker must not be called when durations destination escapes");
+    assert.equal(readFileSync(sentinel, "utf8"), "safe: original", "sentinel must remain untouched");
+  }
+
+  // Case 3b: tmp/scratch-vo/L01.wav leaf symlink escape
+  {
+    const p = await ttsProject({ upTo: "G1" });
+    mkdirSync(join(p.dir, "tmp", "scratch-vo"), { recursive: true });
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-leaf-"));
+    const sentinel = join(outside, "sentinel.wav");
+    writeFileSync(sentinel, "original wav sentinel");
+    rmSync(join(p.dir, "tmp", "scratch-vo", "L01.wav"), { force: true });
+    symlinkSync(sentinel, join(p.dir, "tmp", "scratch-vo", "L01.wav"));
+
+    const r = await p.run({}, "tts", "--scratch", "L01");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "fake worker must not be called");
+    assert.equal(readFileSync(sentinel, "utf8"), "original wav sentinel");
+  }
+
+  // Case 3c: batch pre-validation: earlier job (L01) is valid, later job (L02) leaf escapes
+  {
+    const p = await ttsProject({ upTo: "G1" });
+    mkdirSync(join(p.dir, "tmp", "scratch-vo"), { recursive: true });
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-batch-"));
+    const sentinel = join(outside, "sentinel.wav");
+    writeFileSync(sentinel, "original sentinel");
+    rmSync(join(p.dir, "tmp", "scratch-vo", "L02.wav"), { force: true });
+    symlinkSync(sentinel, join(p.dir, "tmp", "scratch-vo", "L02.wav"));
+
+    const r = await p.run({}, "tts", "--scratch", "L01,L02");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "worker must not be called for entire batch if any destination escapes");
+    assert.equal(existsSync(join(p.dir, "tmp/scratch-vo/L01.wav")), false, "valid earlier job must not write if later job fails validation");
+    assert.equal(readFileSync(sentinel, "utf8"), "original sentinel");
+  }
+
+  // Case 3d: audition leaf symlink escape
+  {
+    const p = await ttsProject();
+    mkdirSync(join(p.dir, "tmp", "audition"), { recursive: true });
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-aud-leaf-"));
+    const sentinel = join(outside, "sentinel.wav");
+    writeFileSync(sentinel, "original sentinel");
+    rmSync(join(p.dir, "tmp", "audition", "narrator-eve.wav"), { force: true });
+    symlinkSync(sentinel, join(p.dir, "tmp", "audition", "narrator-eve.wav"));
+
+    const r = await p.run({}, "tts", "--audition", "--voices", "eve", "--line", "L01");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "fake worker must not be called");
+    assert.equal(readFileSync(sentinel, "utf8"), "original sentinel");
+  }
+
+  // Case 3e: production worker WAV leaf symlink escape
+  {
+    const p = await ttsProject();
+    mkdirSync(join(p.dir, "tmp", "tts"), { recursive: true });
+    const outside = mkdtempSync(join(tmpdir(), "imagine-tts-outside-prod-leaf-"));
+    const sentinel = join(outside, "sentinel.wav");
+    writeFileSync(sentinel, "original sentinel");
+    rmSync(join(p.dir, "tmp", "tts", "L01.v1.wav"), { force: true });
+    symlinkSync(sentinel, join(p.dir, "tmp", "tts", "L01.v1.wav"));
+
+    const r = await p.run({}, "tts", "L01");
+    assert.equal(r.exit, 1);
+    assert.ok(r.env.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+    assert.equal(p.calls().length, 0, "fake worker must not be called");
+    assert.equal(readFileSync(sentinel, "utf8"), "original sentinel");
+  }
 });
