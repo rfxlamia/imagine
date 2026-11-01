@@ -16,6 +16,7 @@ A source reference is `kind:rest`. `status`, `gate` and `patch apply` resolve it
 | `story:sha` | sha256 of `STORY.md` |
 | `asset:<id>.v<N>` | the manifest entry's `sha256` if `N` is the current version of `<id>`, otherwise the literal `superseded` |
 | `clock:<key>` | `label:sha256`; labels below |
+| `file:<relpath>` | sha256 of the file's raw bytes. Only `assets/plan.yaml`, `edit/index.html`, `edit/index.motion.json` and `edit/compositions/<name>.html` resolve; any other path (absolute, containing `..`, or a symlink that leaves the project) is unresolvable |
 
 Canonical JSON: keys sorted recursively, no whitespace, `undefined` dropped.
 
@@ -36,7 +37,7 @@ Regex: `^(?:[-*]\s+)?([LT]\d{2})(?:\s+\[([a-z0-9-]+)\])?:\s+(\S.*?)\s*$`. Other 
 
 ## 3. Bible paths
 
-Dotted path into the parsed `bible.yaml`. When a segment meets an array, the element whose `id` (or `term`, for `pronunciation`) equals the segment is taken: `characters.mara.hair`, `locations.lighthouse`, `pronunciation.Skerryvore`. Gate G2 items: for each top-level key, an array of objects with `id` gives `bible:<key>.<id>` per element; any other non-empty value gives `bible:<key>`.
+Dotted path into the parsed `bible.yaml`. When a segment meets an array, the element whose `id` (or `term`, for `pronunciation`) equals the segment is taken: `characters.mara.hair`, `locations.lighthouse`, `pronunciation.Skerryvore`. Entity ids in `bible.yaml` must match `[A-Za-z0-9][A-Za-z0-9_-]*` (no dot): a path segment cannot tell an id from a sub-property, so a dotted id is a HARD error at `gate G2` and in `validate story` (HARD-ENTITIES-EXIST). Gate G2 items: for each top-level key, an array of objects with `id` gives `bible:<key>.<id>` per element; any other non-empty value gives `bible:<key>`.
 
 ## 4. Style anchors
 
@@ -72,6 +73,7 @@ Narrative paragraph.
 - Key sets (section 5.3): storyboard `scene duration_est voiceover characters location framing composition layers assets reads` (+ heading id/title + narrative), previz `duration camera parallax motion beats transition_in sound poster motion_asserts`, fx `fx grade overlays fx_notes`, edit `src status`.
 - Value types: seconds `4.5s` (`duration_est duration poster`); list `[a, b]` (`characters layers overlays`: ids `[A-Za-z0-9][A-Za-z0-9._-]*`); `location`: one id; `voiceover`: list of `L##` or `T##` with optional `@<offset seconds>` (the key places script units of either kind); `beats`: list of seconds; `assets`: list of `<id>:ref|img:<w>x<h>` or `<id>:vo|music|sfx`; `fx`: list of `id=tool:name[;range=a-b][;needs_final_asset=true|false][;fallback=x][;params=x][;unsupported=true]` (no `,` `;` `]` inside values; tools `shader vfx-chain media-treatment registry css-blend css-mask`; WebGL tools `shader` and `registry` need a `fallback`); `status`: `outline|built|animated`; every other key is free single-line text.
 - Stage block of a shot: the bullets of that stage; the storyboard block also includes the title and narrative.
+- Phase 1 (WP2, 2026-11-01): the edit keys `src` and `status` are reserved and never written. Edit state is the project item `edit:<sNN>` (section 6), so `STORY.md` stays byte-identical across `stage-shot`, `promote-shot`, `export-hf` and `render`.
 - Integrity: `STORY.md` must equal `.history/STORY.r<imagine_rev>.md`. Anything else is `KEY_NOT_OWNED` (HARD-STORY-WRITERS). This is tamper-evidence against accidental edits; an agent that deliberately edits both files is not stopped by the CLI (planning subagents have no Write tool, which is the hard guarantee).
 
 ## 6. project.yaml
@@ -89,13 +91,13 @@ unit:L01:
   patch:  { file: stage/previz/r1.patch.yaml, sha256: <hash>, brief_hash: <optional> }
 ```
 
-Item ids: `g0`, `unit:<id>`, `bible:<path>`, `style:<anchor>`, `g4`, `g5a`, `g6`, `g7`, `asset:<id>.v<N>`, `shot:<sNN>.<stage>` (written by `patch apply`); WP2 adds `vo:<line>`, `edit:<sNN>`, `render:<name>` using the same record shape.
+Item ids: `g0`, `unit:<id>`, `bible:<path>`, `style:<anchor>`, `g4`, `g5a`, `g6`, `g7`, `asset:<id>.v<N>`, `shot:<sNN>.<stage>` (written by `patch apply`); WP2 adds `edit:<sNN>` (written by `promote-shot`) and `render:<name>` (written by `render`: `render:draft` for the draft, `render:<slug>.v<N>` for a final) using the same record shape (`kind` `edit` or `render`, `status` `proposed`). `vo:<line>` is not used in Phase 1: a VO take is a manifest entry (kind `vo`, id = the line id such as `L02`) approved through G5a.
 
 - Optional top-level `pending`: `{ rev: <N+1>, prev: { <id>: <record or null> } }`, written atomically with new records during `patch apply`; if a crash occurs before the STORY.md commit, the next apply restores `prev` entries (PROC-ATOMIC-COMMIT).
 
 ## 7. Derived status
 
-`status` never writes. An item whose recorded status is `approved` or `proposed` is **stale** when (a) any `inputs` entry resolves to a different value than recorded (an unresolvable source counts as `missing`), or (b) any `inputs` key is itself the id of a stale item (propagation, transitive). `watch` mismatches are listed as hints and never change the status. Gate state: `approved` (all items approved), `reopened` (some item stale), `empty` (no items yet), else `open`.
+`status` never writes. An item whose recorded status is `approved` or `proposed` is **stale** when (a) any `inputs` entry resolves to a different value than recorded (an unresolvable source counts as `missing`), or (b) any `inputs` key is itself the id of a stale item (propagation, transitive), or (c) an `inputs` entry recorded as `item` names an item that is now `rejected` or has no record at all (reason `upstream`). A `pending` or `proposed` upstream item stales nothing by itself. `watch` mismatches are listed as hints and never change the status. Gate state: `approved` (all items approved), `reopened` (some item stale), `empty` (no items yet), else `open`.
 
 ## 8. Gates
 
@@ -103,7 +105,7 @@ Order and prerequisites (a gate is recorded only when all its prerequisites are 
 
 Items per gate: G0 `g0`; G1 the script units; G2 bible entities; G3 style anchors; G4 `g4`; G5r latest `ref` assets; G5a latest `vo`, `music`, `sfx` assets (or `g5a` when `g0.silence` is `intentional` and there are none); G5b latest `img` assets; G6 `g6`; G7 `g7`.
 
-Inputs recorded at approval: `g0` all g0 fields; `unit:X` itself + `g0:audio_mode`; `bible:P` itself + `g0:language`; `style:A` itself (+ `g0:format` for `output`, `typography`); `g4` `story:sha` + `g0:format` + `g0:duration_s`; `g5a` `g0:silence`; `asset:I.vN` itself + the current version of each id in the entry's `refs`; `g6` `g4` + `story:sha` + every existing `edit:*`/`render:*` item id; `g7` `g6` + `story:sha` + the same.
+Inputs recorded at approval: `g0` all g0 fields; `unit:X` itself + `g0:audio_mode`; `bible:P` itself + `g0:language`; `style:A` itself (+ `g0:format` for `output`, `typography`); `g4` `story:sha` + `g0:format` + `g0:duration_s` (+ `file:assets/plan.yaml` when that file exists); `g5a` `g0:silence`; `asset:I.vN` itself + the current version of each id in the entry's `refs`; `g6` `g4` + `story:sha` + every existing `edit:*`/`render:*` item id; `g7` `g6` + `story:sha` + the same.
 
 Asset gates also set the manifest entry: approve → `status: approved` (vo: `listen_status: ok`), reject → `status: rejected` (vo: `listen_status: redo`).
 
@@ -120,3 +122,25 @@ Recorded on each touched item: base inputs `g0:format g0:duration_s g0:audio_mod
 - `stage/names.yaml` (main agent, from HyperFrames listings): `transitions`, `shaders`, `registry`, `vfx_chains`, `media_treatment` (lists of names). `cut` and `crossfade` are always valid transitions. Missing file with a name to check → `HARD_NOT_RUN`.
 - `tmp/scratch-vo/durations.yaml` (WP2 `tts --scratch`): `L01: 3.2` seconds per line.
 - `script/readtime.yaml`: `units: { T04: { words: 9, seconds: 3.2 } }`.
+
+## 11. WP2 files
+
+- `assets/plan.yaml` (main agent, part of the G4 production plan; hashed through `file:assets/plan.yaml`): the planned raster assets that `img` generates. G4 approval freezes it: it must exist when G4 is approved, and any later edit makes G4 stale. Asset ids match `[A-Za-z0-9][A-Za-z0-9_-]*` and manifest paths stay under `assets/`.
+
+```yaml
+assets:
+  - id: mara-sheet                  # [A-Za-z0-9][A-Za-z0-9_-]*
+    kind: ref                       # ref | img
+    prompt: "Full-body character reference sheet of Mara, front view, plain off-white background"
+    framing: "full body, front view, centred"   # required: every prompt states framing (PROC-FRAMING-IN-PROMPT)
+    size: 1024x1536                 # generator request, WxH
+    refs: []                        # img only: ids of ref assets, each G5r-approved at its current version
+    required_px: { w: 1080, h: 1920 }   # img: required (resolution budget, proposal section 7.2); ref: optional
+```
+
+- Raster files: `assets/refs/<id>.v<N>.png` and `assets/img/<id>.v<N>.png`; VO takes `assets/vo/<line>.v<N>.wav`. Versions are never overwritten. `img` work directories live in `tmp/img/<id>.v<N>/` (the generated `out.png` and `meta.json` with the compiled and revised prompt).
+- `tmp/scratch-vo/<line>.wav` and `tmp/audition/<speaker>-<voice>.wav` are measurements, never assets.
+- Voice config (`bible.yaml`, `characters[].voice` or top-level `narrator.voice`): `engine: pocket-tts`, `model: english|indonesian`, `source: builtin:<name>|file:<path inside the project>`, `seed_base` (integer), `temperature` (number, optional). Take `n` of a line uses seed `seed_base + n`.
+- `edit/STORYBOARD.md` and `edit/assets/<id>.v<N>.<ext>` are written by `export-hf`. `stage/edit/<shot>/` is the scene-builder shadow project: `SHOT.md`, `hyperframes.json` (copied from `edit/`), `assets/`, `compositions/<shot>.html`, `index.motion.json` (shadow-local seconds).
+- `edit/index.motion.json` is `{ "version": 1, "assertions": [...] }`. Assertions merged by `promote-shot` carry a `"shot": "<sNN>"` tag (HyperFrames ignores unknown assertion fields); assertions without a `shot` tag belong to the main agent and are preserved. Only `appearsBy.bySec` carries a film time and is shifted by the shot start; `before`, `staysInFrame` and `keepsMoving` are copied unchanged.
+- `post/<slug>.v<N>.mp4` (final, immutable), `review/<slug>.draft.mp4` (draft, overwritten), `review/qc.json`.
