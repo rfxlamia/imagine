@@ -1,16 +1,5 @@
 # Guide for agents working in this repository
 
-## Structure Directory
-
-.
-├── packages
-│   └── placehol
-│       └── README.md
-└── skills
-    └── placehol
-        ├── SKILL
-        └── references
-
 ### How to work in here
 
 Store skill packages and dependencies within the `packages` directory.
