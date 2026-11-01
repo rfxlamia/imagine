@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, realpathSync, renameSync, unlinkSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readlinkSync, realpathSync, renameSync, unlinkSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { withLock } from "../fsx.mjs";
 import { saveManifest } from "../docs.mjs";
@@ -14,8 +14,29 @@ export function safePath(dir, rel) {
   if (typeof rel !== "string" || rel === "" || isAbsolute(rel) || rel.split(/[\\/]/).includes("..")) return null;
   const root = realpathSync(dir);
   const abs = resolve(dir, rel);
-  let probe = abs;
-  while (!existsSync(probe)) probe = dirname(probe);
+  let target = abs;
+  const seen = new Set();
+  while (true) {
+    const st = lstatSync(target, { throwIfNoEntry: false });
+    if (!st?.isSymbolicLink()) break;
+    if (seen.has(target) || seen.size > 40) return null;
+    seen.add(target);
+    target = resolve(dirname(target), readlinkSync(target));
+  }
+  let probe = target;
+  while (!existsSync(probe)) {
+    const st = lstatSync(probe, { throwIfNoEntry: false });
+    if (st?.isSymbolicLink()) {
+      if (seen.has(probe) || seen.size > 40) return null;
+      seen.add(probe);
+      probe = resolve(dirname(probe), readlinkSync(probe));
+      continue;
+    }
+    const parent = dirname(probe);
+    if (parent === probe) break;
+    probe = parent;
+  }
+  if (!existsSync(probe)) return null;
   const real = realpathSync(probe);
   return real === root || real.startsWith(root + sep) ? abs : null;
 }
