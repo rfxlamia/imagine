@@ -65,7 +65,8 @@ export function itemDeps(id, ctx) {
     const deps = [id];
     for (const r of entry?.refs ?? []) {
       const cur = currentAsset(ctx.manifest, r);
-      if (cur) deps.push(`asset:${cur.id}.v${cur.v}`);
+      // A ref with no usable version must fail the gate (resolveRef answers null for an unversioned ref), never drop out of the inputs.
+      deps.push(cur ? `asset:${cur.id}.v${cur.v}` : `asset:${r}`);
     }
     return deps;
   }

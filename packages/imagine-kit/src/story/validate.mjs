@@ -1,5 +1,5 @@
 import { err } from "../envelope.mjs";
-import { bibleLookup } from "../docs.mjs";
+import { badBibleIds, bibleLookup } from "../docs.mjs";
 import { FX_TOOLS, WEBGL_TOOLS, parseValue } from "./keys.mjs";
 
 const EPS = 1e-6;
@@ -56,7 +56,15 @@ export function validateStory({ story, project, units, unitDupes, bible, manifes
       else if (count[u] > 1) add("HARD-STORY-UNIT-ONCE", "HARD", u, `script unit ${u} is placed ${count[u]} times`);
     }
     for (const u of Object.keys(count)) if (!units[u]) add("HARD-STORY-UNIT-ONCE", "HARD", u, `a shot references unknown script unit ${u}`);
+    if (g0.audio_mode === "narrated" && Object.keys(units).length === 0 && unitDupes.length === 0) {
+      add("HARD-STORY-UNIT-ONCE", "HARD", null, "a narrated story has no script units; write the script before the storyboard");
+    }
   }
+
+  // A story with no shots is not a story once planning has started (--stage), and never one G4 can approve.
+  if (shots.length === 0 && stage) add("HARD-DURATION", "HARD", null, "STORY.md has no shots; the storyboard stage must create them");
+  checked.add("HARD-ENTITIES-EXIST");
+  for (const id of badBibleIds(bible)) add("HARD-ENTITIES-EXIST", "HARD", id, `bible id "${id.slice(id.indexOf(".") + 1)}" must match [A-Za-z0-9][A-Za-z0-9_-]* (no dots)`);
 
   // Durations
   if (shots.length > 0) {
@@ -90,6 +98,10 @@ export function validateStory({ story, project, units, unitDupes, bible, manifes
       checked.add("HARD-PREVIZ-BEATS-INSIDE");
       for (const b of p.beats) if (b > dur(s) + EPS) add("HARD-PREVIZ-BEATS-INSIDE", "HARD", s.id, `beat at ${b}s is outside the ${dur(s)}s shot`);
     }
+  }
+  const someDur = shots.filter((s) => vals.get(s.id).duration !== undefined).length;
+  if (stage === undefined && someDur > 0 && someDur < shots.length) {
+    add("HARD-DURATION", "HARD", null, `${shots.length - someDur} of ${shots.length} shots have no previz duration; set all or none`);
   }
   if (g0.audio_mode === "narrated" && planned && shots.length > 0) {
     checked.add("HARD-VO-NO-OVERLAP");
@@ -134,7 +146,7 @@ export function validateStory({ story, project, units, unitDupes, bible, manifes
       if ((WEBGL_TOOLS.includes(e.tool) || e.unsupported === "true") && !e.fallback) add("HARD-FX-WEBGL-FALLBACK", "HARD", s.id, `fx "${e.id}" needs a fallback`);
       if (NAME_LISTS[e.tool]) needNames.push({ list: NAME_LISTS[e.tool], name: e.name, shot: s.id, what: `fx "${e.id}" ${e.tool}` });
       checked.add("HARD-NO-CSS-FILTER-RASTER");
-      if (CSS_FILTER.test(`${e.tool}:${e.name} ${e.params ?? ""}`)) add("HARD-NO-CSS-FILTER-RASTER", "HARD", s.id, `fx "${e.id}" uses a CSS filter; use media-treatment for rasters`);
+      if (CSS_FILTER.test(`${e.tool}:${e.name} ${e.params ?? ""} ${e.fallback ?? ""}`)) add("HARD-NO-CSS-FILTER-RASTER", "HARD", s.id, `fx "${e.id}" uses a CSS filter; use media-treatment for rasters`);
     }
     for (const key of ["grade", "overlays", "fx_notes"]) {
       if (s.keys[key] && CSS_FILTER.test(s.keys[key])) { checked.add("HARD-NO-CSS-FILTER-RASTER"); add("HARD-NO-CSS-FILTER-RASTER", "HARD", s.id, `${key} uses a CSS filter; use media-treatment for rasters`); }

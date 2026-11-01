@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { sha256 } from "../src/hash.mjs";
-import { approveThrough, cli, getProject, makeProject, seedCanon, snapshot } from "./helpers/fixture.mjs";
+import { approveThrough, cli, getProject, makeProject, seedCanon, seedMinimalStory, snapshot } from "./helpers/fixture.mjs";
 
 const ready = async (opts) => { const p = await makeProject(opts); seedCanon(p.dir, { copy: opts?.mode && opts.mode !== "narrated" }); return p; };
 const sha = (dir, f) => sha256(readFileSync(join(dir, f)));
@@ -65,6 +65,7 @@ test("DAG-STALE-VS-REVIEW: G4 approve surfaces changed watch sources as advice w
   await snapshot(dir, "shot:s01.storyboard", [], { status: "proposed", watch: ["bible:world"] });
   writeFileSync(join(dir, "bible.yaml"), readFileSync(join(dir, "bible.yaml"), "utf8").replace("1950s", "1960s"));
   assert.equal((await cli(cwd, "gate", "G2", "approve", "--scope", "world", "--quote", "world changed, fine")).exit, 0);
+  await seedMinimalStory(dir);
   const r = await cli(cwd, "gate", "G4", "approve", "--quote", "plan ok");
   assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
   assert.ok(r.env.advice.some((a) => a.rule === "DAG-STALE-VS-REVIEW" && a.item === "shot:s01.storyboard"));

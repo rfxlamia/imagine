@@ -31,8 +31,11 @@ export function deriveAll(ctx) {
     const rec = records[id];
     if (!rec || !STALE_FROM.has(rec.status) || visiting.has(id)) return false;
     visiting.add(id);
-    for (const ref of Object.keys(rec.inputs ?? {})) {
-      if (ref !== id && records[ref] && isStale(ref)) direct.get(id).push({ kind: "upstream", source: ref });
+    for (const [ref, recorded] of Object.entries(rec.inputs ?? {})) {
+      if (ref === id) continue;
+      if (records[ref] && isStale(ref)) direct.get(id).push({ kind: "upstream", source: ref });
+      // An item-only input (recorded as "item") that is now rejected or gone no longer backs this item; pending or proposed stales nothing.
+      else if (recorded === "item" && (!records[ref] || records[ref].status === "rejected")) direct.get(id).push({ kind: "upstream", source: ref });
     }
     visiting.delete(id);
     const stale = direct.get(id).length > 0;
