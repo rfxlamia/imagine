@@ -131,7 +131,7 @@ export default {
     }
     const staleKinds = new Set(STALE_KINDS[patch.stage]);
     const byId = new Map(applied.shots.map((s) => [s.id, s]));
-    const touched = [...applied.touched].filter((id) => !applied.removed.has(id));
+    const touched = [...applied.touched].filter((id) => byId.has(id));
     const realDir = realpathSync(dir);
     for (const id of touched) {
       const itemId = `shot:${id}.${patch.stage}`;

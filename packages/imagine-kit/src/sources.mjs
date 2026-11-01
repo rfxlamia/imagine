@@ -29,8 +29,8 @@ export function createContext(dir) {
         return parseUnits(existsSync(p) ? readText(p) : "", narrated ? "L" : "T");
       });
     },
-    get storyText() { return memo("storyText", () => readText(file("STORY.md"))); },
-    get story() { return memo("story", () => parseStory(this.storyText)); },
+    get storyText() { return memo("storyText", () => (existsSync(file("STORY.md")) ? readText(file("STORY.md")) : null)); },
+    get story() { return memo("story", () => parseStory(this.storyText ?? "")); },
     get manifest() { return memo("manifest", () => loadManifest(dir)); },
     get names() { return memo("names", () => loadNames(dir)); },
     get voDurations() { return memo("voDurations", () => loadVoDurations(dir, this.manifest)); },
@@ -86,7 +86,7 @@ export function resolveRef(ctx, ref, recorded) {
       return v === undefined ? null : hashValue(v);
     }
     case "style": return Object.hasOwn(ctx.style, rest) ? sha256(ctx.style[rest]) : null;
-    case "story": return rest === "sha" ? sha256(ctx.storyText) : null;
+    case "story": return rest === "sha" ? (ctx.storyText === null ? null : sha256(ctx.storyText)) : null;
     case "shot": {
       const m = rest.match(/^(s\d{2})\.(storyboard|previz|fx|edit)$/);
       const s = m && ctx.story.shots.find((x) => x.id === m[1]);

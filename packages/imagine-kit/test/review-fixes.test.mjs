@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import YAML from "yaml";
 import { NOW, approveThrough, asset, cli, getProject, makeProject, put, seedCanon, setManifest, shot, writeStory } from "./helpers/fixture.mjs";
@@ -544,4 +544,97 @@ test("HARD-GATES-RECORDED: gate whose only remaining item is a rejected latest a
   const app2 = await cli(cwd, "gate", "G5b", "approve", "--quote", "re-approve v2");
   assert.equal(app2.exit, 1);
   assert.equal(app2.env.errors[0].rule, "HARD-GATES-RECORDED");
+});
+
+test("HARD-STORY-WRITERS: missing STORY.md reports structured error on status and validate story without HARD-INTERNAL", async () => {
+  const { cwd, dir } = await makeProject();
+  seedCanon(dir);
+  await approveThrough(cwd, "G3");
+
+  const s0 = await srcs(cwd, "bible:characters.mara", "bible:locations.lighthouse", "unit:L01", "unit:L02", "unit:L03");
+  const sbPatch = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 0,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { create_shot: { id: "s01", after: null, title: "Stairs", narrative: "Climb",
+        set: { scene: "stairs", duration_est: "5s", voiceover: ["L01"], characters: ["mara"], location: "lighthouse" } } },
+      { create_shot: { id: "s02", after: "s01", title: "Sea", narrative: "", set: { scene: "sea", duration_est: "5s", voiceover: ["L02"] } } },
+      { create_shot: { id: "s03", after: "s02", title: "Lamp", narrative: "", set: { scene: "lamp", duration_est: "3s", voiceover: ["L03"] } } },
+    ],
+  };
+  const sbRel = stagePatch(dir, "storyboard", sbPatch);
+
+  unlinkSync(join(dir, "STORY.md"));
+
+  // 1. validate story
+  const valRes = await cli(cwd, "validate", "story");
+  assert.equal(valRes.exit, 1);
+  assert.ok(valRes.env.errors.some((e) => e.rule === "HARD-STORY-WRITERS"));
+  assert.ok(!valRes.env.errors.some((e) => e.rule === "HARD-INTERNAL"));
+
+  // 2. status
+  const statRes = await cli(cwd, "status");
+  assert.equal(statRes.exit, 1);
+  assert.ok(statRes.env.errors.some((e) => e.rule === "HARD-STORY-WRITERS"));
+  assert.ok(!statRes.env.errors.some((e) => e.rule === "HARD-INTERNAL"));
+
+  // 3. gate G4 approve --quote "ok"
+  const gateRes = await cli(cwd, "gate", "G4", "approve", "--quote", "ok");
+  assert.equal(gateRes.exit, 1);
+  assert.ok(!gateRes.env.errors.some((e) => e.rule === "HARD-INTERNAL"));
+
+  // 4. patch apply
+  const applyRes = await apply(cwd, sbRel);
+  assert.equal(applyRes.exit, 1);
+  assert.ok(applyRes.env.errors.some((e) => e.rule === "HARD-STORY-WRITERS"));
+  assert.ok(!applyRes.env.errors.some((e) => e.rule === "HARD-INTERNAL"));
+});
+
+test("PROC-ATOMIC-COMMIT: shot removed and re-created in one patch gets a storyboard record", async () => {
+  const { cwd, dir } = await makeProject();
+  seedCanon(dir);
+  await approveThrough(cwd, "G3");
+
+  const s0 = await srcs(cwd, "bible:characters.mara", "bible:locations.lighthouse", "unit:L01", "unit:L02", "unit:L03");
+  const patchA = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 0,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { create_shot: { id: "s01", after: null, title: "Stairs", narrative: "Climb",
+        set: { scene: "stairs", duration_est: "7s", voiceover: ["L01"], characters: ["mara"], location: "lighthouse" } } },
+      { create_shot: { id: "s02", after: "s01", title: "Sea", narrative: "Wait",
+        set: { scene: "sea", duration_est: "7s", voiceover: ["L02", "L03"] } } },
+    ],
+  };
+  const relA = stagePatch(dir, "storyboard", patchA, "patchA.patch.yaml");
+  assert.equal((await apply(cwd, relA)).exit, 0);
+
+  const patchB = {
+    stage: "storyboard", author: "storyboard-artist", base_story_rev: 1,
+    inputs: {
+      bible: { "characters.mara": s0["bible:characters.mara"], "locations.lighthouse": s0["bible:locations.lighthouse"] },
+      units: { L01: s0["unit:L01"], L02: s0["unit:L02"], L03: s0["unit:L03"] },
+    },
+    ops: [
+      { remove_shot: "s02" },
+      { create_shot: { id: "s02", after: "s01", title: "Sea Reborn", narrative: "Look at the sea",
+        set: { scene: "sea", duration_est: "7s", voiceover: ["L02", "L03"] } } },
+    ],
+  };
+  const relB = stagePatch(dir, "storyboard", patchB, "patchB.patch.yaml");
+  const resB = await apply(cwd, relB);
+  assert.equal(resB.exit, 0, JSON.stringify(resB.env.errors));
+
+  const proj = getProject(dir);
+  assert.ok(proj.items["shot:s02.storyboard"], "shot:s02.storyboard must exist in project.yaml");
+  assert.equal(proj.items["shot:s02.storyboard"].rev, 2, "shot:s02.storyboard rev must be 2");
+
+  const storyText = readFileSync(join(dir, "STORY.md"), "utf8");
+  assert.ok(storyText.includes("## Scene s02 — Sea Reborn"), "STORY.md must contain s02");
 });
