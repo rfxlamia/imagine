@@ -30,6 +30,38 @@ test("plan schema rejects missing framing, bad size, bad id and unknown keys", (
   }
 });
 
+test("plan schema requires required_px on img and rejects non-positive dimensions, while ref may omit it", () => {
+  const v = loadValidator("plan");
+  // ref may omit required_px
+  const p0 = plan();
+  delete p0.assets[0].required_px;
+  assert.equal(v(p0).valid, true, "ref may omit required_px");
+
+  // ref may also have valid required_px
+  p0.assets[0].required_px = { w: 1024, h: 1536 };
+  assert.equal(v(p0).valid, true, "ref with valid required_px is valid");
+
+  // img without required_px is rejected
+  const p1 = plan();
+  delete p1.assets[1].required_px;
+  assert.equal(v(p1).valid, false, "img without required_px must be rejected");
+
+  // img with zero w is rejected
+  const p2 = plan();
+  p2.assets[1].required_px = { w: 0, h: 1080 };
+  assert.equal(v(p2).valid, false, "img with zero w must be rejected");
+
+  // img with negative h is rejected
+  const p3 = plan();
+  p3.assets[1].required_px = { w: 1920, h: -5 };
+  assert.equal(v(p3).valid, false, "img with negative h must be rejected");
+
+  // ref with zero w is rejected if required_px is present
+  const p4 = plan();
+  p4.assets[0].required_px = { w: 0, h: 1536 };
+  assert.equal(v(p4).valid, false, "ref with zero w must be rejected");
+});
+
 test("plan schema rejects dotted id and dotted refs[]", () => {
   const v = loadValidator("plan");
   const p1 = plan();

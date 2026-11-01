@@ -22,8 +22,11 @@ export async function isUniformImage(ctx, path) {
 }
 
 const rate = (s) => {
-  const [n, d] = String(s ?? "").split("/").map(Number);
-  return d ? Math.round((n / d) * 1000) / 1000 : Number.isFinite(n) ? n : null;
+  const parts = String(s ?? "").split("/").map(Number);
+  const n = parts[0];
+  const d = parts[1];
+  const val = d ? Math.round((n / d) * 1000) / 1000 : Number.isFinite(n) ? n : null;
+  return Number.isFinite(val) && val > 0 ? val : null;
 };
 
 export async function probeMedia(ctx, path, rule = "HARD-FPS-SIZE") {
@@ -32,9 +35,13 @@ export async function probeMedia(ctx, path, rule = "HARD-FPS-SIZE") {
   const doc = JSON.parse(r.stdout);
   const v = (doc.streams ?? []).find((s) => s.codec_type === "video");
   const a = (doc.streams ?? []).find((s) => s.codec_type === "audio");
+  const rawDur = doc.format?.duration !== undefined && doc.format?.duration !== null && doc.format?.duration !== "N/A"
+    ? Number(doc.format.duration)
+    : null;
+  const duration_s = Number.isFinite(rawDur) && rawDur >= 0 ? Math.round(rawDur * 1000) / 1000 : null;
   return {
     w: v?.width ?? null, h: v?.height ?? null, fps: v ? rate(v.r_frame_rate) : null, video_codec: v?.codec_name ?? null,
-    duration_s: doc.format?.duration === undefined ? null : Math.round(Number(doc.format.duration) * 1000) / 1000,
+    duration_s,
     audio: a ? { codec: a.codec_name, channels: a.channels, sample_rate: Number(a.sample_rate) } : null,
   };
 }

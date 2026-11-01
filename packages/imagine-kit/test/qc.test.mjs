@@ -263,6 +263,96 @@ t("qc fails closed on corrupt non-PNG current asset (HARD-REAL-RASTER, unmeasure
   assert.ok(saved.errors.some((e) => e.rule === "HARD-REAL-RASTER"));
 });
 
+t("qc fails HARD-RASTER-TIER on missing required_px, never claims native", async () => {
+  const p = await makeProject();
+  const mp4 = makeMp4(join(p.cwd, "ok.mp4"));
+  makePng(join(p.dir, "assets/img/no_budget.v1.bin"), 100, 100, () => 0);
+  setManifest(p.dir, (m) => {
+    m.assets.push(asset("no_budget", "img", 1, { w: 100, h: 100, status: "approved" }));
+  });
+
+  const r = await cli(p.cwd, "qc", mp4);
+  assert.equal(r.exit, 1);
+  assert.ok(rules(r).includes("HARD-RASTER-TIER"));
+  assert.match(r.env.errors.find((e) => e.rule === "HARD-RASTER-TIER").message, /missing or non-positive required_px/);
+
+  const row = r.env.data.raster.assets.find((a) => a.id === "no_budget");
+  assert.equal(row.q, null);
+  assert.equal(row.tier, null);
+  assert.ok(r.env.data.raster.unmeasured.includes("no_budget.v1"));
+  assert.equal(r.env.data.raster.native, false);
+
+  const saved = JSON.parse(readFileSync(join(p.dir, "review/qc.json"), "utf8"));
+  assert.equal(saved.raster.native, false);
+  assert.ok(saved.errors.some((e) => e.rule === "HARD-RASTER-TIER"));
+});
+
+t("qc fails HARD-RASTER-TIER on zero or non-finite required_px, never yields native:true", async () => {
+  const p = await makeProject();
+  const mp4 = makeMp4(join(p.cwd, "ok.mp4"));
+  makePng(join(p.dir, "assets/img/zero_budget.v1.bin"), 100, 100, () => 0);
+  setManifest(p.dir, (m) => {
+    m.assets.push(asset("zero_budget", "img", 1, { w: 100, h: 100, required_px: { w: 0, h: 0 }, status: "approved" }));
+  });
+
+  const r = await cli(p.cwd, "qc", mp4);
+  assert.equal(r.exit, 1);
+  assert.ok(rules(r).includes("HARD-RASTER-TIER"));
+  assert.match(r.env.errors.find((e) => e.rule === "HARD-RASTER-TIER").message, /missing or non-positive required_px/);
+
+  const row = r.env.data.raster.assets.find((a) => a.id === "zero_budget");
+  assert.equal(row.q, null);
+  assert.equal(row.tier, null);
+  assert.ok(r.env.data.raster.unmeasured.includes("zero_budget.v1"));
+  assert.equal(r.env.data.raster.native, false);
+
+  const saved = JSON.parse(readFileSync(join(p.dir, "review/qc.json"), "utf8"));
+  assert.equal(saved.raster.native, false);
+  assert.ok(saved.errors.some((e) => e.rule === "HARD-RASTER-TIER"));
+});
+
+t("probeMedia/qc: ffprobe duration N/A or non-finite fps returns HARD errors, writes safe review/qc.json", async () => {
+  const p = await makeProject();
+  const mp4 = makeMp4(join(p.cwd, "ok.mp4"));
+
+  // Fake ffprobe with format.duration: "N/A"
+  const fakeDir = mkdtempSync(join(tmpdir(), "ffprobe-fake-"));
+  const fakeScript = join(fakeDir, "fake-probe.mjs");
+  const fakeJson = JSON.stringify({
+    streams: [
+      { codec_type: "video", width: 1080, height: 1920, r_frame_rate: "30/1", codec_name: "h264" },
+      { codec_type: "audio", codec_name: "aac", channels: 2, sample_rate: "48000" }
+    ],
+    format: { duration: "N/A" }
+  });
+  writeFileSync(fakeScript, `process.stdout.write(${JSON.stringify(fakeJson)});\n`);
+
+  const r = await run(["qc", mp4], { cwd: p.cwd, tools: { ffprobe: [process.execPath, fakeScript] } });
+  assert.equal(r.exit, 1);
+  assert.ok(rules(r).includes("HARD-DURATION"));
+  assert.equal(r.env.data.duration_s, null);
+  assert.notEqual(r.env.data.duration_s, NaN);
+
+  const saved = JSON.parse(readFileSync(join(p.dir, "review/qc.json"), "utf8"));
+  assert.equal(saved.duration_s, null);
+  assert.ok(saved.errors.some((e) => e.rule === "HARD-DURATION"));
+
+  // Fake ffprobe with r_frame_rate: "N/A"
+  const fakeFpsJson = JSON.stringify({
+    streams: [
+      { codec_type: "video", width: 1080, height: 1920, r_frame_rate: "N/A", codec_name: "h264" },
+      { codec_type: "audio", codec_name: "aac", channels: 2, sample_rate: "48000" }
+    ],
+    format: { duration: "13.000" }
+  });
+  writeFileSync(fakeScript, `process.stdout.write(${JSON.stringify(fakeFpsJson)});\n`);
+
+  const rFps = await run(["qc", mp4], { cwd: p.cwd, tools: { ffprobe: [process.execPath, fakeScript] } });
+  assert.equal(rFps.exit, 1);
+  assert.ok(rules(rFps).includes("HARD-FPS-SIZE"));
+  assert.equal(rFps.env.data.fps, null);
+});
+
 const phase0 = existsSync(PHASE0) ? test : test.skip;
 phase0("AC-01: qc runs on a Phase 0 MP4 fixture and reports its real spec", async () => {
   const p = await makeProject();

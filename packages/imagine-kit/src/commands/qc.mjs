@@ -22,9 +22,9 @@ const MAX_TRUE_PEAK = -1;
 // HARD-FPS-SIZE, HARD-DURATION, HARD-AUDIO-STREAM, HARD-LOUDNESS against G0.
 function specChecks(g0, probe, loud, errors) {
   if (probe.w !== g0.width || probe.h !== g0.height) errors.push(err("HARD-FPS-SIZE", "HARD", null, `video is ${probe.w}x${probe.h} but G0 says ${g0.width}x${g0.height}`));
-  if (probe.fps === null || Math.abs(probe.fps - g0.fps) > FPS_TOLERANCE) errors.push(err("HARD-FPS-SIZE", "HARD", null, `video is ${probe.fps} fps but G0 says ${g0.fps}`));
+  if (probe.fps === null || !Number.isFinite(probe.fps) || Math.abs(probe.fps - g0.fps) > FPS_TOLERANCE) errors.push(err("HARD-FPS-SIZE", "HARD", null, `video is ${probe.fps} fps but G0 says ${g0.fps}`));
   const { min, max } = g0.duration_s;
-  if (probe.duration_s === null || probe.duration_s < min - DURATION_TOLERANCE || probe.duration_s > max + DURATION_TOLERANCE) {
+  if (probe.duration_s === null || !Number.isFinite(probe.duration_s) || probe.duration_s < min - DURATION_TOLERANCE || probe.duration_s > max + DURATION_TOLERANCE) {
     errors.push(err("HARD-DURATION", "HARD", null, `duration ${probe.duration_s}s is outside the G0 range ${min}-${max}s`));
   }
   if (!probe.audio) errors.push(err("HARD-AUDIO-STREAM", "HARD", null, "the file has no audio stream (use digital silence when silence is intended)"));
@@ -64,8 +64,26 @@ function rasterReport(dir, sctx, derived, errors, advice) {
     const verified = real !== null;
     const w = verified ? real.w : null;
     const h = verified ? real.h : null;
-    const q = verified && a.required_px && w && h ? rasterQ(w, h, a.required_px) : null;
-    const tier = q === null ? null : tierOf(q);
+
+    const hasReq = a.required_px && typeof a.required_px === "object" &&
+      Number.isFinite(a.required_px.w) && a.required_px.w > 0 &&
+      Number.isFinite(a.required_px.h) && a.required_px.h > 0;
+    if (!hasReq) {
+      errors.push(err("HARD-RASTER-TIER", "HARD", item, `${item} has missing or non-positive required_px (raster budget)`));
+    }
+
+    let q = null;
+    let tier = null;
+    if (hasReq && verified && w && h) {
+      const rawQ = rasterQ(w, h, a.required_px);
+      if (Number.isFinite(rawQ) && rawQ > 0) {
+        q = rawQ;
+        tier = tierOf(q);
+      } else {
+        errors.push(err("HARD-RASTER-TIER", "HARD", item, `${item} has non-finite q`));
+      }
+    }
+
     const accepted = a.status === "approved" && status.get(`asset:${item}`) === "approved";
     rows.push({ id: a.id, v: a.v, w, h, required_px: a.required_px ?? null, q: q === null ? null : round2(q), tier, accepted });
     if (tier === "replan") errors.push(err("HARD-RASTER-TIER", "HARD", item, `${item} has q ${round2(q)} (replan tier, below 0.75)`));
@@ -78,7 +96,7 @@ function rasterReport(dir, sctx, derived, errors, advice) {
     return { id: s.id, worst_q: worst?.q ?? null, tier: worst?.tier ?? null, asset: worst ? `${worst.id}.v${worst.v}` : null };
   });
   const below = rows.filter((r) => r.tier === "soft" || r.tier === "replan").map((r) => `${r.id}.v${r.v}`);
-  const unmeasured = rows.filter((r) => r.q === null).map((r) => `${r.id}.v${r.v}`);
+  const unmeasured = rows.filter((r) => r.q === null || r.tier === null).map((r) => `${r.id}.v${r.v}`);
   const native = below.length === 0 && unmeasured.length === 0;
   if (!native) advice.push({ rule: "HARD-NO-NATIVE-CLAIM", item: null, source: "assets/manifest.yaml", message: `${below.length + unmeasured.length} raster(s) are below native or unmeasured; do not call this film native` });
   return { assets: rows, shots, below_native: below, unmeasured, native };
