@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseRules } from "../check-traceability.mjs";
 import { findViolations, loadPatterns } from "../check-forbidden-names.mjs";
-import { CUT_COMMAND_RE, ORDER, REPLAN_NOTES, TARGETS, WAIVER_FORMAT } from "./allocation.mjs";
+import { CUT_COMMAND_RE, ORDER, REPLAN_NOTES, TARGETS, WAIVER_FORMAT, WAIVER_RULES } from "./allocation.mjs";
 
 const ROOT = join(fileURLToPath(import.meta.url), "..", "..", "..");
 const BRANCH = "wp6/skills-gate";
@@ -210,8 +210,8 @@ export function buildBrief(name, rules, { proposal = null, summary = "", done = 
   out.push(REPLAN_NOTES);
   out.push("");
   if (t.literals.includes("## Waivers")) {
-    out.push("REVIEW.md waivers section format (use it verbatim as the schema):");
-    out.push("```markdown", WAIVER_FORMAT, "```", "");
+    out.push("REVIEW.md waivers section format (copy the field keys verbatim; values shown are examples):");
+    out.push("```markdown", WAIVER_FORMAT, "```", "", "Waiver rules:", WAIVER_RULES, "");
   }
   out.push("## Rules to embed");
   out.push("State each rule in your own words as an instruction, where it applies in the workflow, and put its marker `<!-- rule:ID -->` at the end of that sentence or bullet. One marker per rule is enough; a line must never hold only markers, and markers must not be stacked or dumped in a list.");

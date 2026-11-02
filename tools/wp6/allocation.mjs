@@ -23,16 +23,29 @@ export const REPLAN_NOTES = `- Phase 1 ships 12 \`imagine-kit\` commands: ${KEPT
 - Kit invocation from a skill: \`node "\${CLAUDE_SKILL_DIR}/../../packages/imagine-kit/bin/imagine-kit.mjs" <command> ...\` (Claude Code substitutes \`\${CLAUDE_SKILL_DIR}\` in SKILL.md with the skill's directory inside the plugin; \`\${CLAUDE_PLUGIN_ROOT}\` is documented for hooks and manifests, not skill text). Define this once in each SKILL.md and call it \`imagine-kit\` afterwards. The last stdout line is the JSON envelope (docs/contracts/cli-contract.md). Quote the envelope fields you rely on; never claim a result you did not read.
 - Planning subagents (storyboard-artist, previz-designer, fx-designer) have no Write tool: they return a patch as their final message; the main agent stores it verbatim and runs \`imagine-kit patch apply\`.`;
 
+// Section of review/REVIEW.md (PROC-REVIEW-MD). Field notes live in WAIVER_RULES, never on value lines.
 export const WAIVER_FORMAT = `## Waivers
 
 ### W-001 HARD-<RULE-ID>
+- status: proposed
 - rule: HARD-<RULE-ID>
-- items: s03, s05            (explicit ids; never "all")
-- item_hashes: s03=sha256:<hex>, s05=sha256:<hex>
+- items: shot:s03.previz, asset:bg-harbor.v2
+- item_hashes: shot:s03.previz=<64-hex>, asset:bg-harbor.v2=<64-hex>
 - reason: <the user's reason>
+- consequence: <what the film or the delivery loses while this rule is waived>
 - manual_check: <what the user checks by hand instead>
-- quote: "<the user's verbatim answer granting this waiver>"
-- granted: <YYYY-MM-DD>`;
+- asked: "<the exact question the main agent put to the user>"
+- quote: "<the user's verbatim answer to that question>"
+- granted: <YYYY-MM-DD>
+- history: proposed <YYYY-MM-DD>`;
+
+export const WAIVER_RULES = `- The section lives in \`review/REVIEW.md\`, after the P0/P1/P2 notes (HyperFrames review format: \`t=4.2s · where · problem → exact change · what stays\`) and before the delivery note.
+- \`status\` is one of \`proposed | active | revoked | invalid\`. The main agent may write a \`proposed\` entry (rule, items, item_hashes, reason, consequence, manual_check) and then ask; subagents never write or propose waivers. Only the user's explicit answer to \`asked\` turns it \`active\`: fill \`asked\`, \`quote\` and \`granted\`. Only \`active\` entries count.
+- \`items\` are explicit source references from docs/contracts/source-formats.md section 1 (\`shot:<sNN>.<stage>\`, \`asset:<id>.v<N>\`, \`unit:<L##|T##>\`, \`file:<relpath>\`), never \`all\` or a pattern. \`item_hashes\` are the values \`imagine-kit status --ref <items>\` prints in \`data.sources\`, copied from that envelope, never computed by hand.
+- Before every gate, render and delivery, re-run \`imagine-kit status --ref <items>\` for each active waiver. Any changed value: set \`status: invalid\`, append \`invalid <date> <ref> changed\` to \`history\`, and treat the rule as failing again. Never delete an entry.
+- Revoking needs the user's words too: set \`status: revoked\` and append \`revoked <date> "<quote>"\` to \`history\`.
+- Non-waivable rules (HARD-NON-WAIVABLE) never get an entry, not even \`proposed\`. The D10 allowlist is automatic advice, not a waiver.
+- The delivery note lists every active waiver by id, rule and items.`;
 
 const SUBAGENT_SHARED = [
   "PROC-SUBAGENT-NO-USER", "PROC-SUBAGENT-PROPOSAL-ONLY", "PROC-STYLE-FIRST", "PROC-ADV-REASON", "PROC-HARD-OVER-STYLE",
@@ -60,7 +73,7 @@ export const TARGETS = {
       "DAG-G0-FORMAT", "DAG-G0-LANGUAGE", "DAG-SCRIPT-L-STORYBOARD", "DAG-SCRIPT-CANON", "DAG-BIBLE-ENTITY", "DAG-BIBLE-WORLD",
       "DAG-SHOT-STORYBOARD", "DAG-SHOT-PREVIZ", "DAG-WAIVER-SCOPE", "DAG-STALE-VS-REVIEW",
     ],
-    literals: ["imagine-kit new", "imagine-kit status", "imagine-kit gate", "--quote", "## Waivers", "Mandatory files"],
+    literals: ["imagine-kit new", "imagine-kit status", "imagine-kit gate", "--quote", "## Waivers", "Mandatory files", "review/REVIEW.md", "- status:", "- items:", "- item_hashes:", "- consequence:", "- manual_check:", "- asked:", "- quote:", "- history:"],
   },
   "imagine-canon": {
     kind: "skill",
@@ -141,7 +154,7 @@ export const TARGETS = {
       "HARD-RASTER-TIER", "HARD-NO-NATIVE-CLAIM", "HARD-VO-PRESENT", "HARD-NON-WAIVABLE", "HARD-WAIVER-USER-ONLY", "HARD-WAIVER-LISTED",
       "HARD-WAIVERS-VALID", "HARD-ASSETS-APPROVED", "HARD-NO-SELF-JUDGEMENT", "HARD-SAFE-BAND",
     ],
-    literals: ["imagine-kit render", "--final", "imagine-kit qc", "imagine-kit gate", "## Waivers", "Mandatory files"],
+    literals: ["imagine-kit render", "--final", "imagine-kit qc", "imagine-kit gate", "## Waivers", "Mandatory files", "review/REVIEW.md", "- status:", "- items:", "- item_hashes:", "- consequence:", "- manual_check:", "- asked:", "- quote:", "- history:"],
   },
   "storyboard-artist": {
     kind: "agent",

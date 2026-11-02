@@ -132,6 +132,14 @@ test("checkTarget: skill paths, size and named references", () => {
   assert.match(p, /skills\/imagine\/SKILL.md: outside target/);
 });
 
+test("checkTarget: waiver field keys are required in imagine and imagine-deliver", () => {
+  for (const n of ["imagine", "imagine-deliver"]) {
+    const [f] = passing(n);
+    const p = checkTarget(n, [{ ...f, text: f.text.replace("Literal: - asked:", "") }], rules, patterns);
+    assert.ok(p.includes("missing literal: - asked:"), n);
+  }
+});
+
 test("checkTarget: skill frontmatter name must match its directory", () => {
   const [f] = passing("imagine-plan");
   const p = checkTarget("imagine-plan", [{ ...f, text: f.text.replace("name: imagine-plan", "name: plan") }], rules, patterns).join("\n");
@@ -175,5 +183,10 @@ test("buildBrief: carries every cited rule, literal and the bundle format", () =
     assert.ok(b.includes("=== END FILE ==="));
     assert.ok(!b.includes("§"));
   }
-  assert.match(buildBrief("imagine", rules), /## Waivers/);
+  for (const n of ["imagine", "imagine-deliver"]) {
+    const b = buildBrief(n, rules);
+    assert.match(b, /## Waivers/);
+    assert.match(b, /proposed \| active \| revoked \| invalid/);
+  }
+  assert.doesNotMatch(buildBrief("imagine-edit", rules), /## Waivers/);
 });
