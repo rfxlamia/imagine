@@ -72,7 +72,7 @@ function markerOnly(line) {
 }
 
 // Pure check of one target. files: [{ path, text }] with repo-relative paths.
-export function checkTarget(name, files, rules, patterns) {
+export function checkTarget(name, files, rules, patterns, { exists = (rel) => existsSync(join(ROOT, rel)) } = {}) {
   const t = TARGETS[name];
   if (!t) return [`unknown target ${name}`];
   const problems = [];
@@ -133,6 +133,7 @@ export function checkTarget(name, files, rules, patterns) {
     f.text.split("\n").forEach((line, i) => {
       const at = `${f.path}:${i + 1}`;
       if (line.includes(SECTION_SIGN)) problems.push(`${at}: section-sign symbol (write "section 6.2")`);
+      if (line.includes("\ufffd")) problems.push(`${at}: broken character U+FFFD (copy/encoding damage)`);
       const cut = line.match(CUT_COMMAND_RE);
       if (cut) problems.push(`${at}: cut or deferred command "${cut[0]}"`);
       if (/npx\s+hyperframes(?!@0\.8\.223\b)/.test(line)) problems.push(`${at}: unpinned hyperframes (use npx hyperframes@0.8.223)`);
@@ -141,12 +142,19 @@ export function checkTarget(name, files, rules, patterns) {
   }
   for (const v of findViolations(files, patterns)) problems.push(`${v.path}:${v.line}: forbidden research-reference name`);
 
-  // References named in SKILL.md must be in the bundle.
+  // References named in SKILL.md: bare `references/x` must be in the bundle;
+  // `skills/<other>/references/x` (another skill's file) must already exist on disk.
   if (t.kind === "skill") {
     const have = new Set(files.map((f) => f.path));
-    for (const m of mainFile.text.matchAll(/\breferences\/[\w./-]+\.(?:md|yaml)\b/g)) {
-      const p = `${t.path}/${m[0]}`;
-      if (!have.has(p)) problems.push(`${main}: names ${m[0]} but the bundle has no ${p}`);
+    for (const m of mainFile.text.matchAll(/(?:skills\/([\w-]+)\/)?references\/[\w./-]+\.(?:md|yaml)\b/g)) {
+      const other = m[1];
+      if (other && `skills/${other}` !== t.path) {
+        if (!exists(m[0])) problems.push(`${main}: names ${m[0]} but that file does not exist`);
+        continue;
+      }
+      const rel = m[0].replace(/^skills\/[\w-]+\//, "");
+      const p = `${t.path}/${rel}`;
+      if (!have.has(p)) problems.push(`${main}: names ${rel} but the bundle has no ${p}`);
     }
   }
   return [...new Set(problems)];

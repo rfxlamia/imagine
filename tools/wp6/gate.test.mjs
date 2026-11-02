@@ -109,6 +109,12 @@ test("checkTarget: cut commands, unpinned hyperframes, section sign", () => {
   assert.match(p, /section-sign/);
 });
 
+test("checkTarget: replacement character from encoding damage fails", () => {
+  const [f] = passing("imagine");
+  const p = checkTarget("imagine", [{ ...f, text: f.text + "### 4.1 G1 \ufffd script units\n" }], rules, patterns).join("\n");
+  assert.match(p, /U\+FFFD/);
+});
+
 test("checkTarget: kept commands are not flagged as cut", () => {
   const [f] = passing("imagine");
   const text = f.text + "imagine-kit validate story; imagine-kit patch apply; imagine-kit stage-shot s01; imagine-kit status\n";
@@ -138,6 +144,21 @@ test("checkTarget: waiver field keys are required in imagine and imagine-deliver
     const p = checkTarget(n, [{ ...f, text: f.text.replace("Literal: - asked:", "") }], rules, patterns);
     assert.ok(p.includes("missing literal: - asked:"), n);
   }
+});
+
+test("checkTarget: another skill's reference is checked on disk, not in the bundle", () => {
+  const [f] = passing("imagine-canon");
+  const text = f.text + "Read `R/skills/imagine/references/voice-cloning.md` in full.\nAlso skills/imagine/references/ghost.md.\n";
+  const exists = (rel) => rel === "skills/imagine/references/voice-cloning.md";
+  const p = checkTarget("imagine-canon", [{ ...f, text }], rules, patterns, { exists });
+  assert.deepEqual(p, ["skills/imagine-canon/SKILL.md: names skills/imagine/references/ghost.md but that file does not exist"]);
+});
+
+test("checkTarget: own skill path prefix still requires the bundle file", () => {
+  const [f] = passing("imagine-canon");
+  const text = f.text + "See skills/imagine-canon/references/casting.md.\n";
+  const p = checkTarget("imagine-canon", [{ ...f, text }], rules, patterns, { exists: () => true });
+  assert.ok(p.some((x) => /names references\/casting.md but the bundle has no/.test(x)), p.join());
 });
 
 test("checkTarget: skill frontmatter name must match its directory", () => {
