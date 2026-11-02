@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { err } from "../envelope.mjs";
 import { KitError, UsageError } from "../errors.mjs";
 import { deriveAll } from "../derive.mjs";
@@ -16,14 +16,19 @@ import { loadPlan } from "../img/plan.mjs";
 const RETRIES = 2;
 
 // A leftover image is reusable only when meta.json (written after the checks passed) names this prompt stamp and the file's own hash.
-function adoptable(work, finalPath, stamp) {
-  const metaPath = join(work, "meta.json");
-  if (!existsSync(metaPath)) return null;
-  let meta;
-  try { meta = JSON.parse(readFileSync(metaPath, "utf8")); } catch { return null; }
-  if (meta.prompt_sha256 !== stamp) return null;
-  for (const file of [finalPath, join(work, "out.png")]) {
-    if (existsSync(file) && sha256File(file) === meta.png_sha256 && pngInfo(readFileSync(file))) return { file, revised: meta.revised_prompt ?? null };
+function adoptable(dir, workRels, finalPath, stamp) {
+  for (const workRel of workRels) {
+    const work = safePath(dir, workRel);
+    const metaPath = safePath(dir, `${workRel}/meta.json`);
+    const outputPath = safePath(dir, `${workRel}/out.png`);
+    const workStat = work && lstatSync(work, { throwIfNoEntry: false });
+    if (!workStat?.isDirectory() || !metaPath || !outputPath || !existsSync(metaPath)) continue;
+    let meta;
+    try { meta = JSON.parse(readFileSync(metaPath, "utf8")); } catch { continue; }
+    if (meta.prompt_sha256 !== stamp) continue;
+    for (const file of [finalPath, outputPath]) {
+      if (existsSync(file) && sha256File(file) === meta.png_sha256 && pngInfo(readFileSync(file))) return { file, revised: meta.revised_prompt ?? null, work: workRel };
+    }
   }
   return null;
 }
@@ -53,7 +58,9 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   const finalPath = safePath(dir, rel);
   if (!finalPath) throw new KitError("HARD", `${rel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
 
-  const workRel = `tmp/img/${p.id}.v${v}`;
+  const workBaseRel = `tmp/img/${p.id}.v${v}`;
+  if (!safePath(dir, workBaseRel)) throw new KitError("HARD", `${workBaseRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+  const workRel = `${workBaseRel}.${randomBytes(6).toString("hex")}`;
   const work = safePath(dir, workRel);
   if (!work) throw new KitError("HARD", `${workRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
 
@@ -79,11 +86,20 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   // it was made from this exact prompt and these exact ref files and the file is still the bytes that were checked.
   const stamp = sha256(`${text}\n${refEntries.map((e) => e.sha256).join(",")}`);
   const adopted = finalPath;
-  const found = adoptable(work, adopted, stamp);
+  const safeImgRoot = safePath(dir, "tmp/img");
+  const priorWorkRels = [];
+  const baseWorkPath = safePath(dir, workBaseRel);
+  if (baseWorkPath && lstatSync(baseWorkPath, { throwIfNoEntry: false })?.isDirectory()) priorWorkRels.push(workBaseRel);
+  if (safeImgRoot && existsSync(safeImgRoot)) {
+    priorWorkRels.push(...readdirSync(safeImgRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith(`${p.id}.v${v}.`))
+      .map((entry) => `tmp/img/${entry.name}`));
+  }
+  const found = adoptable(dir, priorWorkRels, adopted, stamp);
   let png = found?.file ?? null;
   let revised = found?.revised ?? null;
   if (png) {
-    advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${p.id}.v${v}`, source: "assets", message: `adopted ${png === adopted ? rel : "tmp/img/" + p.id + ".v" + v + "/out.png"} left by an interrupted run; nothing was regenerated` });
+    advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${p.id}.v${v}`, source: "assets", message: `adopted ${png === adopted ? rel : `${found.work}/out.png`} left by an interrupted run; nothing was regenerated` });
   } else {
     if (!safePath(dir, workRel)) throw new KitError("HARD", `${workRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
     mkdirSync(work, { recursive: true });
@@ -126,7 +142,7 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   if (entry.tier === "replan") advice.push({ rule: "HARD-RASTER-TIER", item: `${p.id}.v${v}`, source: "assets/plan.yaml", message: `q ${entry.q} is below 0.75 (replan tier); regenerate larger or re-plan the shot, export-hf will refuse it` });
   const done = await commitAsset(ctx, dir, { entry, source: png === adopted ? null : png, clearBlocked: `img:${p.id}.v${v}`,
     summary: { command: "img", text: `${p.id}.v${v} ${info.w}x${info.h}${q === null ? "" : ` q=${round2(q)} ${tierOf(q)}`}` } });
-  return done.kept ? null : entry;
+  return done.entry;
 }
 
 export default {

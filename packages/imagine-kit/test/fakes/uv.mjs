@@ -1,12 +1,23 @@
 #!/usr/bin/env node
 // Fake `uv run --with pocket-tts ... python -I tts_worker.py`: follows the worker's JSON protocol and writes real WAV files.
 // FAKE_UV_MODE: ok | fail | short | badwav | noresults | badwav-second. Every request is appended to FAKE_UV_LOG.
-import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, watch, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { encodeWav } from "../helpers/wav.mjs";
 
 const request = JSON.parse(readFileSync(0, "utf8"));
 if (process.env.FAKE_UV_LOG) appendFileSync(process.env.FAKE_UV_LOG, `${JSON.stringify({ argv: process.argv.slice(2), env_eos: process.env.KPOCKET_TTS_ERROR_WITHOUT_EOS ?? null, request })}\n`);
+const barrier = process.env.FAKE_UV_BARRIER;
+if (barrier) {
+  mkdirSync(barrier, { recursive: true });
+  writeFileSync(join(barrier, `${process.pid}`), "ready");
+  await new Promise((resolve, reject) => {
+    const reached = () => readdirSync(barrier).length >= 2;
+    const watcher = watch(barrier, () => { if (reached()) { watcher.close(); resolve(); } });
+    watcher.on("error", (error) => { watcher.close(); reject(error); });
+    if (reached()) { watcher.close(); resolve(); }
+  });
+}
 const mode = process.env.FAKE_UV_MODE ?? "ok";
 if (mode === "fail") {
   console.log(JSON.stringify({ ok: false, id: request.jobs[0].id, error: "RuntimeError: simulated failure" }));

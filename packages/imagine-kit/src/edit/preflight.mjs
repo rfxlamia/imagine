@@ -72,7 +72,7 @@ function scanMotionFiles(dir, rel = "", visited = new Set(), errors = []) {
 
 // What a render needs from edit/: root index.html, scene hosts with class "scene", assertions only in root index.motion.json,
 // no placeholder text. (HARD-SCENE-CLASS, HARD-ROOT-MOTION, HARD-NO-PLACEHOLDER)
-export function renderPreflight(dir) {
+export function renderPreflight(dir, expectedShotIds = null) {
   const errors = [];
   const safeEdit = safePath(dir, "edit");
   if (!safeEdit) return [err("HARD-ROOT-MOTION", "HARD", "edit", "edit/ is outside the project")];
@@ -83,13 +83,31 @@ export function renderPreflight(dir) {
 
   const html = readText(safeIndex);
   if (PLACEHOLDER.test(html)) errors.push(err("HARD-NO-PLACEHOLDER", "HARD", "edit/index.html", "edit/index.html contains placeholder text (TODO, TBD, lorem or {{)"));
-  for (const tag of html.match(/<[^>]*data-composition-src\s*=\s*["'][^"']*["'][^>]*>/g) ?? []) {
+  const expected = expectedShotIds === null ? null : new Set(expectedShotIds);
+  const hostCounts = new Map();
+  const hostHtml = html.replace(/<!--[\s\S]*?-->/g, "");
+  for (const tag of hostHtml.match(/<[^>]*data-composition-src\s*=\s*["'][^"']*["'][^>]*>/g) ?? []) {
     const src = tag.match(/data-composition-src\s*=\s*["']([^"']*)["']/)[1];
+    const id = tag.match(/\bdata-composition-id\s*=\s*["']([^"']*)["']/)?.[1];
     const cls = tag.match(/\bclass\s*=\s*["']([^"']*)["']/)?.[1] ?? "";
-    if (!cls.split(/\s+/).includes("scene")) errors.push(err("HARD-SCENE-CLASS", "HARD", src, `the scene host for ${src} needs class="scene"`));
+    if (!cls.split(/\s+/).includes("scene")) errors.push(err("HARD-SCENE-CLASS", "HARD", id ?? src, `the scene host for ${src} needs class="scene"`));
+    if (!id) errors.push(err("HARD-SCENE-CLASS", "HARD", src, `the scene host for ${src} needs data-composition-id`));
+    else {
+      const count = (hostCounts.get(id) ?? 0) + 1;
+      hostCounts.set(id, count);
+      if (count > 1) errors.push(err("HARD-SCENE-CLASS", "HARD", id, `duplicate scene host for storyboard shot ${id}`));
+      if (expected && !expected.has(id)) errors.push(err("HARD-SCENE-CLASS", "HARD", id, `unknown scene host ${id}; it is not a storyboard shot`));
+      const sourceId = src.match(/^compositions\/(s\d{2})\.html$/)?.[1];
+      if (sourceId !== id) errors.push(err("HARD-SCENE-CLASS", "HARD", id, `scene host ${id} must load compositions/${id}.html; it references ${src}`));
+    }
     const safeSrc = safePath(dir, join("edit", src));
     if (!safeSrc) errors.push(err("HARD-NO-PLACEHOLDER", "HARD", src, `data-composition-src ${src} resolves outside the project`));
     else if (!existsSync(safeSrc)) errors.push(err("HARD-NO-PLACEHOLDER", "HARD", src, `data-composition-src ${src} points at a file that does not exist`));
+  }
+  if (expected) {
+    for (const id of expected) {
+      if (!hostCounts.has(id)) errors.push(err("HARD-SCENE-CLASS", "HARD", id, `missing scene host for storyboard shot ${id}`));
+    }
   }
 
   const { files: motion, errors: motionErrors } = scanMotionFiles(dir);

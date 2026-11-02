@@ -19,6 +19,19 @@ export function deriveAll(ctx) {
     if (rec.kind === "shot-stage" && Number.isInteger(rec.rev) && rec.rev > (ctx.story.front?.imagine_rev ?? 0)) {
       reasons.push({ kind: "uncommitted", source: id });   // left by a patch whose STORY.md commit never happened
     }
+    if (id === "g6") {
+      for (const [ref, recorded] of Object.entries(rec.inputs ?? {})) {
+        if (recorded === "item" && /^(edit|render):/.test(ref)) {
+          reasons.push({ kind: "legacy-dependency", source: ref });
+        }
+      }
+    }
+    const assetMatch = id.match(/^asset:(.+)\.v(\d+)$/);
+    const asset = assetMatch && ctx.manifest.assets.find((a) => a.id === assetMatch[1] && a.v === Number(assetMatch[2]));
+    if (asset?.kind === "vo" && asset.line && (typeof asset.params_hash === "string" || asset.take !== undefined || asset.seed !== undefined || asset.voice !== undefined)
+      && !Object.hasOwn(rec.inputs ?? {}, `tts:take:${asset.line}.v${asset.v}`)) {
+      reasons.push({ kind: "legacy-dependency", source: `tts:take:${asset.line}.v${asset.v}` });
+    }
     direct.set(id, reasons);
     watched.set(id, Object.entries(rec.watch ?? {})
       .filter(([ref, recorded]) => { const current = resolveRef(ctx, ref, recorded); return current !== undefined && current !== recorded; })
@@ -34,8 +47,8 @@ export function deriveAll(ctx) {
     for (const [ref, recorded] of Object.entries(rec.inputs ?? {})) {
       if (ref === id) continue;
       if (records[ref] && isStale(ref)) direct.get(id).push({ kind: "upstream", source: ref });
-      // An item-only input (recorded as "item") that is now rejected or gone no longer backs this item; pending or proposed stales nothing.
-      else if (recorded === "item" && (!records[ref] || records[ref].status === "rejected")) direct.get(id).push({ kind: "upstream", source: ref });
+      // A rejected or missing item no longer backs this approval; pending/proposed items remain reviewable but do not stale dependants.
+      else if (records[ref]?.status === "rejected" || (recorded === "item" && !records[ref])) direct.get(id).push({ kind: "upstream", source: ref });
     }
     visiting.delete(id);
     const stale = direct.get(id).length > 0;

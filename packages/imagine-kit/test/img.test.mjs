@@ -34,7 +34,7 @@ t("PROC-REVISED-PROMPT, PROC-FRAMING-IN-PROMPT: img --ref generates a pending re
   const [call] = p.calls();
   assert.ok(call.argv.includes("--skip-git-repo-check") && call.argv.includes("workspace-write"));
   assert.ok(call.argv.at(-1).startsWith("PROMPT: Mara"));
-  assert.ok(existsSync(join(p.dir, "tmp/img/mara-ref.v1/out.png")));
+  assert.ok(readdirSync(join(p.dir, "tmp/img")).some((name) => /^mara-ref\.v1\..+$/.test(name) && existsSync(join(p.dir, "tmp/img", name, "out.png"))));
   assert.match(readFileSync(join(p.dir, "journal.md"), "utf8"), /img: mara-ref\.v1 1024x1536/);
 });
 
@@ -48,6 +48,24 @@ t("PROC-RESUME-IDEMPOTENT: running the same request again does not call the tool
   assert.equal(again.env.data.assets[0].sha256, sha);
   assert.ok(again.env.advice.some((a) => a.rule === "PROC-RESUME-IDEMPOTENT"));
   assert.equal(getManifest(p.dir).assets.length, 1);
+});
+
+t("concurrent img requests for one asset use isolated worker directories and report the committed hash", async () => {
+  const p = await imgProject();
+  const barrier = join(mkdtempSync(join(tmpdir(), "imagine-img-barrier-")), "arrivals");
+  const [wide, tall] = await Promise.all([
+    p.run({ FAKE_CODEX_BARRIER: barrier, FAKE_CODEX_SIZE: "1024x1536" }, "img", "--ref", "mara-ref"),
+    p.run({ FAKE_CODEX_BARRIER: barrier, FAKE_CODEX_SIZE: "1536x1024" }, "img", "--ref", "mara-ref"),
+  ]);
+  assert.equal(wide.exit, 0, JSON.stringify(wide.env.errors));
+  assert.equal(tall.exit, 0, JSON.stringify(tall.env.errors));
+  const calls = p.calls();
+  assert.equal(calls.length, 2);
+  const workdirs = calls.map((call) => call.argv[call.argv.indexOf("-C") + 1]);
+  assert.notEqual(workdirs[0], workdirs[1], "concurrent workers must not share out.png or meta.json");
+  assert.equal(getManifest(p.dir).assets.filter((a) => a.id === "mara-ref").length, 1);
+  assert.equal(wide.env.data.assets[0].sha256, tall.env.data.assets[0].sha256, "the losing invocation reports the committed asset, not its uncommitted output");
+  assert.equal(wide.env.data.assets[0].sha256, getManifest(p.dir).assets.find((a) => a.id === "mara-ref").sha256);
 });
 
 t("AC-15 HARD-REFS-APPROVED: a batch with an unapproved ref exits 6 and never calls the tool", async () => {
@@ -143,22 +161,46 @@ t("AC-08: a leftover file that is not the checked output (garbage, or made from 
   const p = await imgProject();
   await p.run({}, "img", "--ref", "mara-ref");
   const final = join(p.dir, "assets/refs/mara-ref.v1.png");
-  const meta = join(p.dir, "tmp/img/mara-ref.v1/meta.json");
+  const work = join(p.dir, "tmp/img", readdirSync(join(p.dir, "tmp/img")).find((name) => /^mara-ref\.v1\..+$/.test(name)));
   // Garbage at the final path and no good copy in tmp: the meta hash no longer matches, so the tool runs again.
   writeFileSync(join(p.dir, "assets/manifest.yaml"), "assets: []\n");
   writeFileSync(final, "not a png");
-  rmSync(join(p.dir, "tmp/img/mara-ref.v1/out.png"));
+  rmSync(join(work, "out.png"));
   const garbage = await p.run({}, "img", "--ref", "mara-ref");
   assert.equal(garbage.exit, 0, JSON.stringify(garbage.env.errors));
   assert.equal(p.calls().length, 2, "garbage was not adopted");
   assert.ok(sha256File(final) === getManifest(p.dir).assets[0].sha256 && readFileSync(final).subarray(1, 4).toString() === "PNG");
   // A meta written for another prompt: the image would not match the recorded prompt, so it is regenerated.
   writeFileSync(join(p.dir, "assets/manifest.yaml"), "assets: []\n");
-  const doc = JSON.parse(readFileSync(meta, "utf8"));
-  writeFileSync(meta, JSON.stringify({ ...doc, prompt_sha256: "f".repeat(64) }));
+  for (const name of readdirSync(join(p.dir, "tmp/img")).filter((entry) => /^mara-ref\.v1\..+$/.test(entry))) {
+    const recoveredMeta = join(p.dir, "tmp/img", name, "meta.json");
+    if (!existsSync(recoveredMeta)) continue;
+    const doc = JSON.parse(readFileSync(recoveredMeta, "utf8"));
+    writeFileSync(recoveredMeta, JSON.stringify({ ...doc, prompt_sha256: "f".repeat(64) }));
+  }
   const other = await p.run({}, "img", "--ref", "mara-ref");
   assert.equal(other.exit, 0);
   assert.equal(p.calls().length, 3, "an image from another prompt was not adopted");
+});
+
+t("image crash recovery ignores symlinked meta and output leaves", async () => {
+  for (const leaf of ["meta.json", "out.png"]) {
+    const p = await imgProject();
+    await p.run({}, "img", "--ref", "mara-ref");
+    const work = p.calls()[0].cwd;
+    writeFileSync(join(p.dir, "assets/manifest.yaml"), "assets: []\n");
+    rmSync(join(p.dir, "assets/refs/mara-ref.v1.png"), { force: true });
+    const outside = join(mkdtempSync(join(tmpdir(), "imagine-img-recovery-outside-")), leaf);
+    const candidate = join(work, leaf);
+    writeFileSync(outside, readFileSync(candidate));
+    rmSync(candidate, { force: true });
+    symlinkSync(outside, candidate);
+
+    const rerun = await p.run({}, "img", "--ref", "mara-ref");
+    assert.equal(rerun.exit, 0, JSON.stringify(rerun.env.errors));
+    assert.equal(p.calls().length, 2, `${leaf} symlink must not be adopted`);
+    assert.equal(readFileSync(outside).length > 0, true, `${leaf} external target remains intact`);
+  }
 });
 
 t("AC-08: a crash between generation and the copy into assets/ adopts tmp/img/<id>.vN/out.png without calling the tool", async () => {

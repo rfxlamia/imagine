@@ -6,8 +6,10 @@ import { tmpdir } from "node:os";
 import YAML from "yaml";
 import { sha256File } from "../src/hash.mjs";
 import { wavInfo } from "../src/media.mjs";
-import { cli, getManifest, put } from "./helpers/fixture.mjs";
-import { ttsProject } from "./helpers/tts.mjs";
+import { approveThrough, cli, cliWith, getManifest, getProject, put, setProject } from "./helpers/fixture.mjs";
+import { FAKE_UV, NARRATOR, ttsProject } from "./helpers/tts.mjs";
+import { editProject } from "./helpers/edit.mjs";
+import { encodeWav } from "./helpers/wav.mjs";
 
 test("PROC-ONE-LINE-PER-WAV, PROC-CAPTION-ORIGINAL, HARD-TTS-EOS: production takes: one WAV per line, manifest entry id = line, seed = seed_base + take, pending listen_status", async () => {
   const p = await ttsProject({ edit: (t) => t.replace("She lit it anyway.", "She lit Skerryvore anyway.") });
@@ -64,6 +66,152 @@ test("PROC-RESUME-IDEMPOTENT and PROC-VERSIONS-IMMUTABLE: rerun skips; --redo ma
   assert.deepEqual([redo.env.data.takes[0].v, redo.env.data.takes[0].seed], [2, 1302]);
   assert.equal(sha256File(join(p.dir, "assets/vo/L01.v1.wav")), sha);
   assert.equal(getManifest(p.dir).assets.find((a) => a.v === 2).note, "too fast");
+});
+
+test("production TTS creates a new take when the approved voice cast changes", async () => {
+  const p = await ttsProject();
+  await p.run({}, "tts", "L01");
+  await approveThrough(p.cwd, "G4");
+  await cli(p.cwd, "gate", "G5a", "approve", "--quote", "voice take approved");
+  const bible = readFileSync(join(p.dir, "bible.yaml"), "utf8");
+  put(p.dir, "bible.yaml", bible.replace("source: builtin:george", "source: builtin:jane"));
+  await cli(p.cwd, "gate", "G2", "approve", "--quote", "cast changed and reviewed");
+
+  const status = await cli(p.cwd, "status");
+  assert.equal(status.env.data.gates.G5a.state, "reopened", "the old take approval must stale with its cast source");
+  const changed = await p.run({}, "tts", "L01");
+  assert.equal(changed.exit, 0, JSON.stringify(changed.env.errors));
+  assert.deepEqual([changed.env.data.takes[0].v, changed.env.data.takes[0].seed], [2, 1302]);
+  assert.equal(p.calls().length, 2, "changed effective voice parameters regenerate the take");
+});
+
+test("production TTS creates a new take when the approved script line changes", async () => {
+  const p = await ttsProject();
+  await p.run({}, "tts", "L01");
+  await approveThrough(p.cwd, "G4");
+  await cli(p.cwd, "gate", "G5a", "approve", "--quote", "voice take approved");
+  const narration = readFileSync(join(p.dir, "script/narration.md"), "utf8");
+  put(p.dir, "script/narration.md", narration.replace("Every night for forty years, Mara climbed the stairs and lit the lamp.", "Every night for forty years, Mara carefully climbed the stairs and lit the lamp."));
+  await cli(p.cwd, "gate", "G1", "approve", "--quote", "script line changed and reviewed");
+
+  const status = await cli(p.cwd, "status");
+  assert.equal(status.env.data.gates.G5a.state, "reopened", "the old take approval must stale with its script source");
+  const changed = await p.run({}, "tts", "L01");
+  assert.equal(changed.exit, 0, JSON.stringify(changed.env.errors));
+  assert.equal(changed.env.data.takes[0].v, 2);
+  assert.equal(p.calls().length, 2, "changed effective TTS text regenerates the take");
+});
+
+test("concurrent production TTS requests isolate worker outputs and report the committed hash", async () => {
+  const p = await ttsProject();
+  const barrier = join(mkdtempSync(join(tmpdir(), "imagine-tts-barrier-")), "arrivals");
+  const [first, second] = await Promise.all([
+    p.run({ FAKE_UV_BARRIER: barrier }, "tts", "L01"),
+    p.run({ FAKE_UV_BARRIER: barrier }, "tts", "L01"),
+  ]);
+  assert.equal(first.exit, 0, JSON.stringify(first.env.errors));
+  assert.equal(second.exit, 0, JSON.stringify(second.env.errors));
+  const calls = p.calls();
+  assert.equal(calls.length, 2);
+  const outputs = calls.map((call) => call.request.jobs[0].out);
+  assert.notEqual(outputs[0], outputs[1], "concurrent workers must not share the versioned WAV path");
+  assert.equal(getManifest(p.dir).assets.filter((a) => a.id === "L01").length, 1);
+  assert.equal(first.env.data.takes[0].sha256, second.env.data.takes[0].sha256, "the losing invocation reports the committed asset hash");
+  assert.equal(first.env.data.takes[0].sha256, getManifest(p.dir).assets.find((a) => a.id === "L01").sha256);
+});
+
+test("legacy approved TTS records without take provenance fail closed", async () => {
+  const p = await ttsProject();
+  await p.run({}, "tts", "L01");
+  await approveThrough(p.cwd, "G4");
+  await cli(p.cwd, "gate", "G5a", "approve", "--quote", "take approved");
+  setProject(p.dir, (project) => { delete project.items["asset:L01.v1"].inputs["tts:take:L01.v1"]; });
+  const status = await cli(p.cwd, "status");
+  assert.equal(status.env.data.gates.G5a.state, "reopened");
+  assert.equal(status.env.data.items.find((item) => item.id === "asset:L01.v1").status, "stale");
+  assert.ok(getProject(p.dir).items["asset:L01.v1"]);
+});
+
+test("G5a refuses a production take generated from script text that changed before approval", async () => {
+  const p = await ttsProject();
+  await p.run({}, "tts", "L01");
+  await approveThrough(p.cwd, "G4");
+  const narration = readFileSync(join(p.dir, "script/narration.md"), "utf8");
+  put(p.dir, "script/narration.md", narration.replace("Every night for forty years, Mara climbed the stairs and lit the lamp.", "Every night for forty years, Mara carefully climbed the stairs and lit the lamp."));
+  await cli(p.cwd, "gate", "G1", "approve", "--quote", "script edit reviewed");
+
+  const approval = await cli(p.cwd, "gate", "G5a", "approve", "--quote", "old take must not approve");
+  assert.equal(approval.exit, 1);
+  assert.ok(approval.env.errors.some((e) => /tts:take:L01\.v1/.test(e.message)), JSON.stringify(approval.env.errors));
+  assert.equal(getManifest(p.dir).assets.find((a) => a.id === "L01").status, "pending");
+});
+
+test("changing a voice file at the same path stales and blocks approval of the old take", async () => {
+  const p = await ttsProject();
+  const bible = readFileSync(join(p.dir, "bible.yaml"), "utf8").replace("source: builtin:george", "source: file:voices/narrator.wav");
+  put(p.dir, "bible.yaml", bible);
+  put(p.dir, "voices/narrator.wav", encodeWav(2, { freq: 220 }));
+  await cli(p.cwd, "gate", "G2", "approve", "--quote", "file voice selected");
+  await p.run({}, "tts", "L01");
+  await approveThrough(p.cwd, "G4");
+  await cli(p.cwd, "gate", "G5a", "approve", "--quote", "file voice take approved");
+
+  writeFileSync(join(p.dir, "voices/narrator.wav"), encodeWav(2, { freq: 330 }));
+  const status = await cli(p.cwd, "status");
+  assert.equal(status.env.data.gates.G5a.state, "reopened");
+  const approval = await cli(p.cwd, "gate", "G5a", "approve", "--quote", "old file voice must not approve");
+  assert.equal(approval.exit, 1);
+});
+
+test("changing seed_base after take creation stales G5a and generates the next version with the new seed", async () => {
+  const p = await ttsProject();
+  await p.run({}, "tts", "L01");
+  await approveThrough(p.cwd, "G4");
+  await cli(p.cwd, "gate", "G5a", "approve", "--quote", "take approved");
+  const bible = readFileSync(join(p.dir, "bible.yaml"), "utf8");
+  put(p.dir, "bible.yaml", bible.replace("seed_base: 1300", "seed_base: 1400"));
+  await cli(p.cwd, "gate", "G2", "approve", "--quote", "seed changed and reviewed");
+
+  const status = await cli(p.cwd, "status");
+  assert.equal(status.env.data.gates.G5a.state, "reopened");
+  const changed = await p.run({}, "tts", "L01");
+  assert.deepEqual([changed.env.data.takes[0].v, changed.env.data.takes[0].seed], [2, 1402]);
+});
+
+test("production take approval works when the bible has no pronunciation section", async () => {
+  const p = await ttsProject();
+  const bible = readFileSync(join(p.dir, "bible.yaml"), "utf8");
+  put(p.dir, "bible.yaml", bible.replace("\npronunciation:\n  - term: Skerryvore\n    say: SKERRY-vor\n", "\n"));
+  await cli(p.cwd, "gate", "G2", "approve", "--quote", "bible without lexicon");
+  await p.run({}, "tts", "L01");
+  await approveThrough(p.cwd, "G4");
+  const approval = await cli(p.cwd, "gate", "G5a", "approve", "--quote", "take approved without lexicon");
+  assert.equal(approval.exit, 0, JSON.stringify(approval.env.errors));
+});
+
+test("a stale production take reopens G5a and the G6 approval that depends on it", async () => {
+  const p = await editProject();
+  put(p.dir, "bible.yaml", `${readFileSync(join(p.dir, "bible.yaml"), "utf8")}\n${NARRATOR}`);
+  await cli(p.cwd, "gate", "G2", "approve", "--quote", "narrator cast added");
+  const take = await cliWith(p.cwd, { tools: { uv: [process.execPath, FAKE_UV] } }, "tts", "L01");
+  assert.equal(take.exit, 0, JSON.stringify(take.env.errors));
+  const g5a = await cli(p.cwd, "gate", "G5a", "approve", "--quote", "production take approved");
+  assert.equal(g5a.exit, 0, JSON.stringify(g5a.env.errors));
+  const staged = await p.run({}, "stage-shot", "s01");
+  assert.equal(staged.exit, 0, JSON.stringify(staged.env.errors));
+  p.buildScene("s01");
+  const promoted = await p.run({}, "promote-shot", "s01");
+  assert.equal(promoted.exit, 0, JSON.stringify(promoted.env.errors));
+  const g6 = await cli(p.cwd, "gate", "G6", "approve", "--quote", "edit and production audio approved");
+  assert.equal(g6.exit, 0, JSON.stringify(g6.env.errors));
+
+  const narration = readFileSync(join(p.dir, "script/narration.md"), "utf8");
+  put(p.dir, "script/narration.md", narration.replace("Every night for forty years, Mara climbed the stairs and lit the lamp.", "Every night for forty years, Mara carefully climbed the stairs and lit the lamp."));
+  await cli(p.cwd, "gate", "G1", "approve", "--quote", "script edit reviewed");
+
+  const status = await cli(p.cwd, "status");
+  assert.equal(status.env.data.gates.G5a.state, "reopened");
+  assert.equal(status.env.data.gates.G6.state, "reopened");
 });
 
 test("params_hash changes with the seed and the text, and is stable for the same inputs", async () => {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fake `codex exec`: records its argv, writes out.png into the -C directory and a rollout log with a revised prompt.
 // Behaviour per call comes from FAKE_CODEX_MODES (comma list, last entry repeats): ok | uniform | notpng | fail | nofile.
-import { appendFileSync, mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, existsSync, readdirSync, watch, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { encodePng } from "../helpers/png.mjs";
@@ -16,6 +16,17 @@ const [w, h] = (process.env.FAKE_CODEX_SIZE ?? "1536x1024").split("x").map(Numbe
 const dir = argv[argv.indexOf("-C") + 1];
 const sid = randomUUID();
 process.stdout.write(`OpenAI Codex v0\n--------\nsession id: ${sid}\n--------\n`);
+const barrier = process.env.FAKE_CODEX_BARRIER;
+if (barrier) {
+  mkdirSync(barrier, { recursive: true });
+  writeFileSync(join(barrier, sid), "ready");
+  await new Promise((resolve, reject) => {
+    const reached = () => readdirSync(barrier).length >= 2;
+    const watcher = watch(barrier, () => { if (reached()) { watcher.close(); resolve(); } });
+    watcher.on("error", (error) => { watcher.close(); reject(error); });
+    if (reached()) { watcher.close(); resolve(); }
+  });
+}
 const sleep = Number(process.env.FAKE_CODEX_SLEEP_MS ?? 0);
 if (sleep) await new Promise((r) => setTimeout(r, sleep));
 if (mode === "fail") { process.stderr.write("simulated failure\n"); process.exit(1); }

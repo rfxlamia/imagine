@@ -37,7 +37,9 @@ test("PROC-VERSIONS-IMMUTABLE: a version that already exists is kept and never o
   put(p.dir, "tmp/b.png", "second");
   await commitAsset(ctx, p.dir, { entry: entry(1), source: join(p.dir, "tmp/a.png"), summary: { command: "img", text: "one" } });
   const again = await commitAsset(ctx, p.dir, { entry: entry(1), source: join(p.dir, "tmp/b.png"), summary: { command: "img", text: "two" } });
-  assert.deepEqual(again, { kept: true });
+  assert.equal(again.kept, true);
+  assert.equal(again.entry.sha256, sha256File(join(p.dir, "assets/img/bg.v1.png")));
+  assert.equal(again.entry.path, "assets/img/bg.v1.png");
   assert.equal(readFileSync(join(p.dir, "assets/img/bg.v1.png"), "utf8"), "first");
   assert.equal(getManifest(p.dir).assets.length, 1);
 });

@@ -64,7 +64,7 @@ export default {
       throw new KitError("BLOCKED", "edit/ is not an initialised HyperFrames project (edit/hyperframes.json is missing); run `npx hyperframes@0.8.223 init edit`", { rule: "HARD-ROOT-MOTION" });
     }
 
-    const errors = renderPreflight(dir);
+    const errors = renderPreflight(dir, sctx.story.shots.map((shot) => shot.id));
     if (final) {
       if (derived.gates.G6.state !== "approved") errors.push(err("HARD-GATES-RECORDED", "HARD", "G6", `gate G6 must be approved before a final render (state: ${derived.gates.G6.state})`));
       errors.push(...checkAssets(dir, sctx, derived, { checkCopies: true }).errors);

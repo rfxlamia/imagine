@@ -72,6 +72,26 @@ t("render --final never reuses a version whose MP4 is gone: recorded render item
   assert.equal(eight.env.data.path, "post/keeper.v8.mp4", "the highest filename version counts too");
 });
 
+t("re-promoting a changed shot invalidates G6 and blocks final rendering", async () => {
+  const p = await renderProject();
+  assert.equal((await p.run({}, "stage-shot", "s01")).exit, 0);
+  put(p.dir, "stage/edit/s01/compositions/s01.html", COMPOSITION("s01"));
+  assert.equal((await p.run({}, "promote-shot", "s01")).exit, 0);
+  await cli(p.cwd, "gate", "G6", "approve", "--quote", "edit approved");
+
+  assert.equal((await p.run({}, "stage-shot", "s01")).exit, 0);
+  put(p.dir, "stage/edit/s01/compositions/s01.html", COMPOSITION("s01").replace("opacity:1", "opacity:0.5"));
+  const promoted = await p.run({}, "promote-shot", "s01");
+  assert.equal(promoted.exit, 0, JSON.stringify(promoted.env.errors));
+
+  const status = await cli(p.cwd, "status");
+  assert.equal(status.env.data.gates.G6.state, "reopened");
+  const final = await p.render({}, "render", "--final");
+  assert.notEqual(final.exit, 0);
+  assert.ok(final.env.errors.some((e) => e.item === "G6"));
+  assert.equal(p.calls().some((c) => c.argv.includes("render")), false, "preflight must refuse before invoking HyperFrames");
+});
+
 t("render --final re-checks asset hashes: a swapped asset or edit/assets copy stops the render", async () => {
   const p = await renderProject();
   await cli(p.cwd, "gate", "G6", "approve", "--quote", "ok");
@@ -88,6 +108,24 @@ t("render --final re-checks asset hashes: a swapped asset or edit/assets copy st
   assert.match(b.env.errors.map((e) => e.message).join(" "), /L01\.v1\.wav no longer matches/);
   assert.equal(p.calls().some((c) => c.argv.includes("render")), false, "the render tool never ran");
   assert.deepEqual(readdirSync(join(p.dir, "post")).filter((n) => n.endsWith(".mp4")), []);
+});
+
+t("render preflight requires exactly one scene host for every storyboard shot", async () => {
+  for (const [name, change] of [
+    ["missing", (html) => html.replace('<div class="scene" data-composition-id="s02" data-composition-src="compositions/s02.html" data-start="6" data-duration="7" data-track-index="0"></div>', "")],
+    ["duplicate", (html) => html.replace("</body>", '<div class="scene" data-composition-id="s01" data-composition-src="compositions/s01.html" data-start="0" data-duration="6"></div></body>')],
+    ["unknown", (html) => html.replace('data-composition-id="s02"', 'data-composition-id="s99"')],
+    ["source mismatch", (html) => html.replace("compositions/s02.html", "compositions/s01.html")],
+    ["commented", (html) => html.replace('<div class="scene" data-composition-id="s02" data-composition-src="compositions/s02.html" data-start="6" data-duration="7" data-track-index="0"></div>', '<!-- <div class="scene" data-composition-id="s02" data-composition-src="compositions/s02.html" data-start="6" data-duration="7" data-track-index="0"></div> -->')],
+  ]) {
+    const p = await renderProject();
+    const index = readFileSync(join(p.dir, "edit/index.html"), "utf8");
+    put(p.dir, "edit/index.html", change(index));
+    const result = await p.render({}, "render", "--draft");
+    assert.notEqual(result.exit, 0, name);
+    assert.ok(result.env.errors.some((e) => /scene host|storyboard shot|duplicate|unknown/i.test(e.message)), JSON.stringify(result.env.errors));
+    assert.equal(p.calls().some((c) => c.argv.includes("render")), false, `${name}: preflight must refuse before invoking HyperFrames`);
+  }
 });
 
 t("preflight: scene host without class, motion file under compositions, extra root sidecar, placeholder, missing src", async () => {
@@ -252,7 +290,7 @@ t("unique temp render output per invocation and cleanup on failure", async () =>
   const p = await renderProject();
   const r1Promise = p.render({ FAKE_NPX_SLEEP_MS: "600" }, "render", "--draft");
   const r2Promise = p.render({ FAKE_NPX_SLEEP_MS: "600" }, "render", "--draft");
-  const [r1, r2] = await Promise.all([r1Promise, r2Promise]);
+  await Promise.all([r1Promise, r2Promise]);
   const calls = p.calls().filter((c) => c.argv.includes("render"));
   const out1 = calls[calls.length - 2].argv[calls[calls.length - 2].argv.indexOf("-o") + 1];
   const out2 = calls[calls.length - 1].argv[calls[calls.length - 1].argv.indexOf("-o") + 1];
