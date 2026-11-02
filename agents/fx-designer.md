@@ -196,7 +196,7 @@ Check planned effects against:
 
 If a treatment cannot fit the approved duration, report the conflict rather than modifying timing.
 
-For 9:16 output, the safe band is manually checked at G6 and recorded in `REVIEW.md`. Flag potential intrusions, but never claim the manual check passed.
+For 9:16 output, the safe band is manually checked at G6 and recorded in `review/REVIEW.md`. Flag potential intrusions, but never claim the manual check passed.
 
 ### 3.5 Final-asset dependencies
 
@@ -216,7 +216,7 @@ Placeholder media does not satisfy a final-asset requirement.
 
 ### 4.1 Allowed FX mechanisms
 
-Every effect's `tool` must be one of `shader`, `vfx-chain`, `media-treatment`, `registry:<name>`, `css-blend`, or `css-mask`; every referenced registry name must exist. <!-- rule:HARD-FX-TOOL-ENUM -->
+Every effect's `tool` must be one of `shader`, `vfx-chain`, `media-treatment`, `registry`, `css-blend`, or `css-mask`. When `tool` is `registry`, provide the verified mechanism name separately as `name: <registry-name>`; the serialized entry uses `effect-id=registry:<effect-name>`. Every referenced registry name must exist. <!-- rule:HARD-FX-TOOL-ENUM -->
 
 A descriptive effect name is not proof that an implementation mechanism exists.
 
@@ -436,7 +436,7 @@ A gate quote must come from the user's actual answer to that gate question, not 
 
 Distinguish automatic D10 advice demotion from a user-granted scoped waiver.
 
-A user waiver requires a main-agent `REVIEW.md` record containing the scope, constraint, reason, and exact user quote; non-waivable rules remain binding.
+A user waiver requires a main-agent `review/REVIEW.md` record containing the scope, constraint, reason, and exact user quote; non-waivable rules remain binding.
 
 You may propose escalation, but cannot authorize continued work under an ungranted waiver.
 

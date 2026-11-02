@@ -68,19 +68,19 @@ Project files required by activity:
 
 | Activity | Mandatory project files |
 |---|---|
-| Entry/G4 verification | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md`, project configuration, current asset manifest |
-| Canonical ref generation | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md`, current asset manifest, referenced prompt/plan records |
-| Canonical continuity audit/G5r | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md`, current asset manifest, all affected reference images |
-| Batch image generation | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md`, current asset manifest, approved source reference images |
-| Batch continuity audit/G5b | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md`, current asset manifest, affected batch images and reference images |
-| Narrated audio/G5a | `script/narration.md`, `bible.yaml`, `style.md`, `STORY.md`, `review/REVIEW.md`, current asset manifest, approved casting/lexicon |
-| Music-led/text-led audio/G5a | `script/copy.md`, `bible.yaml`, `style.md`, `STORY.md`, `review/REVIEW.md`, current asset manifest, source audio/cue records |
-| Post-generation budget audit | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md`, current asset manifest, measured raster records |
-| Regeneration/impact/recovery | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md`, current asset manifest, all affected source and output versions |
+| Entry/G4 verification | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md` if present, project configuration, current asset manifest |
+| Canonical ref generation | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md` if present, current asset manifest, referenced prompt/plan records |
+| Canonical continuity audit/G5r | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md` if present, current asset manifest, all affected reference images |
+| Batch image generation | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md` if present, current asset manifest, approved source reference images |
+| Batch continuity audit/G5b | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md` if present, current asset manifest, affected batch images and reference images |
+| Narrated audio/G5a | `script/narration.md`, `bible.yaml`, `style.md`, `STORY.md`, `review/REVIEW.md` if present, current asset manifest, approved casting/lexicon |
+| Music-led/text-led audio/G5a | `script/copy.md`, `bible.yaml`, `style.md`, `STORY.md`, `review/REVIEW.md` if present, current asset manifest, source audio/cue records |
+| Post-generation budget audit | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md` if present, current asset manifest, measured raster records |
+| Regeneration/impact/recovery | `STORY.md`, `bible.yaml`, `style.md`, `review/REVIEW.md` if present, current asset manifest, all affected source and output versions |
 
 The project configuration and asset manifest must be read at their actual paths as established by the initialized project and observed kit results; never invent a different path or silently initialize a replacement.
 
-If a required file does not yet exist, distinguish an expected not-yet-produced output from a missing prerequisite. Missing prerequisites block the stage.
+If a required file does not yet exist, distinguish an expected not-yet-produced output from a missing prerequisite. Missing prerequisites block the stage. `review/REVIEW.md` is optional until the review workflow creates it: read it when present, but its absence alone does not block generation. Create it through the documented review workflow before recording the first finding, decision, or waiver that belongs there.
 
 Audits and reviews always include the complete current `bible.yaml` and `style.md`, not excerpts or previously cached descriptions. <!-- rule:PROC-BRIEF-AUDIT-CANON -->
 

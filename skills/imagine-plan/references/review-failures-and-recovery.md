@@ -46,7 +46,7 @@ Do not phrase an approval question as a request for general feedback.
 
 ### 2.1 Suggested REVIEW.md gate record
 
-Use the canonical format required by `docs/contracts/source-formats.md`. The following describes the information that must be preserved; it does not authorize a second incompatible schema.
+The waiver ledger schema and lifecycle are authoritative in `skills/imagine/references/waivers.md`; this reference does not define a competing waiver schema. `docs/contracts/source-formats.md` defines source-reference forms and hashes, not the waiver ledger. The following gate record is a suggested summary of information to preserve, not a canonical schema.
 
 ```markdown
 ### G4 — Production plan
@@ -229,7 +229,7 @@ The main agent must:
 3. Explain the risk and available compliant repair.
 4. Identify the proposed waiver scope and duration.
 5. Ask for an explicit human decision.
-6. Record the verbatim answer in `REVIEW.md`.
+6. Record the verbatim answer in `review/REVIEW.md`.
 7. Preserve the applicable source evidence and versions.
 8. Keep other violations blocked.
 9. Re-evaluate the waiver when its affected inputs change.
@@ -238,27 +238,9 @@ A waiver must not be inferred from the user's acceptance of a different item.
 
 There is no independent waiver CLI workflow in Phase 1.
 
-### 6.4 Suggested waiver entry
+### 6.4 Waiver record
 
-Follow the canonical `REVIEW.md` syntax in the source-format contract. Preserve at least:
-
-```markdown
-### Scoped waiver — [actual identifier]
-
-- Requirement: [actual rule or diagnostic]
-- Scope: [exact shots, items, frames, or versions]
-- Evidence: [actual measured failure]
-- Risk explained: [specific consequence]
-- Compliant alternative offered: [actual repair]
-- Question asked: [actual waiver question]
-- User answer, verbatim: [actual answer]
-- Decision: [granted / refused]
-- Expiration or invalidation condition: [specific dependency]
-```
-
-Never leave descriptor text in a real waiver entry.
-
-Record the user's decision, not the main agent's proposed disposition.
+Use only the waiver schema, exact fields, placement, status values, and lifecycle defined in `skills/imagine/references/waivers.md`; do not create a parallel entry format here. Preserve the specific failed condition, scope, risk and compliant alternative shown to the user, the exact question, and the user's verbatim answer. Record the user's decision, never the main agent's proposed disposition.
 
 An explicit scoped waiver is separate from the automatic D10 advice exception and does not expand that allowlist.
 
@@ -278,7 +260,7 @@ All diagnostics outside the single applicable D10 automatic exception must be re
 
 The planning skill must not claim G6 merely because the planned FX and camera parameters appear valid.
 
-At G6, check the format-specific 9:16 safe band manually in the actual draft and record the inspection and any resulting decision in `REVIEW.md`.
+At G6, check the format-specific 9:16 safe band manually in the actual draft and record the inspection and any resulting decision in `review/REVIEW.md`.
 
 The review must include both the Studio preview and a playable draft MP4 with the full mix listened to by the user.
 
