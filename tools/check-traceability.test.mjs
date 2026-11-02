@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { checkRegistry, checkCoverage } from "./check-traceability.mjs";
+import { checkRegistry, checkCoverage, parseClasses } from "./check-traceability.mjs";
 
 const rules = [
   { id: "HARD-X-ONE", source: "section 8.1", text: "t", cover: "both" },
@@ -57,6 +57,37 @@ test("coverage: deferred rule skipped and counted", () => {
   assert.deepEqual(r.missing, []);
   assert.equal(r.deferred, 1);
   assert.equal(r.covered, 3);
+});
+
+test("coverage: class filter checks only the listed classes", () => {
+  const files = [{ path: "tests/x.test.mjs", text: "HARD-X-ONE AC-01" }];
+  const all = checkCoverage(rules, files);
+  assert.deepEqual(all.missing.sort(), ["HARD-X-ONE (instructions)", "PROC-Y (instructions)"]);
+  const r = checkCoverage(rules, files, { classes: new Set(["HARD", "GATE"]) });
+  assert.deepEqual(r.missing, ["HARD-X-ONE (instructions)"]);
+  assert.equal(r.covered, 0);
+  assert.equal(r.skipped, 2);
+});
+
+test("coverage: class filter still reports orphans in every class", () => {
+  const files = [{ path: "agents/b.md", text: "<!-- rule:PROC-GHOST --> <!-- rule:HARD-X-ONE -->" }, { path: "tests/x.test.mjs", text: "HARD-X-ONE" }];
+  const r = checkCoverage(rules, files, { classes: new Set(["HARD"]) });
+  assert.deepEqual(r.missing, []);
+  assert.deepEqual(r.orphans, ["PROC-GHOST in agents/b.md"]);
+});
+
+test("parseClasses: comma list, validated", () => {
+  assert.deepEqual([...parseClasses(["--classes", "HARD,GATE"])].sort(), ["GATE", "HARD"]);
+  assert.equal(parseClasses(["--report", "x"]), null);
+  assert.throws(() => parseClasses(["--classes", "HARD,NOPE"]), /unknown class NOPE/);
+  assert.throws(() => parseClasses(["--classes"]), /--classes needs/);
+});
+
+test("cli: --classes HARD,GATE runs filtered coverage", () => {
+  const tool = fileURLToPath(new URL("./check-traceability.mjs", import.meta.url));
+  const r = spawnSync(process.execPath, [tool, "--classes", "HARD,GATE"], { encoding: "utf8" });
+  assert.match(r.stdout + r.stderr, /classes HARD,GATE/);
+  assert.doesNotMatch(r.stderr, /^missing (PROC|ADV|DAG|CAP|AC)-/m);
 });
 
 test("entry guard runs main when invoked via symlink", () => {

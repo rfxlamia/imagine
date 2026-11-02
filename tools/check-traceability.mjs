@@ -2,11 +2,14 @@
 // Verifies the rule registry and that every rule is enforced by an instruction
 // marker (<!-- rule:ID -->) and/or referenced by a test, per its `cover` field.
 // Rules with `status: deferred` are kept in the registry but skipped by coverage.
+// `--classes HARD,GATE` limits the coverage check to rules whose id prefix is listed
+// (the WP6 acceptance gate); orphan markers are still reported for every class.
 import { readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ID_RE = /^(HARD|ADV|GATE|DAG|PROC|CAP|AC)-[A-Z0-9]+(-[A-Z0-9]+)*$/;
+const CLASSES = ["HARD", "ADV", "GATE", "DAG", "PROC", "CAP", "AC"];
+const ID_RE = new RegExp(`^(${CLASSES.join("|")})-[A-Z0-9]+(-[A-Z0-9]+)*$`);
 const COVERS = new Set(["instructions", "tests", "both"]);
 const STATUSES = new Set(["active", "deferred"]);
 const MARKER_RE = /<!--\s*rule:([A-Z0-9-]+)\s*-->/g;
@@ -44,7 +47,17 @@ export function checkRegistry(rules) {
   return problems;
 }
 
-export function checkCoverage(rules, files) {
+export function parseClasses(argv) {
+  const i = argv.indexOf("--classes");
+  if (i < 0) return null;
+  const raw = argv[i + 1];
+  if (!raw || raw.startsWith("--")) throw new Error("--classes needs a comma list, e.g. --classes HARD,GATE");
+  const set = new Set(raw.split(",").map((c) => c.trim()).filter(Boolean));
+  for (const c of set) if (!CLASSES.includes(c)) throw new Error(`unknown class ${c}`);
+  return set;
+}
+
+export function checkCoverage(rules, files, { classes = null } = {}) {
   const known = new Set(rules.map((r) => r.id));
   const marked = new Set();
   const orphans = [];
@@ -62,8 +75,10 @@ export function checkCoverage(rules, files) {
   const missing = [];
   let covered = 0;
   let deferred = 0;
+  let skipped = 0;
   for (const r of rules) {
     if (r.status === "deferred") { deferred += 1; continue; }
+    if (classes && !classes.has(r.id.split("-")[0])) { skipped += 1; continue; }
     const cover = r.cover ?? "instructions";
     const needI = cover !== "tests";
     const needT = cover !== "instructions";
@@ -73,7 +88,7 @@ export function checkCoverage(rules, files) {
     if (!okT) missing.push(`${r.id} (tests)`);
     if (okI && okT) covered += 1;
   }
-  return { missing, orphans, covered, deferred };
+  return { missing, orphans, covered, deferred, skipped };
 }
 
 function walk(root, dir, out) {
@@ -95,8 +110,11 @@ function main() {
   if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
   console.log(`registry ok: ${rules.length} rules`);
   if (process.argv.includes("--registry-only")) return;
+  let classes;
+  try { classes = parseClasses(process.argv); } catch (e) { console.error(e.message); process.exit(2); }
   const files = [...INSTRUCTION_ROOTS, ...TEST_ROOTS].flatMap((d) => walk(root, join(root, d), []));
-  const { missing, orphans, covered, deferred } = checkCoverage(rules, files);
+  const { missing, orphans, covered, deferred, skipped } = checkCoverage(rules, files, { classes });
+  const scope = classes ? ` (classes ${[...classes].join(",")}; ${skipped} skipped)` : "";
   const reportIdx = process.argv.indexOf("--report");
   if (reportIdx > 0) {
     const lines = ["# Traceability report", "", `Covered ${covered}/${rules.length - deferred} active (${deferred} deferred)`, "", "| Rule | Cover | Instruction markers | Test refs |", "|---|---|---|---|"];
@@ -111,10 +129,11 @@ function main() {
     writeFileSync(join(root, process.argv[reportIdx + 1]), lines.join("\n") + "\n");
   }
   if (missing.length || orphans.length) {
+    if (scope) console.error(`coverage failed${scope}`);
     console.error([...missing.map((m) => `missing ${m}`), ...orphans.map((o) => `orphan ${o}`)].join("\n"));
     process.exit(1);
   }
-  console.log(`coverage ok: ${covered}/${rules.length - deferred} active (${deferred} deferred)`);
+  console.log(`coverage ok: ${covered}/${rules.length - deferred - skipped} active (${deferred} deferred)${scope}`);
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main();
