@@ -189,10 +189,10 @@ export function buildBrief(name, rules, { proposal = null, summary = "", done = 
   const byId = new Map(rules.map((r) => [r.id, r]));
   const out = [];
   const target = t.kind === "skill" ? `${t.path}/SKILL.md (plus optional ${t.path}/references/*.md)` : t.path;
-  out.push(`You are writing \`${target}\` for Imagine, a Claude Code plugin (repo github.com/rfxlamia/imagine, branch \`${BRANCH}\`).`);
+  out.push(`You are writing \`${target}\` for Imagine, a Claude Code plugin (repo github.com/rfxlamia/imagine, branch \`${BRANCH}\`, open as pull request #4: https://github.com/rfxlamia/imagine/pull/4).`);
   out.push("This is a written exercise: you cannot run tools here and must not pretend you did. Produce the file contents only.");
   out.push("");
-  out.push("## Read first (on that branch)");
+  out.push("## Read first (on that branch / in pull request #4, not on main)");
   out.push("- `docs/contracts/rules.yaml` (rule registry), `docs/contracts/cli-contract.md` (the 12 kit commands, envelope, exit codes), `docs/contracts/source-formats.md` (project files, STORY.md, gates, patch inputs), `docs/contracts/claude-code-platform.md` (plugin facts).");
   out.push("- `tests/behavioral/red/SUMMARY.md` (how models fail without these instructions) and `tools/wp6/allocation.mjs` (what every file must carry).");
   if (name === "scene-builder") out.push("- `hooks/scene-builder-scope-lib.mjs` (what the PreToolUse hook allows this agent to do).");
