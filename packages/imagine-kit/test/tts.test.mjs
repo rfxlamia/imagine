@@ -34,6 +34,23 @@ test("PROC-ONE-LINE-PER-WAV, PROC-CAPTION-ORIGINAL, HARD-TTS-EOS: production tak
   assert.equal(call.env_eos, "1", "KPOCKET_TTS_ERROR_WITHOUT_EOS=1 reaches the worker");
 });
 
+test("repeated line ids in one invocation produce one plan entry, one take and a real hash", async () => {
+  const p = await ttsProject();
+  const r = await p.run({}, "tts", "L01,L01");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.equal(p.calls().length, 1, "one worker request");
+  assert.equal(p.calls()[0].request.jobs.length, 1, "one job, not one per duplicate");
+  assert.equal(r.env.data.takes.length, 1);
+  assert.notEqual(r.env.data.takes[0].sha256, "0".repeat(64), "the reported hash is the committed one, not the placeholder");
+  assert.match(r.env.data.takes[0].sha256, /^[0-9a-f]{64}$/);
+  assert.equal(getManifest(p.dir).assets.filter((a) => a.id === "L01").length, 1);
+  const r2 = await p.run({}, "tts", "L02", "L02");
+  assert.equal(r2.exit, 0, JSON.stringify(r2.env.errors));
+  assert.equal(p.calls()[1].request.jobs.length, 1, "repeated separate positionals deduplicate too");
+  assert.equal(r2.env.data.takes.length, 1);
+  assert.notEqual(r2.env.data.takes[0].sha256, "0".repeat(64));
+});
+
 test("PROC-RESUME-IDEMPOTENT and PROC-VERSIONS-IMMUTABLE: rerun skips; --redo makes take 2 with seed_base + 2", async () => {
   const p = await ttsProject();
   await p.run({}, "tts", "L01");

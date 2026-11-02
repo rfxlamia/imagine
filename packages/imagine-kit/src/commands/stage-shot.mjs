@@ -1,5 +1,4 @@
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
-import { basename, join } from "node:path";
 import { withLock, writeAtomic } from "../fsx.mjs";
 import { err } from "../envelope.mjs";
 import { deriveAll } from "../derive.mjs";
@@ -8,6 +7,7 @@ import { resolveProject } from "../project.mjs";
 import { createContext } from "../sources.mjs";
 import { UsageError } from "../errors.mjs";
 import { editPreconditions, parsedKeys, shotAssets, shotOrThrow } from "../edit/shots.mjs";
+import { exportName } from "../edit/assets-check.mjs";
 import { safePath } from "../img/commit.mjs";
 
 const num = (n) => String(Math.round(n * 1000) / 1000);
@@ -25,7 +25,7 @@ function shotBrief(sctx, shot, assets) {
     "## Narrative", shot.narrative || "(none)", "",
     "## Shot keys (storyboard, previz, fx)", ...keyLines, "",
     "## Voiceover in this shot", ...(lines.length ? lines : ["- none"]), "",
-    "## Assets (copied into assets/)", ...(assets.length ? assets.map((a) => `- ${a.decl.id} (${a.entry.kind}) -> assets/${basename(a.entry.path)}`) : ["- none"]), "",
+    "## Assets (copied into assets/)", ...(assets.length ? assets.map((a) => `- ${a.decl.id} (${a.entry.kind}) -> assets/${exportName(a.entry)}`) : ["- none"]), "",
     "## Output contract",
     `- compositions/${shot.id}.html: a sub-composition wrapped in <template>, data-composition-id="${shot.id}", timeline registered as window.__timelines["${shot.id}"], tweens with fromTo() only.`,
     "- index.motion.json (optional): { \"version\": 1, \"assertions\": [...] } in shadow-local seconds; promote-shot shifts appearsBy.bySec by the shot start.",
@@ -77,10 +77,10 @@ async function stage(ctx, dir, rel, id) {
   }
 
   for (const a of assets.found) {
-    const syncedRel = `edit/assets/${basename(a.entry.path)}`;
+    const syncedRel = `edit/assets/${exportName(a.entry)}`;
     const synced = safePath(dir, syncedRel);
     const src = synced && existsSync(synced) ? synced : safePath(dir, a.entry.path);
-    const dest = safePath(dir, `stage/edit/${id}/assets/${basename(a.entry.path)}`);
+    const dest = safePath(dir, `stage/edit/${id}/assets/${exportName(a.entry)}`);
     if (!src || !dest) return out([err("HARD-ASSETS-APPROVED", "HARD", a.decl.id, `asset ${a.decl.id} path leaves project`)]);
   }
 
@@ -102,10 +102,10 @@ async function stage(ctx, dir, rel, id) {
     mkdirSync(lockAssetsDir, { recursive: true });
     copyFileSync(lockSrcHf, lockShadowHf);
     for (const a of assets.found) {
-      const syncedRel = `edit/assets/${basename(a.entry.path)}`;
+      const syncedRel = `edit/assets/${exportName(a.entry)}`;
       const synced = safePath(dir, syncedRel);
       const src = synced && existsSync(synced) ? synced : safePath(dir, a.entry.path);
-      const dest = safePath(dir, `stage/edit/${id}/assets/${basename(a.entry.path)}`);
+      const dest = safePath(dir, `stage/edit/${id}/assets/${exportName(a.entry)}`);
       if (!src || !dest) return out([err("HARD-ASSETS-APPROVED", "HARD", a.decl.id, `asset ${a.decl.id} path leaves project`)]);
       copyFileSync(src, dest);
     }

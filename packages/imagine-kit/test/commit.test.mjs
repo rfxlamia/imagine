@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -97,4 +97,16 @@ test("commitAsset refuses an entry whose path leaves the project and writes noth
   put(p.dir, "tmp/in.png", "png-bytes");
   await assert.rejects(commitAsset(ctx, p.dir, { entry: { ...entry(1), path: "../escape.png" }, source: join(p.dir, "tmp/in.png"), summary: { command: "img", text: "x" } }), /outside the project/);
   assert.equal(getManifest(p.dir).assets.length, 0);
+});
+
+test("placeFile never follows a symlink planted at the old predictable temp name", async () => {
+  const p = await makeProject();
+  put(p.dir, "tmp/in.bin", "bytes");
+  const victim = join(mkdtempSync(join(tmpdir(), "imagine-place-victim-")), "victim.bin");
+  const planted = join(p.dir, "assets/img/out.bin.tmp-" + process.pid);
+  symlinkSync(victim, planted);
+  placeFile(join(p.dir, "tmp/in.bin"), join(p.dir, "assets/img/out.bin"));
+  assert.equal(existsSync(victim), false, "the planted symlink target was never written");
+  assert.equal(readFileSync(join(p.dir, "assets/img/out.bin"), "utf8"), "bytes");
+  assert.equal(lstatSync(planted).isSymbolicLink(), true, "the planted entry is left untouched, not consumed");
 });
