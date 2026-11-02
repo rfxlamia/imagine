@@ -16,7 +16,7 @@ const ROOT = join(fileURLToPath(import.meta.url), "..", "..", "..");
 const BRANCH = "wp6/skills-gate";
 const MAX_LINES = 500;
 const MARKER_RE = /<!--\s*rule:([A-Z0-9-]+)\s*-->/g;
-const FILE_OPEN_RE = /^=== FILE: (\S+) ===$/;
+const FILE_OPEN_RE = /^=== FILE: (`*[^\s`]+`*) ===$/;
 const FILE_CLOSE = "=== END FILE ===";
 const SECTION_SIGN = "§";
 
@@ -30,13 +30,15 @@ export function parseBundle(text) {
   const problems = [];
   let cur = null;
   for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
-    const open = line.match(FILE_OPEN_RE);
+    // Chat UIs add stray spaces or backticks around the delimiters and the path.
+    const bare = line.trim().replace(/^`+|`+$/g, "").trim();
+    const open = bare.match(FILE_OPEN_RE);
     if (open) {
       if (cur) problems.push(`${cur.path}: missing ${FILE_CLOSE} before next FILE`);
-      cur = { path: open[1], lines: [] };
+      cur = { path: open[1].replace(/^`+|`+$/g, ""), lines: [] };
       continue;
     }
-    if (line === FILE_CLOSE) {
+    if (bare === FILE_CLOSE) {
       if (!cur) { problems.push(`stray ${FILE_CLOSE}`); continue; }
       files.push({ path: cur.path, text: cur.lines.join("\n").replace(/\n*$/, "\n") });
       cur = null;
@@ -234,6 +236,7 @@ export function buildBrief(name, rules, { proposal = null, summary = "", done = 
     out.push(`- Frontmatter: \`name: ${basename(t.path, ".md")}\`, \`description\`, \`tools: ${t.tools.allowed.join(", ")}\` (no others), \`model: sonnet\`.`);
     out.push(`- At most ${MAX_LINES} lines.`);
   }
+  out.push("- To say a cut command does not exist, name it without the kit prefix (\"there is no guard command; hash the protected files yourself\"). The gate rejects any `imagine-kit <cut command>` string, even in a negative sentence.");
   out.push("- English. Never use the section-sign symbol; write \"section 6.2\". Never name an image model or any research reference skill. Pin every HyperFrames call as `npx hyperframes@0.8.223`.");
   out.push("- Output every file as a block, nothing else between blocks:");
   out.push("```text", `=== FILE: ${t.kind === "skill" ? `${t.path}/SKILL.md` : t.path} ===`, "<full file contents>", "=== END FILE ===", "```");

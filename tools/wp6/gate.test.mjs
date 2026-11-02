@@ -115,6 +115,12 @@ test("checkTarget: kept commands are not flagged as cut", () => {
   assert.deepEqual(checkTarget("imagine", [{ ...f, text }], rules, patterns), []);
 });
 
+test("checkTarget: naming a cut command without the kit prefix passes", () => {
+  const [f] = passing("imagine");
+  const text = f.text + "There is no guard command and no brief command; hash the protected files yourself.\n";
+  assert.deepEqual(checkTarget("imagine", [{ ...f, text }], rules, patterns), []);
+});
+
 test("checkTarget: skill paths, size and named references", () => {
   const [f] = passing("imagine-edit");
   const text = f.text + "Read references/edit-protocol.md before stage 9.\n";
@@ -140,6 +146,13 @@ test("parseBundle: blocks, outside text ignored, errors", () => {
   assert.match(parseBundle("=== FILE: a.md ===\nx\n").problems.join(), /missing === END FILE ===/);
   assert.match(parseBundle("just prose").problems.join(), /no === FILE/);
   assert.match(parseBundle("=== FILE: a.md ===\n=== END FILE ===\n=== FILE: a.md ===\n=== END FILE ===\n").problems.join(), /duplicate/);
+});
+
+test("parseBundle: tolerates backticks and spaces around delimiters", () => {
+  const r = parseBundle("  === FILE: `agents/fx-designer.md` ===  \nbody\n`=== END FILE ===`\n");
+  assert.deepEqual(r.problems, []);
+  assert.equal(r.files[0].path, "agents/fx-designer.md");
+  assert.equal(r.files[0].text, "body\n");
 });
 
 test("parseFrontmatter: keys and quotes", () => {
