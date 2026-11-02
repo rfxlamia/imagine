@@ -172,11 +172,29 @@ test("DAG-EDIT-RENDER: changing the previz makes edit:s01 stale, and a stale edi
   assert.equal(s.env.data.items.find((i) => i.id === "edit:s01").status, "proposed");
   const g6 = await cli(p.cwd, "gate", "G6", "approve", "--quote", "edit ok");
   assert.equal(g6.exit, 0, JSON.stringify(g6.env.errors));
-  assert.ok(getProject(p.dir).items.g6.inputs["edit:s01"]);
+  assert.notEqual(getProject(p.dir).items.g6.inputs["edit:s01"], "item");
   put(p.dir, "edit/compositions/s01.html", "<template>changed</template>");
   s = await cli(p.cwd, "status");
   assert.equal(s.env.data.items.find((i) => i.id === "edit:s01").status, "stale");
   assert.equal(s.env.data.items.find((i) => i.id === "g6").status, "stale");
+});
+
+test("G6 fails closed for legacy edit item inputs and reopens when an edit dependency is rejected", async () => {
+  for (const mode of ["legacy", "rejected"]) {
+    const p = await editProject();
+    await p.run({}, "stage-shot", "s01");
+    p.buildScene("s01");
+    await p.run({}, "promote-shot", "s01");
+    await cli(p.cwd, "gate", "G6", "approve", "--quote", "edit approved");
+    setProject(p.dir, (project) => {
+      if (mode === "legacy") {
+        delete project.items.g6.inputs["item:edit:s01"];
+        project.items.g6.inputs["edit:s01"] = "item";
+      } else project.items["edit:s01"].status = "rejected";
+    });
+    const status = await cli(p.cwd, "status");
+    assert.equal(status.env.data.gates.G6.state, "reopened", mode);
+  }
 });
 
 test("shadow-project symlink escape is refused and writes/copies nothing outside or into project", async () => {

@@ -1,24 +1,23 @@
 import { existsSync, readFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { basename, extname, join } from "node:path";
 import { err } from "../envelope.mjs";
 import { KitError, UsageError } from "../errors.mjs";
 import { deriveAll } from "../derive.mjs";
 import { currentAsset } from "../docs.mjs";
 import { withLock, readYaml, writeYamlAtomic } from "../fsx.mjs";
-import { sha256, sha256File } from "../hash.mjs";
+import { sha256File } from "../hash.mjs";
 import { wavInfo } from "../media.mjs";
 import { resolveProject } from "../project.mjs";
 import { createContext } from "../sources.mjs";
 import { commitAsset, safePath } from "../img/commit.mjs";
 import { applyLexicon, resolveVoice, voiceConfig } from "../tts/voices.mjs";
 import { runWorker } from "../tts/worker.mjs";
+import { expectedTtsParamsHash, ttsParamsHash } from "../tts/provenance.mjs";
 
 const DEFAULT_VOICE = { engine: "pocket-tts", source: "builtin:eve" };
 const USAGE = "usage: tts <line,...|--all> [--scratch] [--redo <line> --note <text>] | tts --audition --voices <a,b,c> --line <L##>";
 const report = (line, v, seed, duration_s, sha, params) => ({ line, v, seed, duration_s, sha256: sha, params_hash: params });
-const paramsHash = (voice, seed, ttsText) => sha256(JSON.stringify({ engine: voice.engine, model: voice.model, config: voice.config ?? null, source: voice.sourceHash,
-  temperature: voice.temperature ?? null, eos_threshold: voice.eos_threshold ?? null, seed, tts_text: ttsText, pocket_tts: "4.0.1" }));
-
 function checkWav(path, item) {
   const info = existsSync(path) ? wavInfo(readFileSync(path)) : null;
   if (!info || info.format !== 1 || info.channels !== 1 || info.bits !== 16 || info.sample_rate !== 24000 || !(info.duration_s > 0)) {
@@ -67,7 +66,7 @@ export default {
       const res = await runWorker(ctx, jobs);
       const takes = meta.map((m, i) => {
         const info = checkWav(m.out, jobs[i].id);
-        return report(values.line, 0, m.seed, info.duration_s, sha256File(m.out), paramsHash(m.v, m.seed, m.text));
+        return report(values.line, 0, m.seed, info.duration_s, sha256File(m.out), ttsParamsHash(m.v, m.seed, m.text));
       });
       return { project: rel, advice: [{ rule: "PROC-SCRATCH-NOT-ASSET", item: values.line, source: "tmp/audition", message: "audition files are for listening only; cast the chosen voice in bible.yaml" }], data: { takes: res.length ? takes : [] } };
     }
@@ -94,7 +93,7 @@ export default {
       await runWorker(ctx, jobs);
       const takes = meta.map((m) => {
         const info = checkWav(m.out, m.id);
-        return report(m.id, 0, m.seed, info.duration_s, sha256File(m.out), paramsHash(m.v, m.seed, m.text));
+        return report(m.id, 0, m.seed, info.duration_s, sha256File(m.out), ttsParamsHash(m.v, m.seed, m.text));
       });
       await withLock(dir, async () => {
         const file = safePath(dir, relDurations);
@@ -122,14 +121,17 @@ export default {
       const all = sctx.manifest.assets.filter((a) => a.kind === "vo" && a.id === id);
       const latest = all.reduce((b, a) => (!b || a.v > b.v ? a : b), null);
       const cur = currentAsset(sctx.manifest, id);
-      if (cur && values.redo !== id) {
-        advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${id}.v${cur.v}`, source: "assets/manifest.yaml", message: `${id} v${cur.v} already exists; nothing was regenerated (use --redo ${id} --note <why> for a new take)` });
+      const desiredParams = cur ? expectedTtsParamsHash(sctx, cur) : null;
+      if (cur && values.redo !== id && cur.params_hash === desiredParams) {
+        advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${id}.v${cur.v}`, source: "assets/manifest.yaml", message: `${id} v${cur.v} already exists with current script and voice inputs; nothing was regenerated (use --redo ${id} --note <why> for a new take)` });
         takes.push(report(id, cur.v, cur.seed, cur.duration_s, cur.sha256, cur.params_hash));
         continue;
       }
       const v = (latest?.v ?? 0) + 1;
       const seed = voice.seed_base + v;
-      const relOut = join("tmp", "tts", `${id}.v${v}.wav`);
+      const canonicalOut = join("tmp", "tts", `${id}.v${v}.wav`);
+      if (!safePath(dir, canonicalOut)) throw new KitError("HARD", `${canonicalOut} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${id}.v${v}` });
+      const relOut = join("tmp", "tts", `${id}.v${v}.${randomBytes(6).toString("hex")}.wav`);
       const out = safePath(dir, relOut);
       if (!out) throw new KitError("HARD", `${relOut} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${id}.v${v}` });
       const finalRel = `assets/vo/${id}.v${v}.wav`;
@@ -146,10 +148,11 @@ export default {
     }
     for (const { p, info } of validated) {
       const entry = { id: p.id, kind: "vo", v: p.v, path: `assets/vo/${p.id}.v${p.v}.wav`, sha256: "0".repeat(64), status: "pending", line: p.id,
-        text: p.u.text, tts_text: p.text, voice: p.voice.source, seed: p.seed, take: p.v, params_hash: paramsHash(p.voice, p.seed, p.text),
+        text: p.u.text, tts_text: p.text, voice: p.voice.source, seed: p.seed, take: p.v, params_hash: ttsParamsHash(p.voice, p.seed, p.text),
         duration_s: info.duration_s, listen_status: "pending", ...(values.redo === p.id ? { note: values.note } : {}) };
-      await commitAsset(ctx, dir, { entry, source: p.out, summary: { command: "tts", text: `${p.id}.v${p.v} ${info.duration_s}s seed=${p.seed}` } });
-      takes.push(report(p.id, p.v, p.seed, info.duration_s, entry.sha256, entry.params_hash));
+      const committed = await commitAsset(ctx, dir, { entry, source: p.out, summary: { command: "tts", text: `${p.id}.v${p.v} ${info.duration_s}s seed=${p.seed}` } });
+      const result = committed.entry;
+      takes.push(report(p.id, result.v, result.seed, result.duration_s, result.sha256, result.params_hash));
     }
     takes.sort((a, b) => ids.indexOf(a.line) - ids.indexOf(b.line));
     return { project: rel, advice, data: { takes } };

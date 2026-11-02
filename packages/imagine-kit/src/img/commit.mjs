@@ -60,7 +60,8 @@ export async function commitAsset(ctx, dir, { entry, source, summary, clearBlock
     const manifest = fresh.manifest;
     const dest = safePath(dir, entry.path);
     if (!dest) throw new KitError("HARD", `${entry.path} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${entry.id}.v${entry.v}` });
-    if (manifest.assets.some((a) => a.id === entry.id && a.v === entry.v)) return { kept: true };
+    const existing = manifest.assets.find((a) => a.id === entry.id && a.v === entry.v);
+    if (existing) return { kept: true, entry: existing };
     if (source) {
       if (existsSync(dest)) unlinkSync(dest);
       placeFile(source, dest);
@@ -71,7 +72,7 @@ export async function commitAsset(ctx, dir, { entry, source, summary, clearBlock
     const project = fresh.project;
     if (clearBlocked) project.blocked = project.blocked.filter((b) => b.step !== clearBlocked);
     saveProject(dir, project);
-    return { kept: false, journal_id: appendJournal(dir, { command: summary.command, summary: summary.text, now: ctx.now() }) };
+    return { kept: false, entry, journal_id: appendJournal(dir, { command: summary.command, summary: summary.text, now: ctx.now() }) };
   });
 }
 

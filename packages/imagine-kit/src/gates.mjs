@@ -57,7 +57,8 @@ export function itemDeps(id, ctx) {
   if (id === "g5a") return ["g0:silence"];
   if (id === "g6" || id === "g7") {
     const downstream = Object.keys(ctx.project.items).filter((k) => /^(edit|render):/.test(k));
-    return [id === "g6" ? "g4" : "g6", "story:sha", ...downstream];
+    const productionAssets = id === "g6" ? assetItems(ctx, ["vo", "music", "sfx", "img"]) : [];
+    return [id === "g6" ? "g4" : "g6", "story:sha", ...productionAssets, ...downstream];
   }
   if (kind === "asset") {
     const m = id.match(/^asset:(.+)\.v(\d+)$/);
@@ -67,6 +68,9 @@ export function itemDeps(id, ctx) {
       const cur = currentAsset(ctx.manifest, r);
       // A ref with no usable version must fail the gate (resolveRef answers null for an unversioned ref), never drop out of the inputs.
       deps.push(cur ? `asset:${cur.id}.v${cur.v}` : `asset:${r}`);
+    }
+    if (entry?.kind === "vo" && entry.line && (typeof entry.params_hash === "string" || entry.take !== undefined || entry.seed !== undefined || entry.voice !== undefined)) {
+      deps.push(`tts:take:${entry.line}.v${entry.v}`);
     }
     return deps;
   }

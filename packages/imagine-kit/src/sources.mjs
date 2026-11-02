@@ -7,6 +7,7 @@ import { assetEntry, bibleEntities, bibleLookup, currentAsset, currentAssets, lo
   parseUnits, styleSections } from "./docs.mjs";
 import { parseStory } from "./story/parse.mjs";
 import { blockHash } from "./story/block.mjs";
+import { expectedTtsParamsHash } from "./tts/provenance.mjs";
 
 export const SUPERSEDED = "superseded";
 
@@ -80,6 +81,23 @@ function clockValue(ctx, key, recorded) {
   return hash === null ? null : `${label}:${hash}`;
 }
 
+function itemFingerprint(ctx, id, visiting = new Set()) {
+  const item = ctx.project.items[id];
+  if (!item) return null;
+  if (visiting.has(id)) return null;
+  visiting.add(id);
+  const inputs = {};
+  for (const [ref, recorded] of Object.entries(item.inputs ?? {})) {
+    if (recorded === "item" && /^(edit|render):/.test(ref)) inputs[ref] = itemFingerprint(ctx, ref, visiting);
+    else {
+      const current = resolveRef(ctx, ref, recorded);
+      inputs[ref] = current === undefined ? recorded : current;
+    }
+  }
+  visiting.delete(id);
+  return hashValue(inputs);
+}
+
 // string = value; null = unresolvable; undefined = item-only reference (no hash of its own)
 export function resolveRef(ctx, ref, recorded) {
   const i = ref.indexOf(":");
@@ -108,6 +126,25 @@ export function resolveRef(ctx, ref, recorded) {
       return m ? assetValue(ctx, m[1], Number(m[2])) : null;
     }
     case "clock": return clockValue(ctx, rest, recorded);
+    case "edit": case "render": {
+      if (recorded === "item") return undefined;
+      const id = `${kind}:${rest}`;
+      if (!ctx.project.items[id]) return recorded === undefined ? undefined : null;
+      return itemFingerprint(ctx, id);
+    }
+    case "item": {
+      if (recorded === "item") return undefined;
+      if (!/^(edit|render):[A-Za-z0-9][A-Za-z0-9._-]*$/.test(rest)) return null;
+      return itemFingerprint(ctx, rest);
+    }
+    case "tts": {
+      const m = rest.match(/^take:([A-Za-z0-9][A-Za-z0-9_-]*)\.v(\d+)$/);
+      if (!m) return null;
+      const entry = ctx.manifest.assets.find((a) => a.kind === "vo" && a.line === m[1] && a.v === Number(m[2]));
+      if (typeof entry?.params_hash !== "string") return null;
+      const expected = expectedTtsParamsHash(ctx, entry);
+      return expected && expected === entry.params_hash ? expected : null;
+    }
     case "file": return fileValue(ctx.dir, rest);
     default: return undefined;
   }
