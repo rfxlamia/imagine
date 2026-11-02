@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { sha256File } from "../src/hash.mjs";
@@ -49,6 +49,27 @@ t("render --final needs G6, uses --quality delivery and writes immutable post/<s
   assert.equal(two.env.data.path, "post/keeper.v2.mp4");
   assert.ok(existsSync(join(p.dir, "post/keeper.v1.mp4")));
   assert.ok(getProject(p.dir).items["render:keeper.v1"] && getProject(p.dir).items["render:keeper.v2"]);
+});
+
+t("render --final never reuses a version whose MP4 is gone: recorded render items still count", async () => {
+  const p = await renderProject();
+  await cli(p.cwd, "gate", "G6", "approve", "--quote", "edit ok");
+  assert.equal((await p.render({}, "render", "--final")).env.data.path, "post/keeper.v1.mp4");
+  assert.equal((await p.render({}, "render", "--final")).env.data.path, "post/keeper.v2.mp4");
+  const v2 = JSON.stringify(getProject(p.dir).items["render:keeper.v2"]);
+  unlinkSync(join(p.dir, "post/keeper.v2.mp4"));
+  const three = await p.render({}, "render", "--final");
+  assert.equal(three.exit, 0, JSON.stringify(three.env.errors));
+  assert.equal(three.env.data.path, "post/keeper.v3.mp4", "a deleted MP4 does not free its version");
+  assert.equal(JSON.stringify(getProject(p.dir).items["render:keeper.v2"]), v2, "the v2 record is preserved, not overwritten");
+  rmSync(join(p.dir, "post"), { recursive: true, force: true });
+  const four = await p.render({}, "render", "--final");
+  assert.equal(four.exit, 0, JSON.stringify(four.env.errors));
+  assert.equal(four.env.data.path, "post/keeper.v4.mp4", "a missing post/ still counts the recorded items");
+  copyFileSync(join(p.dir, "post/keeper.v4.mp4"), join(p.dir, "post/keeper.v7.mp4"));
+  const eight = await p.render({}, "render", "--final");
+  assert.equal(eight.exit, 0, JSON.stringify(eight.env.errors));
+  assert.equal(eight.env.data.path, "post/keeper.v8.mp4", "the highest filename version counts too");
 });
 
 t("render --final re-checks asset hashes: a swapped asset or edit/assets copy stops the render", async () => {

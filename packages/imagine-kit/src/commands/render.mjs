@@ -13,10 +13,12 @@ import { checkAssets } from "../edit/assets-check.mjs";
 import { renderPreflight } from "../edit/preflight.mjs";
 import { placeFile, safePath } from "../img/commit.mjs";
 
-const nextVersion = (dir, slug) => {
+const nextVersion = (dir, slug, items = {}) => {
   const d = safePath(dir, "post");
-  if (!d || !existsSync(d)) return 1;
-  const found = readdirSync(d).map((n) => n.match(new RegExp(`^${slug}\\.v(\\d+)\\.mp4$`))?.[1]).filter(Boolean).map(Number);
+  const files = d && existsSync(d) ? readdirSync(d).map((n) => n.match(new RegExp(`^${slug}\\.v(\\d+)\\.mp4$`))?.[1]) : [];
+  // A render record keeps its version even when the MP4 is gone: versions are immutable, so the next final never reuses one.
+  const recorded = Object.keys(items).map((k) => k.match(new RegExp(`^render:${slug}\\.v(\\d+)$`))?.[1]);
+  const found = [...files, ...recorded].filter(Boolean).map(Number);
   return Math.max(0, ...found) + 1;
 };
 
@@ -73,7 +75,7 @@ export default {
     if (!safeTargetDir) {
       errors.push(err("HARD-ASSETS-APPROVED", "HARD", targetDirRel, `${targetDirRel} is outside the project`));
     }
-    const version = final ? nextVersion(dir, slug) : null;
+    const version = final ? nextVersion(dir, slug, sctx.project.items) : null;
     const target = final ? `post/${slug}.v${version}.mp4` : `review/${slug}.draft.mp4`;
     const safeTarget = safePath(dir, target);
     if (!safeTarget) {

@@ -38,7 +38,8 @@ function isMalformedLintDoc(doc) {
 
 // `hyperframes lint <dir> --json`: ok is false when any finding has severity error.
 export async function lintProject(ctx, dir) {
-  const timeoutMs = Number(ctx.env?.FAKE_NPX_TIMEOUT_MS ?? ctx.env?.IMAGINE_LINT_TIMEOUT_MS ?? 300000);
+  const configured = Number(ctx.env?.IMAGINE_LINT_TIMEOUT_MS);
+  const timeoutMs = Number.isFinite(configured) && configured > 0 ? configured : 300000;
   const r = ensureTool(await runTool(ctx, "npx", ["--yes", HYPERFRAMES, "lint", dir, "--json"], { env: HF_ENV, timeoutMs }), "npx", "HARD-SCENE-LINT");
   if (r.timedOut) {
     return { errors: [err("HARD-SCENE-LINT", "HARD_NOT_RUN", null, "hyperframes lint timed out", (r.stderr || r.stdout).slice(-300))], warnings: [] };

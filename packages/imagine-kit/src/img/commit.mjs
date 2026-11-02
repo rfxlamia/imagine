@@ -1,4 +1,5 @@
-import { copyFileSync, existsSync, lstatSync, mkdirSync, readlinkSync, realpathSync, renameSync, unlinkSync } from "node:fs";
+import { constants, copyFileSync, existsSync, lstatSync, mkdirSync, readlinkSync, realpathSync, renameSync, unlinkSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { withLock } from "../fsx.mjs";
 import { saveManifest } from "../docs.mjs";
@@ -44,8 +45,10 @@ export function safePath(dir, rel) {
 // Copies a finished file into the project without ever exposing a half-written file at the final path.
 export function placeFile(src, dest) {
   mkdirSync(dirname(dest), { recursive: true });
-  const tmp = `${dest}.tmp-${process.pid}`;
-  copyFileSync(src, tmp);
+  // Unpredictable name plus exclusive creation: a pre-existing entry at the temp path (for example a symlink planted by
+  // a concurrent process) makes copyFileSync fail instead of writing through it.
+  const tmp = `${dest}.tmp-${process.pid}-${randomBytes(6).toString("hex")}`;
+  copyFileSync(src, tmp, constants.COPYFILE_EXCL);
   renameSync(tmp, dest);
 }
 

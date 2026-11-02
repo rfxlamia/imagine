@@ -1,13 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cli, getProject, put, setProject } from "./helpers/fixture.mjs";
-import { editProject, COMPOSITION } from "./helpers/edit.mjs";
+import { cli, getProject, put, setProject, shot } from "./helpers/fixture.mjs";
+import { addAudio, editProject, COMPOSITION } from "./helpers/edit.mjs";
 
-const motionOf = (dir) => JSON.parse(readFileSync(join(dir, "edit/index.motion.json"), "utf8"));
-const MOTION = { version: 1, assertions: [
+const motionOf = (dir) => JSON.parse(readFileSync(join(dir, "edit/index.motion.json"), "utf8"));const MOTION = { version: 1, assertions: [
   { kind: "appearsBy", selector: "#a", bySec: 1.5 }, { kind: "staysInFrame", selector: "#a" }, { kind: "keepsMoving", maxStaticSec: 2 }] };
 
 test("stage-shot builds the shadow project and returns {shot, path}", async () => {
@@ -25,6 +24,26 @@ test("stage-shot builds the shadow project and returns {shot, path}", async () =
   p.buildScene("s01");
   await p.run({}, "stage-shot", "s01");
   assert.ok(existsSync(join(p.dir, "stage/edit/s01/compositions/s01.html")), "a rerun never deletes the scene-builder's composition");
+});
+
+test("stage-shot stages the exported copy under its exportName even when the source basename differs", async () => {
+  const shots = [
+    shot("s01", { scene: "stairs", duration_est: "6s", duration: "6s", voiceover: "[L01, L02@2.5]", characters: "[mara]", location: "lighthouse", assets: "[bg:img:1536x1024,bed:music]", framing: "wide" }, "Stairs", "She climbs."),
+    shot("s02", { scene: "lamp", duration_est: "7s", duration: "7s", voiceover: "[L03]", fx: "[glow=css-blend:screen]" }, "Lamp"),
+  ];
+  const p = await editProject({ shots });
+  await addAudio(p);
+  const exported = await p.run({}, "export-hf");
+  assert.equal(exported.exit, 0, JSON.stringify(exported.env.errors));
+  // Distinguish the exported copy from the source file: stage-shot must sync the copy in edit/assets/, not the source.
+  writeFileSync(join(p.dir, "edit/assets/bed.v1.wav"), "exported-copy");
+  const r = await p.run({}, "stage-shot", "s01");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.deepEqual(readdirSync(join(p.dir, "stage/edit/s01/assets")).sort(), ["bed.v1.wav", "bg.v1.png"]);
+  assert.equal(readFileSync(join(p.dir, "stage/edit/s01/assets/bed.v1.wav"), "utf8"), "exported-copy", "the exported copy was synced, not the source file");
+  const brief = readFileSync(join(p.dir, "stage/edit/s01/SHOT.md"), "utf8");
+  assert.match(brief, /bed \(music\) -> assets\/bed\.v1\.wav/);
+  assert.doesNotMatch(brief, /music\.v1\.wav/, "the brief never names the source basename");
 });
 
 test("stage-shot preconditions: G4, export-hf output, initialised edit/, non-stale previz, usage", async () => {
@@ -193,10 +212,28 @@ test("timed-out lint refuses promotion with no copy or project item", async () =
   const p = await editProject();
   await p.run({}, "stage-shot", "s01");
   p.buildScene("s01");
-  const r = await p.run({ FAKE_NPX_MODE: "lint-timeout", FAKE_NPX_TIMEOUT_MS: "50", FAKE_NPX_SLEEP_MS: "500" }, "promote-shot", "s01");
+  const r = await p.run({ FAKE_NPX_MODE: "lint-timeout", IMAGINE_LINT_TIMEOUT_MS: "50", FAKE_NPX_SLEEP_MS: "500" }, "promote-shot", "s01");
   assert.equal(r.exit, 1);
   assert.equal(existsSync(join(p.dir, "edit/compositions/s01.html")), false);
   assert.equal(getProject(p.dir).items["edit:s01"], undefined);
+});
+
+test("lint timeout comes only from a positive finite IMAGINE_LINT_TIMEOUT_MS; everything else uses the default", async () => {
+  const p = await editProject();
+  await p.run({}, "stage-shot", "s01");
+  p.buildScene("s01");
+  for (const [label, env] of [
+    ["the test-only variable is ignored", { FAKE_NPX_TIMEOUT_MS: "50" }],
+    ["empty", { IMAGINE_LINT_TIMEOUT_MS: "" }],
+    ["non-numeric", { IMAGINE_LINT_TIMEOUT_MS: "junk" }],
+    ["zero", { IMAGINE_LINT_TIMEOUT_MS: "0" }],
+    ["negative", { IMAGINE_LINT_TIMEOUT_MS: "-5" }],
+    ["Infinity", { IMAGINE_LINT_TIMEOUT_MS: "Infinity" }],
+  ]) {
+    const r = await p.run({ ...env, FAKE_NPX_SLEEP_MS: "500" }, "promote-shot", "s01");
+    assert.equal(r.exit, 0, `${label}: ${JSON.stringify(r.env.errors)}`);
+    assert.ok(existsSync(join(p.dir, "edit/compositions/s01.html")), label);
+  }
 });
 
 test("source change during lint re-reads context under lock and refuses promotion of stale state", async () => {

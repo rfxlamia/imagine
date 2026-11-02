@@ -72,7 +72,7 @@ export default {
       return { project: rel, advice: [{ rule: "PROC-SCRATCH-NOT-ASSET", item: values.line, source: "tmp/audition", message: "audition files are for listening only; cast the chosen voice in bible.yaml" }], data: { takes: res.length ? takes : [] } };
     }
 
-    const ids = values.all ? Object.keys(units).sort() : positionals.flatMap((p) => p.split(",")).map((s) => s.trim()).filter(Boolean).map(known);
+    const ids = values.all ? Object.keys(units).sort() : [...new Set(positionals.flatMap((p) => p.split(",")).map((s) => s.trim()).filter(Boolean).map(known))];
     if (ids.length === 0) throw new UsageError(USAGE);
     if (values.redo !== undefined && !ids.includes(known(values.redo))) throw new UsageError("--redo must name one of the requested lines");
 
