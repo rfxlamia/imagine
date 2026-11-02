@@ -308,7 +308,7 @@ Permitted mechanism classes are:
 - `shader`
 - `vfx-chain`
 - `media-treatment`
-- `registry:<name>`
+- `registry` (with the mechanism identifier supplied separately as `name: <registry-name>`)
 - `css-blend`
 - `css-mask`
 

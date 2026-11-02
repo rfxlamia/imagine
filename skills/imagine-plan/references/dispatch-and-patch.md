@@ -40,11 +40,11 @@ Include the following in every dispatch:
 - Explicit hard constraints, advisory defaults, and blocked unknowns.
 - Required structured-patch output format.
 
-Compute a `brief_hash` from a deterministic serialization of the dispatch's actual content and source inventory. Use a stable ordering and document the serialization choice so that later checks can reproduce it.
+Compute a `brief_hash` from a deterministic serialization of the dispatch's actual content and source inventory. Use a stable ordering and document the serialization choice so that later checks can reproduce it. The patch author must echo that exact `brief_hash` in the patch.
 
-The patch author must echo that `brief_hash` and enumerate the source-section hashes it actually used in `inputs`.
+The main agent obtains authoritative scoped source hashes from `imagine-kit status --ref <source-refs>` and copies the actual values from `data.sources` into the dispatch. The patch author echoes those supplied values in `inputs`, labeling them as supplied rather than independently verified. The main agent rechecks the same scoped values before patch application.
 
-A full-file hash is not automatically interchangeable with a section hash. Derive each hash from the source granularity required by the patch contract. Never invent a hash because a referenced section was not read.
+A full-file hash is not interchangeable with a section hash. Use the actual scoped `data.sources` value for each declared source reference; never substitute a full-file digest or invent a hash because a referenced section was not read.
 
 Do not dispatch a brief containing an unresolved required source fact as though it were approved canon.
 
@@ -60,7 +60,7 @@ Protect at least:
 - `style.md`
 - The active script file
 - `assets/manifest.yaml` if present
-- `REVIEW.md` if present
+- `review/REVIEW.md` if present
 - Every additional source whose hash is used by the dispatch
 - Every approved reference or audio file exposed to the dispatch
 
@@ -230,8 +230,8 @@ Verify:
 Verify:
 
 - Each effect has an identifiable purpose.
-- `tool` is one of `shader`, `vfx-chain`, `media-treatment`, `registry:<name>`, `css-blend`, or `css-mask`.
-- Every named mechanism exists in the verified capability source.
+- `tool` is one of `shader`, `vfx-chain`, `media-treatment`, `registry`, `css-blend`, or `css-mask`.
+- Each named mechanism (`shader`, `vfx-chain`, `media-treatment`, or `registry`) exists in the verified capability source; for `tool: registry`, `name` carries the registry mechanism identifier.
 - Range and parameters match that mechanism's contract.
 - Raster CSS `filter` is not used, including in `fallback`.
 - WebGL-dependent effects have a valid fallback.

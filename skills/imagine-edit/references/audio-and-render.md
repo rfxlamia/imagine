@@ -253,22 +253,9 @@ It must include:
 - SFX at their current cues.
 - An audio stream when required.
 
-Use `imagine-kit render` with the supported draft-render contract, or the pinned HyperFrames renderer where the workflow explicitly requires direct invocation.
+Use `imagine-kit render --draft` as the canonical G6 draft render path. It writes `review/<slug>.draft.mp4` and records the `render:draft` item and journal evidence. The pinned HyperFrames renderer may be used only for diagnostics; its output is noncanonical and must not serve as G6 review evidence unless a documented mechanism reconciles its path, hash, and kit state.
 
-The direct HyperFrames draft render contract uses:
-- The `edit` project.
-- Draft quality.
-- 30 fps.
-- An explicit output path.
-- `--no-best-effort`.
-
-For example, the relevant pinned command shape is:
-
-`HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 render edit -o post/<slug>.draft.mp4 --fps 30 --quality draft --no-best-effort`
-
-Replace `<slug>` with the approved film slug and use the actual supported output path.
-
-Read the real process result and output metadata before claiming that the file was rendered.
+Read the actual kit result and output metadata before claiming that the canonical draft was rendered.
 
 A valid draft is the basis of G6 listening and picture review.
 

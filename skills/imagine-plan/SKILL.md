@@ -19,6 +19,8 @@ The main agent is the coordinator, validator, semantic auditor, patch applier, a
 
 This skill does not own G0–G3 canonical authoring, G5 asset generation and review, stage 8b implementation, stage 9 editing, G6 picture lock, or G7 delivery. Route those responsibilities to `imagine`, `imagine-canon`, `imagine-generate`, `imagine-edit`, or `imagine-deliver` as appropriate.
 
+Stage numbers are labels, not execution order. Follow the dependency DAG: `5 storyboard → 6 previz → 8a FX plan → G4 → 7 generate → 8b implement → 9 edit`; in particular, stage 8a precedes G4 approval and stage 7 generation.
+
 Do not bypass earlier gates, manufacture approvals, or treat a proposed plan as an approved production plan.
 
 The governing contracts are the files under `docs/contracts/` on the installed plugin revision. If a required schema, command argument, project path, or capability cannot be confirmed from those contracts, stop the affected operation and report the missing contract information. Do not infer an interface from an earlier proposal.
@@ -85,7 +87,7 @@ The main agent, not the subagent, must read the full contents of the listed file
 
 Repeat the full reads after resume, after context compaction, when entering a different planning stage, and whenever a relevant canonical source or contract changes. A remembered summary, a previous subagent message, or a prior stage's hashes do not replace the current full reads.
 
-A stage may start only after all of its mandatory files have been read in the current context, and its dispatched patch must echo the source hashes computed from those reads; these hashes are agent-provided evidence, not independently tool-verified claims. <!-- rule:HARD-BRIEF-CURRENT -->
+A stage may start only after all of its mandatory files have been read in the current context. The main agent obtains authoritative scoped source hashes from `imagine-kit status --ref` and its actual `data.sources`, then includes them in the dispatch. The patch author echoes those supplied values, labels them as supplied rather than independently verified, and never substitutes a full-file hash for a required section hash. The main agent checks the values again before patch application. <!-- rule:HARD-BRIEF-CURRENT -->
 
 ### 3.1 Plugin files — every planning stage
 
@@ -123,7 +125,7 @@ Within the active project under `.imagine/<p>/`, read in full:
 - `bible.yaml`
 - `style.md`
 - `STORY.md` if already created
-- `REVIEW.md` if present, to establish current gate and item decisions
+- `review/REVIEW.md` if present, to establish current gate and item decisions
 - `assets/manifest.yaml` if present, to establish existing asset identity and status
 
 If this is the first storyboard creation and `STORY.md` does not exist, verify its absence instead of inventing its contents. Never treat missing approved canonical files as empty.
@@ -139,14 +141,14 @@ Read in full:
 - `bible.yaml`
 - `style.md`
 - `STORY.md`, including current revision and all shots
-- `REVIEW.md` if present
+- `review/REVIEW.md` if present
 - `assets/manifest.yaml` if present
-- The persisted current clock record under `tmp/` and every actual source file from which it was measured or derived
+- The authoritative clock artifact for the G0 audio mode and every actual source file from which it was measured or derived
 - Every current source or asset referenced by the storyboard and needed for motion or resolution planning
 
-For music-led work, read the actual licensed music file's associated metadata and the generated beat-grid output. For narrated work, read the timing record for every scratch-VO unit. For text-led work, read every `T##` unit and its read-time or explicit user override.
+Resolve the clock source by G0 audio mode: narrated work uses the actual per-line scratch timing record and referenced scratch recordings. When the documented kit scratch path is used, its timing output is `tmp/scratch-vo/durations.yaml`; for another explicitly authorized scratch-reading method, read that method's actual timing record and recording. Music-led work uses the licensed music provenance and actual generated beat-grid output. Text-led work uses `script/readtime.yaml`, including an explicitly approved per-unit override. Read the applicable authoritative artifact and its actual source inputs.
 
-The current clock record is required before previz dispatch; absence blocks stage 6.
+The applicable clock evidence is required before previz dispatch; absence blocks stage 6.
 
 ### 3.4 Project files — stage 8a FX plan
 
@@ -157,7 +159,7 @@ Read in full:
 - `bible.yaml`
 - `style.md`
 - `STORY.md`, including the applied previz
-- `REVIEW.md` if present
+- `review/REVIEW.md` if present
 - `assets/manifest.yaml` if present
 - The current clock record and its referenced sources
 - The applicable, verified HyperFrames registry and effect capability definitions
