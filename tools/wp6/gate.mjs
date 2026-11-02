@@ -206,6 +206,7 @@ export function buildBrief(name, rules, { proposal = null, summary = "", done = 
   if (name === "scene-builder") out.push("- `hooks/scene-builder-scope-lib.mjs` (what the PreToolUse hook allows this agent to do).");
   if (done.length) out.push(`- Files already written, for consistent terms: ${done.map((d) => `\`${TARGETS[d].path}\``).join(", ")}.`);
   out.push("- Do not open `tests/behavioral/scenarios/`; those are held-out test prompts.");
+  out.push("- This reading list is for you, the author. At runtime the file runs inside a user's film project where none of these repo files exist, so do not tell the runtime agent to read them or mention the branch, the pull request, the RED summary or the allocation map.");
   out.push("");
   out.push("## Role of this file");
   out.push(t.role);
