@@ -85,7 +85,7 @@ export function checkTarget(name, files, rules, patterns, { exists = (rel) => ex
     if (f.path.includes("..") || f.path.startsWith("/")) problems.push(`${f.path}: path must be repo-relative without ..`);
     if (!/\.(md|yaml)$/.test(f.path)) problems.push(`${f.path}: only .md and .yaml files`);
     const n = f.text.split("\n").length;
-    if (n > MAX_LINES) problems.push(`${f.path}: ${n} lines (max ${MAX_LINES}; split into references/)`);
+    if (n > MAX_LINES) problems.push(`${f.path}: ${n} lines (max ${MAX_LINES}; ${t.kind === "skill" ? "split into references/" : "agents are one file: tighten, no references/"})`);
   }
   const mainFile = files.find((f) => f.path === main);
   if (!mainFile) return [...problems, `missing ${main}`];
