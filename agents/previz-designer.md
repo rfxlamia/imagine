@@ -288,6 +288,8 @@ Use the exact supported input representation from the dispatch. Never reinterpre
 
 A source hash must correspond to content actually read. If the source is read but its hash is missing, request the hash from the main agent and return `blocked`.
 
+This applies to your notes as much as your patch: never ask the main agent to supply a hash for content you did not read or that is not a hashable source. Blocked reports name missing facts (content, versions, dimensions); only a redispatch carrying the actual hashes completes the inputs manifest.
+
 Never copy illustrative hash tokens into a submitted patch.
 
 ### 6.3 Operation quality
