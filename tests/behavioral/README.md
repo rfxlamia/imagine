@@ -38,6 +38,20 @@ Model slugs used in file names: `chatgpt`, `gemini`. A scenario may be run on on
 
 The saved header records the first 12 hex characters of the prompt's sha256. GREEN must show the same hash as RED; a different hash means the prompt changed and RED must be re-run.
 
+## GREEN runs (WP7)
+
+1. Build the upload once per instruction revision:
+
+   ```bash
+   node tests/behavioral/run.mjs pack
+   ```
+
+   This writes `imagine-green.zip` and `imagine-green.md` (one file with `===== FILE: <path> =====` markers) to `$TMPDIR/imagine-green/`, or to the directory given as an argument. Only tracked files under `skills/`, `agents/` and `.claude-plugin/plugin.json` are packed, so the gitignored placeholders never ship. Scenarios are not packed: their targets and pass criteria would leak the grading. Packing refuses if any file names a forbidden research reference.
+2. Open a temporary chat on the same model as the scenario's RED run, attach the upload (the `.md` bundle when the chat cannot read a zip), and paste the prompt from `run.mjs prompt <name>` as the only message.
+3. Save the answer with `save green`. It refuses when `red/<name>.<slug>.md` is missing or its prompt hash differs from the current prompt, and warns when the model label differs from RED.
+4. Grade it. `node tests/behavioral/run.mjs compare <name> <slug>` prints the targets, pass criteria, the RED grade and the GREEN answer side by side; add a `## Grade` table to the GREEN file in the same format as RED.
+5. On a failed rule, fix the instruction file, re-pack, and re-run that scenario only.
+
 ## Rules for prompts and pasted answers
 
 - Never include the image-bridge reference skill, or any image model name, in a prompt or an upload.
