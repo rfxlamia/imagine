@@ -148,7 +148,7 @@ A waiver for one aspect ratio, asset, shot, or version does not apply to another
 
 Do not offer waivers that would authorize:
 - Fabricating tool results or observed measurements.
-- Treating a failed unallowlisted strict check as clean.
+- Reporting a failed unallowlisted strict check as clean or passed.
 - Omitting the required explicit G6 answer.
 - Claiming to have heard audio that was not heard.
 - Bypassing dispatch ownership and protected-file integrity.
@@ -158,6 +158,8 @@ Do not offer waivers that would authorize:
 - Silently dropping required narration or other mandated content.
 - Rendering with best-effort omission while claiming strict delivery.
 - Circumventing the three-attempt scene lint limit.
+
+These are integrity bans, not additions to the non-waivable HARD list in the imagine skill's `references/waivers.md`, which is exhaustive. A failed strict check (HARD-HF-STRICT) stays waivable: the user may grant a waiver scoped to the exact findings and items, and the check is then reported as failed and waived, never as clean. Fixing through scene-builder remains the default to offer first.
 
 Where a requirement is legitimately changeable, the user may authorize a new approved source specification through the appropriate impact and reopening workflow.
 

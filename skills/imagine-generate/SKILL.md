@@ -339,7 +339,7 @@ Editing must use the same asset versions that Stage 7 handed off.
 
 For applicable HyperFrames checking, run `HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 check --json --strict`. Under D10, only `contrast_aa_failure` located inside a documented shader-transition window is automatically demoted to advice; every other check error or warning is blocking.
 
-A scoped user waiver is not a substitute for this strict tool result or any other non-waivable check.
+Never report a failed strict check as clean. A blocking finding is fixed, or bypassed only by a user-granted waiver scoped to that rule and its items and reported as failed and waived; non-waivable checks are never waived.
 
 The later edit review must include snapshot sheets, a draft MP4 containing the full mix, the user's G6 visual/audio assessment, and the manual 9:16 safe-band check recorded in `review/REVIEW.md`.
 
