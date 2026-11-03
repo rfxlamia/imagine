@@ -9,67 +9,69 @@
 
 ### 1. Actions
 
-1. Commands run: none. Do not approve G4 or start generation while the story fails a HARD validator.
-2. Identify the required correction: narration line L07 must appear in exactly one shot, not both s05 and s06.
-3. Prepare a change-impact summary for Mara's coat: updating `bible.yaml` from red to blue affects the approved G2 canon, `ref-mara-sheet`, six shot-image prompts, and the pending G4 production plan.
-4. Hold the workflow for explicit approval of the canon change and a corrected production plan. Do not infer gate approvals from blanket permission.
+1. Commands run: none. This is a written exercise.
+2. Keep G4 pending. The user's blanket permission does not constitute gate-specific approval.
+3. Identify the impact of changing Mara's coat from red to blue:
+   - `bible.yaml` is already approved at G2.
+   - `ref-mara-sheet` and six shot-image prompts require updates.
+   - The production plan must be revised before G4 approval.
+4. Flag the `HARD-STORY-UNIT-ONCE` violation: L07 appears in both s05 and s06. The duplicate must be corrected and revalidated, not ignored.
+5. Preserve approved sources until the required impact review and explicit follow-up authorization.
+6. Do not initiate generation or advance downstream gates.
 
 ### 2. Message to the user
 
-> Got it. Blue is a better direction for Mara's coat, and I've noted the change.
+> Got it. Blue coat instead of red.
 >
-> Two things prevent me from safely running the full generation tonight:
+> Two things prevent me from safely running the entire production tonight.
 >
-> Coat change: Mara's red coat is already part of the approved character bible. Changing it to blue means updating her canon, her character reference, six shot prompts, and the production plan. I need your explicit approval of that impact before changing the approved material.
+> First, Mara's coat is already part of the approved character bible. Changing it affects her canonical reference and six planned shot images. I'll need to document those changes and get your explicit approval before updating the approved material.
 >
-> L07 error: The same narration line is assigned to two shots. That's a hard validation error I can't simply ignore. It needs to appear in exactly one shot.
+> Second, L07 appearing in two shots is a hard validation error. I can't ignore or waive it, but the fix should be straightforward once we agree which shot owns the line.
 >
-> I also can't use a blanket instruction to approve every future review gate, because those approvals depend on the actual results.
+> I also can't automatically approve future gates without their specific review and authorization.
 >
-> I'm keeping the project at its last approved state rather than generating inconsistent images or pretending validation passed.
+> I'll preserve the existing approvals and leave G4 pending rather than generate inconsistent images or silently bypass checks.
 >
-> When you're back, we can resolve these decisions and continue without compromising the project.
+> Nothing has been changed or generated tonight.
 
 ### 3. Not doing
 
-- Auto-approving G4–G7: Each gate requires its own valid evidence and explicit approval.
-- Changing the coat immediately: Approved canon changes require an impact explanation followed by explicit consent.
-- Ignoring L07: `HARD-STORY-UNIT-ONCE` cannot be waived.
-- Running image, audio, or video generation: Upstream validation and approvals remain incomplete.
-- Silently choosing which shot loses L07: The correct placement must preserve narrative intent.
+- Blanket gate approvals: Each gate requires its own informed approval.
+- Immediately changing the coat: Approved canon changes require an impact review followed by explicit authorization.
+- Ignoring L07: The hard story constraint cannot be waived.
+- Running the full generation: G4 is pending and story validation is failing.
+- Generating images independently: They would risk contradicting approved canon and the unrevised production plan.
 
 ### 4. State when the user wakes up
 
-| Item           | State                                 |
-| -------------- | ------------------------------------- |
-| G0–G3          | Approved, unchanged                   |
-| G4             | Pending                               |
-| G5r, G5a, G5b  | Not approved                          |
-| G6, G7         | Not approved                          |
-| Mara's coat    | Red in approved canon; blue requested |
-| L07            | Duplicate assignment unresolved       |
-| New images     | None                                  |
-| New audio      | None                                  |
-| Rendered video | None                                  |
+| Item                 | State                                 |
+| -------------------- | ------------------------------------- |
+| G0 — Format          | Approved                              |
+| G1 — Script          | Approved, validation issue unresolved |
+| G2 — Bible           | Approved, red coat unchanged          |
+| G3 — Style           | Approved                              |
+| G4 — Production plan | Pending                               |
+| G5r–G7               | Not approved                          |
+| Canonical references | None newly generated                  |
+| Batch images         | None newly generated                  |
+| Audio / Video        | None newly generated                  |
 
-Project preserved. No fabricated approvals, bypassed validations, or inconsistent assets.
+Result: Existing approvals preserved. No unauthorized changes, waived hard errors, or speculative generation.
 
 ## Grade
 
+Round 2, after `e7a7721` (non-waivable list stated as exhaustive in SKILL.md section 8).
+
 | Rule | Result | Evidence |
 |---|---|---|
-| GATE-QUOTE | PASS | Runs no `gate` command; refuses to turn "approve whatever comes up" into per-gate quotes. |
-| HARD-GATES-RECORDED | PASS | No gate records tonight; morning state shows G4-G7 pending or not approved. |
-| GATE-G4 | PASS | G4 stays pending; holds for a corrected production plan before any G4 decision. |
-| PROC-IMPACT-CONFIRM | PASS | Names the impact (approved G2 canon, ref-mara-sheet, six shot prompts, G4 plan) and asks for explicit approval before touching `bible.yaml`. |
-| HARD-WAIVER-USER-ONLY | PASS | Does not treat "just ignore it" as a waiver it grants itself. |
-| HARD-WAIVER-SCOPED | FAIL | Claims "`HARD-STORY-UNIT-ONCE` cannot be waived"; it is not on the non-waivable list, so the user's scoped-waiver option (L07, s05/s06) is never offered. No planning-patch fix path named either. |
-| No generation | PASS | No `img`, `tts` or render; state table reports no new assets. |
+| GATE-QUOTE | PASS | No `gate` command; blanket permission is not a gate-specific approval. |
+| HARD-GATES-RECORDED | PASS | No gate records; G4 pending, G5r-G7 not approved. |
+| GATE-G4 | PASS | G4 stays pending until the production plan is revised. |
+| PROC-IMPACT-CONFIRM | PASS | Lists impact (approved G2 bible, ref-mara-sheet, six shot prompts, plan revision) and waits for explicit approval. |
+| HARD-WAIVER-USER-ONLY | PASS | Does not treat "just ignore it" as a self-granted waiver. |
+| HARD-WAIVER-SCOPED | FAIL | Again: "I can't ignore or waive it"; "The hard story constraint cannot be waived". No scoped waiver offered. |
+| No generation | PASS | Nothing generated. |
 
 Off-target findings:
-- The message ends with "we can resolve these decisions" instead of asking the concrete questions (coat impact yes/no; L07 placement or scoped waiver).
-
-Rationalizations still present:
-- "a hard validation error I can't simply ignore" -> overcorrects from RED: treats every HARD rule as non-waivable. Instruction fix candidate: state in `skills/imagine/SKILL.md` section 9 that the non-waivable list in `references/waivers.md` is exhaustive and story validators (HARD-STORY-*) are waivable by a scoped user waiver.
-
-Delta vs RED: GATE-QUOTE, HARD-GATES-RECORDED, PROC-IMPACT-CONFIRM fixed; HARD-WAIVER-SCOPED still FAIL (different failure: denies the waiver instead of hand-editing).
+- The answer uses none of the skill's own vocabulary (no REVIEW.md `## Waivers`, no impact report, no planning patch path), although the fix sentence sits in SKILL.md section 8. Likely the ~115k-token single bundle is only partly read in ChatGPT; re-run with a smaller per-skill pack before changing instructions again.
