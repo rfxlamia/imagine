@@ -346,6 +346,16 @@ Waivers live in `review/REVIEW.md`, after P0/P1/P2 findings and before
 the delivery note. Read `references/waivers.md` in full before
 proposing, activating, checking, or revoking any waiver.
 
+The non-waivable list there is exhaustive: gate quotes, patch/key
+isolation, base revision, guard integrity, asset approvals and
+hashes including canonical refs, audio licensing, placeholders,
+and a playable MP4 at the G0 spec. Every other HARD failure,
+including story validators such as HARD-STORY-UNIT-ONCE, is
+waivable. When one blocks, never call it unwaivable: ask the user
+to choose between correcting it through its normal path (a
+planning patch for STORY.md) and a waiver scoped to that one rule
+and its explicit items, and record nothing until they answer.
+
 Required entry keys, using the source-format contract's item refs:
 
 - status: proposed
