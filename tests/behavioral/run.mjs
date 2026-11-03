@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Web-chat scenario helper.
-//   node tests/behavioral/run.mjs prompt <name>                            print the prompt block
+//   node tests/behavioral/run.mjs prompt <name> [--green]                  print the prompt block (GREEN: with the fixed preamble)
 //   node tests/behavioral/run.mjs save <red|green> <name> <slug> <label>   stdin answer -> <phase>/<name>.<slug>.md
-//   node tests/behavioral/run.mjs pack [out-dir]                           GREEN upload: imagine-green.zip + imagine-green.md
+//   node tests/behavioral/run.mjs pack [--for <name>] [out-dir]            GREEN upload: <base>.zip + <base>.md
 //   node tests/behavioral/run.mjs compare <name> <slug>                    grading sheet: criteria, RED grade, GREEN answer
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -18,7 +18,11 @@ const PHASES = new Set(["red", "green"]);
 const SLUGS = new Set(["chatgpt", "gemini"]);
 // Only tracked files ship, so gitignored placeholders never reach the upload.
 // Scenarios stay out: their targets and pass criteria would leak the grading.
-const PACK_ROOTS = ["skills", "agents", ".claude-plugin/plugin.json"];
+const MANIFEST = ".claude-plugin/plugin.json";
+const PACK_ROOTS = ["skills", "agents", MANIFEST];
+// Sent before the scenario prompt in GREEN only. It sits outside the hashed
+// prompt, so it must never change between GREEN runs.
+export const GREEN_PREAMBLE = "Before answering, read the attached file in full; it holds the plugin's skill and agent instructions you must follow.\n\n";
 
 function fail(msg) {
   console.error(msg);
@@ -58,9 +62,14 @@ export function checkGreenAgainstRed(redText, sha, label) {
   return { warning: red.model !== label ? `model label differs from RED ("${red.model}")` : null };
 }
 
-export function packFiles(root = repo) {
-  return execFileSync("git", ["ls-files", "--", ...PACK_ROOTS], { cwd: root, encoding: "utf8" })
+// Without a name: the whole plugin. With one: that skill's folder or that
+// agent's file plus the manifest, which is what Claude Code loads for it.
+export function packFiles(name = null, root = repo) {
+  const roots = name ? [`skills/${name}/`, `agents/${name}.md`, MANIFEST] : PACK_ROOTS;
+  const files = execFileSync("git", ["ls-files", "--", ...roots], { cwd: root, encoding: "utf8" })
     .split("\n").filter(Boolean).sort();
+  if (name && files.length < 2) throw new Error(`no tracked skill or agent named ${name}`);
+  return files;
 }
 
 export function bundleMarkdown(files) {
@@ -74,14 +83,24 @@ export function bundleMarkdown(files) {
   return [...head, ...body].join("\n");
 }
 
-function pack(outDir) {
-  const paths = packFiles();
+function pack(args) {
+  const i = args.indexOf("--for");
+  const name = i >= 0 ? args[i + 1] : null;
+  if (i >= 0 && !name) fail("usage: pack [--for <name>] [out-dir]");
+  const outDir = args.filter((_, j) => i < 0 || (j !== i && j !== i + 1))[0] ?? join(tmpdir(), "imagine-green");
+  let paths;
+  try {
+    paths = packFiles(name);
+  } catch (e) {
+    fail(e.message);
+  }
   const files = paths.map((p) => ({ path: p, text: readFileSync(join(repo, p), "utf8") }));
   const bad = findViolations(files, loadPatterns());
   if (bad.length) fail(`forbidden name in ${bad.map((v) => `${v.path}:${v.line}`).join(", ")}; nothing packed`);
   mkdirSync(outDir, { recursive: true });
-  const zip = join(outDir, "imagine-green.zip");
-  const md = join(outDir, "imagine-green.md");
+  const base = name ? `imagine-green-${name}` : "imagine-green";
+  const zip = join(outDir, `${base}.zip`);
+  const md = join(outDir, `${base}.md`);
   rmSync(zip, { force: true });
   execFileSync("zip", ["-X", "-q", zip, ...paths], { cwd: repo });
   writeFileSync(md, bundleMarkdown(files));
@@ -111,8 +130,10 @@ function save([phase, name, slug, label]) {
   const bad = findViolations([{ path: "stdin", text: answer }], loadPatterns());
   if (bad.length) fail(`forbidden name on answer line(s): ${bad.map((v) => v.line).join(", ")}; not saved`);
   const date = new Date().toISOString().slice(0, 10);
-  const uploads = phase === "green" ? "imagine-green upload attached, " : "";
-  const header = `# ${phase.toUpperCase()}: ${name} (${slug})\n\n- model: ${label}\n- date: ${date}\n- prompt sha256: ${sha}\n- chat: temporary, memory off, ${uploads}prompt sent verbatim, no follow-up\n\n## Answer\n\n`;
+  const chat = phase === "green"
+    ? `temporary, memory off, imagine-green-${name}.md attached, fixed GREEN preamble + prompt sent verbatim, no follow-up`
+    : "temporary, memory off, prompt sent verbatim, no follow-up";
+  const header = `# ${phase.toUpperCase()}: ${name} (${slug})\n\n- model: ${label}\n- date: ${date}\n- prompt sha256: ${sha}\n- chat: ${chat}\n\n## Answer\n\n`;
   mkdirSync(join(here, phase), { recursive: true });
   const out = join(here, phase, `${name}.${slug}.md`);
   writeFileSync(out, header + answer + "\n");
@@ -136,14 +157,16 @@ function compare([name, slug]) {
 
 function main([cmd, ...args]) {
   if (cmd === "prompt") {
-    if (args.length !== 1) fail("usage: prompt <name>");
-    process.stdout.write(extractPrompt(scenarioText(args[0])));
+    const green = args.includes("--green");
+    const rest = args.filter((a) => a !== "--green");
+    if (rest.length !== 1) fail("usage: prompt <name> [--green]");
+    process.stdout.write((green ? GREEN_PREAMBLE : "") + extractPrompt(scenarioText(rest[0])));
     return;
   }
   if (cmd === "save") return save(args);
-  if (cmd === "pack") return pack(args[0] ?? join(tmpdir(), "imagine-green"));
+  if (cmd === "pack") return pack(args);
   if (cmd === "compare") return compare(args);
-  fail("usage: run.mjs prompt <name> | save <red|green> <name> <chatgpt|gemini> <model label> | pack [out-dir] | compare <name> <chatgpt|gemini>");
+  fail("usage: run.mjs prompt <name> [--green] | save <red|green> <name> <chatgpt|gemini> <model label> | pack [--for <name>] [out-dir] | compare <name> <chatgpt|gemini>");
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main(process.argv.slice(2));

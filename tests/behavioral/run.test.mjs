@@ -42,6 +42,20 @@ test("pack ships skills, agents and the manifest only", () => {
   assert.ok(!files.some((f) => f.includes("placeholder")));
 });
 
+test("pack --for ships one skill folder or one agent file plus the manifest", () => {
+  const skill = packFiles("imagine");
+  assert.ok(skill.includes("skills/imagine/SKILL.md") && skill.includes(".claude-plugin/plugin.json"));
+  assert.ok(skill.every((f) => f.startsWith("skills/imagine/") || f === ".claude-plugin/plugin.json"), skill.join(","));
+  assert.deepEqual(packFiles("scene-builder"), [".claude-plugin/plugin.json", "agents/scene-builder.md"]);
+  assert.throws(() => packFiles("nope"), /no tracked skill or agent/);
+});
+
+test("every scenario has a packable skill or agent", () => {
+  for (const f of readdirSync(join(here, "scenarios"))) {
+    assert.ok(packFiles(f.replace(/\.md$/, "")).length <= 10, f);
+  }
+});
+
 test("bundleMarkdown wraps each file in FILE/END markers", () => {
   const out = bundleMarkdown([{ path: "a.md", text: "one\n" }, { path: "b.md", text: "two" }]);
   assert.match(out, /===== FILE: a\.md =====\none\n===== END FILE =====\n\n===== FILE: b\.md =====\ntwo\n===== END FILE =====/);

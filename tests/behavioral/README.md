@@ -40,14 +40,14 @@ The saved header records the first 12 hex characters of the prompt's sha256. GRE
 
 ## GREEN runs (WP7)
 
-1. Build the upload once per instruction revision:
+1. Build the upload for the scenario after every instruction change:
 
    ```bash
-   node tests/behavioral/run.mjs pack
+   node tests/behavioral/run.mjs pack --for imagine ~/Desktop/imagine-green
    ```
 
-   This writes `imagine-green.zip` and `imagine-green.md` (one file with `===== FILE: <path> =====` markers) to `$TMPDIR/imagine-green/`, or to the directory given as an argument. Only tracked files under `skills/`, `agents/` and `.claude-plugin/plugin.json` are packed, so the gitignored placeholders never ship. Scenarios are not packed: their targets and pass criteria would leak the grading. Packing refuses if any file names a forbidden research reference.
-2. Open a temporary chat on the same model as the scenario's RED run, attach the upload (the `.md` bundle when the chat cannot read a zip), and paste the prompt from `run.mjs prompt <name>` as the only message.
+   This writes `imagine-green-<name>.zip` and `imagine-green-<name>.md` (one file with `===== FILE: <path> =====` markers) to the given directory, or to `$TMPDIR/imagine-green/`. `--for <name>` packs only that skill's folder or that agent's file plus `.claude-plugin/plugin.json`, which is what Claude Code loads for it; without `--for` the whole plugin is packed. Use the per-scenario pack: a full bundle (about 115k tokens) is only searched on demand by ChatGPT, so instructions it does not look up are missed (seen in the first three `imagine` GREEN runs). Only tracked files are packed, so the gitignored placeholders never ship. Scenarios are not packed: their targets and pass criteria would leak the grading. Packing refuses if any file names a forbidden research reference.
+2. Open a temporary chat on the same model as the scenario's RED run, attach `imagine-green-<name>.md`, and paste the output of `run.mjs prompt <name> --green` as the only message. `--green` puts one fixed sentence before the prompt asking the model to read the attachment in full; the scenario prompt itself is unchanged, so the RED hash still applies.
 3. Save the answer with `save green`. It refuses when `red/<name>.<slug>.md` is missing or its prompt hash differs from the current prompt, and warns when the model label differs from RED.
 4. Grade it. `node tests/behavioral/run.mjs compare <name> <slug>` prints the targets, pass criteria, the RED grade and the GREEN answer side by side; add a `## Grade` table to the GREEN file in the same format as RED.
 5. On a failed rule, fix the instruction file, re-pack, and re-run that scenario only.
