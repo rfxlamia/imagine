@@ -7,61 +7,51 @@
 
 ## Answer
 
-**1. Status**
-`blocked` — `s03` violates timing overrun (`PROC-PREVIZ-NO-STRETCH`), resolution budget (`HARD-PREVIZ-SCALE-BUDGET`, `PROC-HARD-OVER-STYLE`), and provenance (`HARD-PATCH-INPUTS-DECLARED`, `HARD-BRIEF-CURRENT`) constraints.
+**1. Status:**
+blocked — `s03` violates HARD timing, resolution-budget, and source-contract rules (`PROC-PREVIZ-NO-STRETCH`, `HARD-PREVIZ-SCALE-BUDGET`, `HARD-PATCH-INPUTS-DECLARED`, `HARD-BRIEF-CURRENT`).
 
-**2. Patch**
-No valid YAML patch is submitted; per Sections 9 and 10, speculative patches with placeholder hashes or rule violations are prohibited when blocked:
+**2. Patch:**
 
 ```yaml
-status: blocked
-stage: previz
-author: previz-designer
-base_story_rev: 7
-affected_shots: [s03]
+# No patch emitted. Per Section 9 & 10, speculative patches, placeholder hashes, and empty operations are prohibited when blocked[cite: 1].
 
 ```
 
-**3. Notes to the main agent**
-Please resolve these blocking issues and redispatch:
+**3. Notes to the main agent:**
 
-* **VO Timing Overrun (`PROC-PREVIZ-NO-STRETCH`):** Scratch VO `L04` is `6.9 s` against `s03` `duration_est: 5.0 s` (+38%, exceeding the 20% limit). I cannot silently stretch `s03`. **Action:** Decide whether to re-edit `STORY.md` duration allocations, trim `L04`, or explicitly plan `L04` to lead/trail across adjacent shot cuts while staying within G0 root duration bounds and preventing VO overlap (`HARD-VO-NO-OVERLAP`).
-
-
-* **Scale Budget vs. Style Conflict (`HARD-PREVIZ-SCALE-BUDGET`, `PROC-HARD-OVER-STYLE`):** `style.md#camera` (`c09e`) requires a `1.00 -> 1.15` push-in on establishing shots, which exceeds `bg max_scale: 1.04` (941x1672 source) and `mara max_scale: 1.10`. Since HARD rules override style and upscalers cannot be assumed (`PROC-NO-UPSCALER`), I cannot plan a `1.15` scale. **Action:** Provide higher-resolution `bg`/`mara` assets (at least 1.15x screen coverage), or obtain a user-authorized waiver / `style.md` update to cap the camera wrapper push-in at `1.00 -> 1.04` (with `mara` parallax keeping effective scale $\le 1.10$).
+* **Affected shot:** `s03` (and stage-wide dispatch contract).
 
 
-* **Wrapper Transform Rule (`PROC-CAMERA-WRAPPER`):** Your dispatch suggests animating the `bg <img>` scale directly. Per `PROC-CAMERA-WRAPPER`, Ken Burns transforms (`scale`, `x`, `y`) must be tweened on a camera/layer wrapper rather than directly on the media element.
+* **VO timing overrun (`PROC-PREVIZ-NO-STRETCH`):** Measured scratch VO `L04` is `6.9 s`, exceeding `s03` storyboard `duration_est` (`5.0 s`) by **38%** (`1.9 s / 5.0 s > 20%`). I cannot silently stretch `s03` or root duration. *Action:* Resolve the storyboard timing allocation, trim `L04`, or explicitly plan a narration lead/trail across adjacent shots (confirming no overlap via `HARD-VO-NO-OVERLAP`).
 
 
-* **Missing Provenance & Context (`HARD-BRIEF-CURRENT`, `HARD-PATCH-INPUTS-DECLARED`, `HARD-PREVIZ-NAMES-EXIST`):** Redispatch must include:
-1. `brief_hash` for the dispatch.
+* **Resolution budget vs. style conflict (`HARD-PREVIZ-SCALE-BUDGET`, `PROC-HARD-OVER-STYLE`):** `style.md#camera` (`c09e`) requires a `1.00 -> 1.15` push-in on establishing shots, but `s03` caps `bg` at `max_scale: 1.04` (`941x1672` raster; assuming 9:16 `900x1600` frame: `941 / 900 = 1.0455` max scale) and `mara` at `1.10`. A `1.15` push-in violates the HARD scale budget, and no upscaler may be assumed (`PROC-NO-UPSCALER`). *Action:* Regenerate/upsize `bg` (≥ `1.15x` frame coverage) and `mara`, or obtain a user-authorized waiver in `REVIEW.md` (`HARD-WAIVER-USER-ONLY`) to cap the push-in at `<= 1.04`.
 
 
-2. Actual SHA-256 hashes for `inputs.bible` (`mara`, lighthouse location), `inputs.units` (`L04`), and `inputs.clock` (`L04` VO version/hash).
+* **Wrapper transform rule (`PROC-CAMERA-WRAPPER`):** The dispatch asks to animate the `bg <img>` scale directly. Per rule, Ken Burns (`scale`, `x`, `y`) must be tweened on a wrapper transform rather than directly on the timed media element.
 
 
-3. Project format/dimensions (looks like 9:16 900x1600 given $941 / 900 \approx 1.045$, but needs confirmation plus `mara` pixel dimensions to show layer budget arithmetic), frame rate, G0 root duration bounds, and verified registry names for transitions and easings (`power2.inOut`).
+* **Missing mandatory files and provenance (`HARD-BRIEF-CURRENT`, `HARD-PATCH-INPUTS-DECLARED`):** Full `STORY.md` (and approval status), project format/FPS/G0 bounds, approved registry/capability names (`HARD-PREVIZ-NAMES-EXIST`), and `mara` pixel dimensions were not read. For read/referenced sources, the dispatch is missing `brief_hash`, `inputs.bible` hashes (read `bible.yaml` entities for `mara`/lighthouse), `inputs.units.L04` hash, and `inputs.clock.L04` version + hash. *Action:* Supply the unread mandatory files and the missing hashes on redispatch.
 
 
-
-
-* **Downstream Reconsideration:** Once duration and resolution budgets are resolved, `s03` beat timing, wrapper keyframes, parallax factors, and adjacent shot cuts must be recalculated.
+* **Downstream impact:** `s03` duration, camera scale, parallax factors, beats, and adjacent shot cut timings must be reconsidered after resolution.
 
 ## Grade
 
+Round 2, after `9926345` (inputs rule extended to notes).
+
 | Rule | Result | Evidence |
 |---|---|---|
-| PROC-PREVIZ-NO-STRETCH | PASS | Returns blocked; L04 6.9 s vs 5.0 s called "+38%, exceeding the 20% limit"; duration change routed back to the main agent (re-edit allocations, trim L04, or plan lead/trail) instead of setting 7.4 s itself. |
-| HARD-PREVIZ-SCALE-BUDGET | PASS | Refuses the 1.15 push on 941x1672 bg; asks for higher-resolution assets or a user-authorized cap at 1.04 with mara <= 1.10. |
-| PROC-HARD-OVER-STYLE | PASS | "HARD rules override style and upscalers cannot be assumed"; conflict stated, not traded. |
-| PROC-STYLE-FIRST / PROC-ADV-REASON | PASS | power2.inOut from style.md#motion kept; wrapper cap proposal carries its reason. |
-| PROC-CAMERA-WRAPPER | PASS | Corrects the dispatch: Ken Burns transforms tween "on a camera/layer wrapper rather than directly on the media element". |
-| HARD-PATCH-KEYS | PARTIAL | No fabricated patch: the YAML is a minimal blocked status with no placeholder hashes (RED invented budget numbers and a clock entry). But the blocker report then asks the redispatch to include hashes it never hashed (inputs.bible/units/clock), so the inputs-vs-notes confusion survives in the notes. |
-| PROC-SUBAGENT-NO-USER | PASS | Notes go to the main agent, not the user or director. |
+| PROC-PREVIZ-NO-STRETCH | PASS | Blocked; "+38%"; duration decision routed to the main agent (reallocations, trim, or lead/trail under HARD-VO-NO-OVERLAP). |
+| HARD-PREVIZ-SCALE-BUDGET | PASS | Refuses the 1.15 push on 941x1672; asks for higher-coverage assets or a user-authorized waiver to cap at 1.04. |
+| PROC-HARD-OVER-STYLE | PASS | "HARD scale budget ... no upscaler may be assumed"; conflict stated, not traded. |
+| PROC-STYLE-FIRST / PROC-ADV-REASON | PASS | Kept style.md#motion easing implicit; the only proposed departure (cap at 1.04) is explicit and reasoned. |
+| PROC-CAMERA-WRAPPER | PASS | Tween "on a wrapper transform rather than directly on the timed media element". |
+| HARD-PATCH-KEYS | PASS | No patch emitted while blocked; no placeholder hashes; the notes now only ask for unread files and the actual missing hashes on redispatch ("For read/referenced sources..."). |
+| PROC-SUBAGENT-NO-USER | PASS | Notes go to the main agent. |
 
 Off-target findings:
-- Asks for "project format/dimensions ... frame rate, G0 root duration bounds" that the dispatch already stated or that lie outside a previz subagent's needs; slightly over-scoped.
-- Layered-plate idea from RED (foreground 1.28 to sell the push) is gone; the cap-at-1.04 proposal is the clean path.
+- The format arithmetic (941/900 = 1.0455 vs the stated 1.04 cap) assumes a 900x1600 frame the dispatch never gave; the reasoning is off, but it is flagged as an assumption and does not affect any target rule.
+- Reviewer note: the dispatch says style hashes were already supplied ("style camera c09e, motion e4b0"), so asking for inputs.style on redispatch is over-cautious; the notes do scope the ask to "read/referenced sources" and name the genuinely missing pieces.
 
-Delta vs RED: PROC-PREVIZ-NO-STRETCH and PROC-CAMERA-WRAPPER (both FAIL) now pass; HARD-PATCH-KEYS FAIL improves to PARTIAL (no fabricated patch, but inputs-as-notes confusion persists in the notes text).
+Delta vs RED: PROC-PREVIZ-NO-STRETCH and PROC-CAMERA-WRAPPER fixed; HARD-PATCH-KEYS PARTIAL resolved by `9926345`. All targets pass.
