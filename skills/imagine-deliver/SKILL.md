@@ -263,6 +263,8 @@ Apply the per-layer source-resolution calculation in [delivery-checks.md](refere
 
 No `replan` raster tier may ship; a `soft` tier requires evidence of explicit acceptance at **both G4 and G5b**, for the affected asset and planned/measured quality. <!-- rule:HARD-RASTER-TIER -->
 
+For a `replan` raster, report the shot, asset, geometry, dimensions and shortfall, then offer all six options for the user to choose: reduce camera push or maximum scale; reduce parallax travel; crop less of the source; break a full-frame raster into smaller layered elements; use vector, HTML or CSS ground elements; or a different delivery size through an approved G0 change. No upscaler and no waiver are among the options. Details are in `references/delivery-checks.md` section 5.4.
+
 The label `native` is permitted only when every raster layer in the delivered film has effective `q >= 1.0`. <!-- rule:HARD-NO-NATIVE-CLAIM -->
 
 No upscaler is assumed or treated as part of Phase 1; ffmpeg Lanczos interpolation and Chrome DPR do not increase raster `q`. <!-- rule:PROC-NO-UPSCALER -->
