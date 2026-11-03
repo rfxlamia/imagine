@@ -261,13 +261,9 @@ A valid draft is the basis of G6 listening and picture review.
 
 ### 7.4 Delivery render
 
-After G6 approval and any required freshness revalidation, use delivery quality.
+After G6 approval and any required freshness revalidation, use `imagine-kit render --final` as the only canonical delivery render path. It writes the immutable final version at `post/<slug>.v<N>.mp4` and records the kit-managed render state and journal evidence. Do not render a changed post-G6 edit as though it were the locked version.
 
-The direct pinned HyperFrames delivery command shape is:
-
-`HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 render edit -o post/<slug>.v<n>.mp4 --fps 30 --quality delivery --no-best-effort`
-
-Do not render a changed post-G6 edit as though it were the locked version.
+Direct HyperFrames rendering may be used for diagnostics only. Its output is noncanonical and must not be accepted as a G7 deliverable; it does not replace the kit's preflight, version selection, freshness checks, or state recording.
 
 If the source has changed, apply the impact procedure and reopen the affected gate.
 
