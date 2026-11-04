@@ -310,3 +310,26 @@ test("entry exits 2 when the logic module cannot load", () => {
 });
 
 
+
+test("scene-builder may hand its report back to the parent via SubagentHandback", () => {
+  const { cwd } = fixture();
+  const r = sb(cwd, "SubagentHandback", { message: "done" });
+  assert.equal(r.decision, "allow");
+  assert.equal(r.reason, "report to the parent agent");
+});
+
+test("near-miss SubagentHandback tool names are still denied", () => {
+  const { cwd } = fixture();
+  for (const name of ["subagenthandback", "SubagentHandbackX", "XSubagentHandback", "SubagentHandback "]) {
+    const r = sb(cwd, name, { message: "done" });
+    assert.equal(r.decision, "deny", name);
+    assert.equal(r.reason, `scene-builder may not use ${name}`);
+  }
+});
+
+test("unknown tools stay denied for scene-builder", () => {
+  const { cwd } = fixture();
+  const r = sb(cwd, "WebFetch", { url: "https://example.com" });
+  assert.equal(r.decision, "deny");
+  assert.equal(r.reason, "scene-builder may not use WebFetch");
+});

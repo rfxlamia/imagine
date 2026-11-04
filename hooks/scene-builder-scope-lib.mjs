@@ -7,6 +7,7 @@
 // - NotebookEdit requires notebook_path inside shadow and denies if file_path is present.
 // - Bash is restricted to 'npx hyperframes@0.8.223 lint|snapshot|check|validate'
 //   with a typed per-subcommand flag allowlist and exactly one required shadow DIR positional.
+// - SubagentHandback (exact name) is allowed: it only carries the final report to the parent agent.
 // All other tools are denied.
 // Path validation splits into two predicates:
 // - insideShadowWrite: strictly below the shadow root (rejects writing the shadow root itself)
@@ -217,6 +218,7 @@ export function decide(input) {
     if (READ_ONLY_TOOLS.has(input.tool_name)) return { decision: "allow", reason: "read-only tool" };
     if (WRITE_TOOLS.has(input.tool_name)) return decideWrite(input.cwd, input.tool_input);
     if (input.tool_name === "NotebookEdit") return decideNotebookEdit(input.cwd, input.tool_input);
+    if (input.tool_name === "SubagentHandback") return { decision: "allow", reason: "report to the parent agent" };
     if (input.tool_name === "Bash") return decideBash(input.cwd, input.tool_input?.command);
     return deny(`scene-builder may not use ${input.tool_name}`);
   } catch (e) {
