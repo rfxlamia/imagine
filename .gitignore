@@ -43,6 +43,11 @@ __pycache__/
 *.pyc
 .venv/
 
+# Behavioural pack manifests: transient per-run artifacts. The auditable
+# record of what was uploaded is the bundle sha256 and commit in the result
+# header.
+tests/behavioral/packs/
+
 # OS / editor
 .DS_Store
 *.log
@@ -67,3 +72,4 @@ copilot/
 /.beads/hooks/*.backup
 /.beads/PRIME.md
 /.pi/
+/.workbuddy-ai/
