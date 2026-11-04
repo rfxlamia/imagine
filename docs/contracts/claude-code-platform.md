@@ -45,6 +45,9 @@ The proposed set removes every user-owned plugin, skill, agent, MCP server, Sess
 | Exit code 2 | Blocking error; PreToolUse call blocked, reason from stderr (not exercised) | hooks.md "Exit code output" | VERIFIED-DOC |
 | Other non-zero / can't start / timeout (600 s default) | Non-blocking; action proceeds, unless `"onFailure": "block"` (v2.1.295+) (not exercised) | hooks.md "Exit code output", "onFailure" | VERIFIED-DOC |
 | Signal-kill exit status | Not known | none | UNVERIFIED |
+| SessionStart env (`CLAUDE_ENV_FILE`) | A SessionStart hook appends `export` lines to the file at `CLAUDE_ENV_FILE`; Claude Code runs that file before each later Bash command of the session. `hooks/session-env.mjs` writes `export HYPERFRAMES_NO_TELEMETRY=1` (imagine-z8p.8) so scene-builder's bare `npx hyperframes@0.8.223` commands run with telemetry off | hooks.md "Persist environment variables"; env-vars.md `CLAUDE_ENV_FILE` | VERIFIED-DOC |
+| Plugin SessionStart hook gets `CLAUDE_ENV_FILE` | 2026-11-04 `claude -p --plugin-dir <repo>` (haiku, `--setting-sources project,local --strict-mcp-config`): `SessionStart:startup` hook_response exit 0, empty stdout and stderr; `session-env.mjs` exits 1 when the variable is unset, so the file was provided and written | stream-json hook events | VERIFIED-RUN |
+| `CLAUDE_ENV_FILE` reaches subagent Bash | Docs say "all subsequent Bash commands" of the session; subagents are not named. The 2026-11-04 spike ended before any tool call (subscription error from `claude -p`); check at WP8 start | hooks.md "Persist environment variables" | UNVERIFIED |
 | `-p` | Headless print mode; runs succeeded | `claude --help`; cli-reference.md | VERIFIED-RUN |
 | `--plugin-dir <path>` | Loads plugin for session; its hooks fire | `claude --help` line 163; Run A | VERIFIED-RUN |
 | `--model claude-haiku-5-5` | init `model: "claude-haiku-5-5"` | `claude --help` line 135; Run A init | VERIFIED-RUN |
