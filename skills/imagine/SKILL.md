@@ -349,14 +349,20 @@ proposing, activating, checking, or revoking any waiver.
 The non-waivable list there is exhaustive: gate quotes, patch/key
 isolation, base revision, guard integrity, asset approvals and
 hashes including canonical refs, audio licensing, placeholders,
-a playable MP4 at the G0 spec, and the raster quality floor (no
+a playable MP4 at the G0 spec, the raster quality floor (no
 `replan` tier may ship; a `soft` tier needs explicit G4 and G5b
-acceptance). Every other HARD failure, including story validators
-such as HARD-STORY-UNIT-ONCE, is waivable. When one blocks, never
-call it unwaivable: ask the user to choose between correcting it
-through its normal path (a planning patch for STORY.md) and a waiver
-scoped to that one rule and its explicit items, and record nothing
-until they answer.
+acceptance), and the story validators the kit runs before G4, such
+as HARD-STORY-UNIT-ONCE. A rule the kit itself decides is never
+waivable: `imagine-kit gate G4 approve` refuses a story error
+whatever REVIEW.md says, so a waiver for one would leave G4 blocked
+and only misstate the evidence. When such a rule blocks, say that
+it has to be corrected and route the fix through its normal path
+(a planning patch for STORY.md). Every other HARD failure is
+waivable. When one of those blocks, never call it unwaivable: ask
+the user to choose between correcting it through its normal path
+and a waiver scoped to that one rule and its explicit items, and
+record nothing until they answer.
+<!-- rule:HARD-NON-WAIVABLE -->
 
 Required entry keys, using the source-format contract's item refs:
 

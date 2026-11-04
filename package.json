@@ -6,5 +6,8 @@
     "test": "node --test 'hooks/*.test.mjs' 'tools/*.test.mjs' 'tests/behavioral/*.test.mjs'",
     "check:names": "node tools/check-forbidden-names.mjs",
     "check:rules": "node tools/check-traceability.mjs --registry-only"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
   }
 }

@@ -115,6 +115,8 @@ Never propose a waiver for:
 - Shipping placeholders.
 - An unplayable MP4 or one that violates the approved G0 output specification.
 - The raster quality floor: no `replan` tier may ship; a `soft` tier needs explicit G4 and G5b acceptance.
+- The story validators the kit runs before G4, such as HARD-STORY-UNIT-ONCE. `imagine-kit gate G4 approve` refuses a story error whatever REVIEW.md says, so a waiver for one would leave G4 blocked and only misstate the evidence.
+<!-- rule:HARD-NON-WAIVABLE -->
 
 A user may authorize a new source specification through the impact/reapproval workflow. That is not a waiver of the existing technical evidence.
 
