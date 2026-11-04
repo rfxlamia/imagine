@@ -41,10 +41,6 @@ const red = (sha, model = "M1") => `# RED: s (gemini)\n\n- model: ${model}\n- da
 // must report exactly these, so a new defect fails the test and a fixed one
 // has to be re-baselined on purpose.
 const KNOWN_DEFECTS = {
-  "fx-designer.gemini.md": [
-    "yaml block 1: Nested mappings are not allowed in compact mappings at line 67, column 17",
-    "yaml block 1: Implicit keys need to be on a single line at line 67, column 17",
-  ],
   // The lint json is quoted with a shell-style escape, which yaml does not
   // accept; the report it belongs to still carries the json verbatim.
   "scene-builder.gemini.md": [
