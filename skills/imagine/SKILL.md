@@ -357,8 +357,10 @@ waivable: `imagine-kit gate G4 approve` refuses a story error
 whatever REVIEW.md says, so a waiver for one would leave G4 blocked
 and only misstate the evidence. When such a rule blocks, say that
 it has to be corrected and route the fix through its normal path
-(a planning patch for STORY.md). Every other HARD failure is
-waivable. When one of those blocks, never call it unwaivable: ask
+(a planning patch for STORY.md). Ask the user the decision the fix
+needs, as a direct question (for a unit anchored twice: which shot
+keeps it), and apply nothing until they answer. Every other HARD
+failure is waivable. When one of those blocks, never call it unwaivable: ask
 the user to choose between correcting it through its normal path
 and a waiver scoped to that one rule and its explicit items, and
 record nothing until they answer.
