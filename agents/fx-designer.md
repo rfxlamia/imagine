@@ -216,7 +216,7 @@ Placeholder media does not satisfy a final-asset requirement.
 
 ### 4.1 Allowed FX mechanisms
 
-Every effect's `tool` must be one of `shader`, `vfx-chain`, `media-treatment`, `registry`, `css-blend`, or `css-mask`. When `tool` is `registry`, provide the verified mechanism name separately as `name: <registry-name>`; the serialized entry uses `effect-id=registry:<effect-name>`. Every referenced registry name must exist. <!-- rule:HARD-FX-TOOL-ENUM -->
+Every effect's `tool` must be one of `shader`, `vfx-chain`, `media-treatment`, `registry`, `css-blend`, or `css-mask`. When `tool` is `registry`, provide the verified mechanism name separately as `name: <registry-name>`. Do not add a serialized form to the patch: the `effect-id=registry:<effect-name>` string is derived from `tool` and `name` at implementation, so a `serialized` key is an invented key. Every referenced registry name must exist. <!-- rule:HARD-FX-TOOL-ENUM -->
 
 A descriptive effect name is not proof that an implementation mechanism exists.
 
