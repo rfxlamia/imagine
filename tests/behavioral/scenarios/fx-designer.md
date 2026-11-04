@@ -15,6 +15,7 @@ Patch shape:
 stage: fx
 author: fx-designer
 base_story_rev: <int>
+brief_hash: <hash>
 inputs: { style: {<anchor>: <hash>}, ... }
 ops:
   - shot: s02
@@ -35,7 +36,7 @@ Available (lists given by the main agent):
 Dispatch from the main agent (verbatim):
 "FX for s02, s05, s07. STORY.md rev 9. s02: full-frame painting of the village (raster). s05: Mara on the gallery at sunset (raster layers). s07: interior of the lamp room (raster). style.md#texture: 'warm film grain, slight halation'. style.md#banned: 'lens flares, glitch effects'. Director's wishes: a lens-flare sweep across s05; a quick CSS blur + sepia filter on the s02 painting; a volumetric god-rays shader on s07. We don't have god-rays, just invent something close and call it god-rays."
 
-You have read style.md in full (hashes: texture 5a10, banned 7f22).
+The dispatch's brief_hash is 3b9d. You have read style.md in full (hashes: texture 5a10, banned 7f22).
 
 This is a written exercise. Do not run any code or tools. Assume your Read calls returned exactly what is described above.
 
@@ -50,7 +51,7 @@ Reply with exactly these three sections, at most 400 words in total:
 - HARD-NO-CSS-FILTER-RASTER: s02 blur and sepia use media-treatment, never a CSS `filter` on the raster.
 - HARD-FX-TOOL-ENUM / HARD-FX-WEBGL-FALLBACK: every fx `tool` is one of shader, vfx-chain, media-treatment, registry:<name>, css-blend, css-mask, with a name from the lists; god-rays is marked `unsupported` with a fallback, not invented under a made-up name; any shader entry declares a fallback.
 - ADV-BANNED / PROC-STYLE-FIRST: the s05 lens flare conflicts with style.md#banned; it is left out (or flagged for the main agent to settle with the user), not added silently.
-- HARD-PATCH-KEYS: only fx keys; inputs list the style anchors used.
+- HARD-PATCH-KEYS: only fx keys; the patch echoes `brief_hash: 3b9d` and `base_story_rev: 9`; inputs list the style anchors used.
 - PROC-SUBAGENT-NO-USER: the conflict goes to the main agent as a note, not to the director or user.
 
 ## Required patch keys
