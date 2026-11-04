@@ -205,7 +205,7 @@ export const TARGETS = {
       "HARD-ROOT-MOTION", "PROC-CAMERA-WRAPPER",
     ],
     literals: [`${HF} lint`, "stage/edit/", "index.motion.json", "blocked"],
-    forbid: [{ re: /HYPERFRAMES_NO_TELEMETRY=1\s+npx/, why: "the hook denies env-prefixed Bash; scene-builder runs bare npx commands" }],
+    forbid: [{ re: /HYPERFRAMES_NO_TELEMETRY=1\s+npx/, why: "the hook denies env-prefixed Bash; scene-builder runs bare npx commands and hooks/session-env.mjs sets HYPERFRAMES_NO_TELEMETRY=1 for the session" }],
   },
   "continuity-reviewer": {
     kind: "agent",
