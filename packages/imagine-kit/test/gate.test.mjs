@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { sha256 } from "../src/hash.mjs";
-import { approveThrough, cli, getProject, makeProject, seedCanon, seedMinimalStory, snapshot } from "./helpers/fixture.mjs";
+import { approveThrough, cli, getProject, makeProject, put, seedCanon, seedMinimalStory, shot, snapshot, writeStory } from "./helpers/fixture.mjs";
 
 const ready = async (opts) => { const p = await makeProject(opts); seedCanon(p.dir, { copy: opts?.mode && opts.mode !== "narrated" }); return p; };
 const sha = (dir, f) => sha256(readFileSync(join(dir, f)));
@@ -137,6 +137,39 @@ test("HARD-NON-WAIVABLE: gate has no waiver option", async () => {
   const r = await cli(cwd, "gate", "G0", "approve", "--quote", "q", "--waive");
   assert.equal(r.exit, 2);
   assert.equal(getProject(dir).items.g0, undefined);
+});
+
+test("HARD-STORY-UNIT-ONCE: a duplicate unit blocks G4 even when a REVIEW.md waiver claims it", async () => {
+  const { cwd, dir } = await ready();
+  await approveThrough(cwd, "G3");
+  const { createContext } = await import("../src/sources.mjs");
+  const sctx = createContext(dir);
+  const half = sctx.project.g0.duration_s.max / 2;
+  await writeStory(dir, sctx.story.front?.imagine_rev ?? 0, [
+    shot("s01", { scene: "main", duration_est: `${half}s`, voiceover: "[L01]" }),
+    shot("s02", { scene: "main", duration_est: `${half}s`, voiceover: "[L01,L02,L03]" }),
+  ]);
+  // A waiver the user granted, scoped to the duplicated unit.
+  put(dir, "review/REVIEW.md", [
+    "## Waivers", "",
+    "### W-001 HARD-STORY-UNIT-ONCE",
+    "- status: active",
+    "- rule: HARD-STORY-UNIT-ONCE",
+    "- items: unit:L01",
+    "- item_hashes: unit:L01=0000000000000000000000000000000000000000000000000000000000000000",
+    "- reason: the user accepted the duplicate placement",
+    "- consequence: L01 plays twice",
+    "- manual_check: listen to the cut",
+    '- asked: "may L01 play in both shots?"',
+    '- quote: "yes, waive it"',
+    "- granted: 2026-11-01",
+    "- history: proposed 2026-11-01",
+    "",
+  ].join("\n"));
+  const r = await cli(cwd, "gate", "G4", "approve", "--quote", "plan ok");
+  assert.equal(r.exit, 1);
+  assert.ok(r.env.errors.some((e) => e.rule === "HARD-STORY-UNIT-ONCE"), JSON.stringify(r.env.errors));
+  assert.equal(getProject(dir).items.g4, undefined);
 });
 
 test("gates G2-G4 enumerate the documented items and G4 records the story hash", async () => {

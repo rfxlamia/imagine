@@ -36,11 +36,17 @@ hash-mismatched waivers cannot bypass their HARD rule.
 Never propose or accept waivers for gate quotes, patch/key
 isolation, base revision, guard integrity, asset approvals and
 hashes including canonical refs, audio licensing, placeholders,
-a playable MP4 conforming to G0 specifications, or the raster
+a playable MP4 conforming to G0 specifications, the raster
 quality floor: no `replan` tier may ship; a `soft` tier needs
-explicit G4 and G5b acceptance.
+explicit G4 and G5b acceptance, or the story validators the kit
+runs before G4, such as HARD-STORY-UNIT-ONCE.
 <!-- rule:HARD-NON-WAIVABLE -->
 <!-- rule:HARD-RASTER-TIER -->
+
+A rule the kit itself decides is never waivable: `imagine-kit gate
+G4 approve` refuses a story error whatever this file says, so a
+waiver for one would leave G4 blocked and only misstate the
+evidence. Correct it through the planning patch path instead.
 
 Non-waivable failures must be corrected before proceeding.
 

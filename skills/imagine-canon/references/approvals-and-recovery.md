@@ -257,6 +257,8 @@ Never create a waiver proposal for any non-waivable rule:
 - Prohibited placeholders.
 - Playable G0-compliant MP4 delivery.
 - The raster quality floor: no `replan` tier may ship; a `soft` tier needs explicit G4 and G5b acceptance.
+- The story validators the kit runs before G4, such as HARD-STORY-UNIT-ONCE. `imagine-kit gate G4 approve` refuses a story error whatever REVIEW.md says, so a waiver for one would leave G4 blocked and only misstate the evidence.
+<!-- rule:HARD-NON-WAIVABLE -->
 
 An agent cannot replace an observed HARD failure with
 a claim that the creative result appears acceptable.
