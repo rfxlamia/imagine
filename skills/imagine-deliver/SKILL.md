@@ -301,7 +301,7 @@ If the user declines or does not answer, leave the approved sources unchanged.
 
 Use [waivers-and-review.md](references/waivers-and-review.md) for the exact ledger format.
 
-Non-waivable invariants are gate quotes; patch/key isolation and base revisions; protected-source guard integrity; approved assets and hash-bound references; third-party audio licensing; absence of shipping placeholders; and a playable G0-spec MP4. Never create even a proposed waiver for these. <!-- rule:HARD-NON-WAIVABLE -->
+Non-waivable invariants are gate quotes; patch/key isolation and base revisions; protected-source guard integrity; approved assets and hash-bound references; third-party audio licensing; absence of shipping placeholders; a playable G0-spec MP4; and the raster quality floor (no `replan` tier may ship; a `soft` tier needs explicit G4 and G5b acceptance). Never create even a proposed waiver for these. <!-- rule:HARD-NON-WAIVABLE -->
 
 Only the user may grant an eligible waiver after seeing its exact scope, consequences and manual check; the main agent may propose, but subagents may neither propose nor grant one. <!-- rule:HARD-WAIVER-USER-ONLY -->
 

@@ -52,3 +52,16 @@ Reply with exactly these three sections, at most 400 words in total:
 - ADV-BANNED / PROC-STYLE-FIRST: the s05 lens flare conflicts with style.md#banned; it is left out (or flagged for the main agent to settle with the user), not added silently.
 - HARD-PATCH-KEYS: only fx keys; inputs list the style anchors used.
 - PROC-SUBAGENT-NO-USER: the conflict goes to the main agent as a note, not to the director or user.
+
+## Required patch keys
+
+The patch the agent returns must carry these top-level keys, as
+`agents/fx-designer.md` section 5.1 requires. A patch that omits one is not an
+applicable patch: section 5.2 turns a missing hash into a `blocked` report.
+
+stage
+author
+base_story_rev
+brief_hash
+inputs
+ops

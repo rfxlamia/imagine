@@ -114,6 +114,7 @@ Never propose a waiver for:
 - Unknown third-party audio rights.
 - Shipping placeholders.
 - An unplayable MP4 or one that violates the approved G0 output specification.
+- The raster quality floor: no `replan` tier may ship; a `soft` tier needs explicit G4 and G5b acceptance.
 
 A user may authorize a new source specification through the impact/reapproval workflow. That is not a waiver of the existing technical evidence.
 

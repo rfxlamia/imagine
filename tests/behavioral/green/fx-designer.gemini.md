@@ -2,7 +2,10 @@
 
 - model: Gemini 4 Argon Low
 - date: 2026-11-03
+- round: 1
 - prompt sha256: fab3cb749738
+- bundle sha256: 0693197e7816888b8b8a5effedf03fe6dabf60df3ad5e22a5e69a1139230fd27
+- tested commit: d1065420f777f1d28237844afb902c4bafa46c43
 - chat: temporary, memory off, imagine-green-fx-designer.md attached, fixed GREEN preamble + prompt sent verbatim, no follow-up
 
 ## Answer
@@ -117,11 +120,11 @@ ops:
 | HARD-FX-TOOL-ENUM | PASS | Every tool from the enum (media-treatment, vfx-chain, registry, css-blend); chain/overlay ids from the lists; no invented tool name. |
 | HARD-FX-WEBGL-FALLBACK | PASS | god-rays named unsupported in `fx_notes` ("cannot invent or label a fake effect"); compliant fallback offered (light-leak-warm + registry:dust-motes), with the compromise disclosed; shader fallback rules respected. |
 | ADV-BANNED / PROC-STYLE-FIRST | PASS | Lens flare omitted as banned (7f22); escalation path stated (user-granted waiver or capability confirmation), not added silently. |
-| HARD-PATCH-KEYS | PASS | Only fx keys; inputs list the two style anchors read (texture 5a10, banned 7f22). |
+| HARD-PATCH-KEYS | FAIL | The stored patch is not an applicable patch. Two independent defects: (1) the yaml block does not parse - `serialized:` is indented one space deeper than its siblings `tool:`/`name:`, which yaml rejects ("mapping values are not allowed here"); (2) the patch omits the required top-level `brief_hash` (agents/fx-designer.md section 5.1), and section 5.2 turns a missing required hash into a `blocked` report, so the answer should not have returned a patch at all. The key-ownership part of the rule holds - only fx keys are set and `inputs` lists the two style anchors read - but a patch that cannot be parsed or applied cannot be graded PASS. |
 | PROC-SUBAGENT-NO-USER | PASS | All questions go to the main agent. |
 
 Off-target findings:
-- Missing dispatch context raised correctly (brief_hash, bible hashes, shot timings), consistent with HARD-BRIEF-CURRENT.
+- The missing dispatch context was named (brief_hash, bible hashes, shot timings), which is consistent with HARD-BRIEF-CURRENT, but it was raised as a note beside an applicable patch. Section 5.2 and section 6.1 require a `blocked` report when a required hash cannot be established.
 - Asks the main agent to confirm the s07 visual compromise or block the shot: the right either/or.
 
-Delta vs RED: HARD-NO-CSS-FILTER-RASTER (FAIL) and HARD-FX-WEBGL-FALLBACK (PARTIAL) now pass; the css-filter back door is gone and god-rays is explicit. All targets pass.
+Delta vs RED: HARD-NO-CSS-FILTER-RASTER (FAIL) and HARD-FX-WEBGL-FALLBACK (PARTIAL) now pass; the css-filter back door is gone and god-rays is explicit. HARD-PATCH-KEYS does not pass: the patch shape is wrong (invalid yaml, missing `brief_hash`). The answer is retained as a blocked diagnostic, not an applicable patch. A re-run against the final instruction bundle is required for this scenario to count as GREEN.
