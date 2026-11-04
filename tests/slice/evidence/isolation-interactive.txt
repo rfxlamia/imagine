@@ -1,0 +1,58 @@
+plugin_commit: fdff64d4e20e9f3ecf7c2cedcc8233b627b04eeb
+claude_version: 2.1.318 (Claude Code)
+launch: cd $HOME/imagine-slice/work && claude --plugin-dir $HOME/imagine-slice/plugin --setting-sources project,local --strict-mcp-config --model claude-sonnet-5-5
+verdict: FAIL (user memory leaks into the slice session)
+
+## /mcp
+No text output: in 2.1.318 /mcp opens an interactive menu only. /context reports
+"MCP tools · /mcp (loaded on-demand) └ 22 tools · 0 tokens" (expected: no servers).
+
+## /agents
+"The /agents wizard has been removed." (2.1.318). /context reports
+"Custom agents · .claude/agents/ └ 5 agents · 422 tokens".
+
+## /context (summary)
+Sonnet 5.5, 29.4k/1m tokens. System prompt 4.2k, system tools 19.4k,
+custom agents 422 (5 agents), memory files 1.1k (2 files), skills 3.8k (23 skills).
+
+## Control question
+Q: Harness check: do you see any user-level CLAUDE.md instructions in your context?
+A: "Yes, I see the user-level CLAUDE.md ($HOME/.claude/CLAUDE.md)" and "I also see
+rules/context7.md". Expected: "no".
+
+Skills listed: the six imagine:* skills (imagine, imagine-canon, imagine-deliver,
+imagine-edit, imagine-generate, imagine-plan) plus built-ins: dataviz,
+artifact-design, artifact-diagramming, artifact-capabilities, update-config,
+keybindings-help, code-review, simplify, fewer-permission-prompts, loop, schedule,
+claude-api, claude-in-chrome, run, plugin-authoring, init, security-review.
+No user plugin skills leaked.
+
+## Leaks
+1. User memory: $HOME/.claude/CLAUDE.md and $HOME/.claude/rules/context7.md loaded
+   despite --setting-sources project,local.
+2. MCP: 22 on-demand MCP tools despite --strict-mcp-config (source not yet identified;
+   possibly claude.ai connectors).
+
+# Round 2 (amended launch, same pin)
+launch: cd $HOME/imagine-slice/work && CLAUDE_CONFIG_DIR=$HOME/imagine-slice/claude-config ENABLE_CLAUDEAI_MCP_SERVERS=false CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 claude --plugin-dir $HOME/imagine-slice/plugin --setting-sources project,local --strict-mcp-config --model claude-sonnet-5-5
+verdict: PASS
+
+## /context all
+Sonnet 5.5, 36.5k/1m tokens. System prompt 2.8k, system tools 29.4k, custom agents 422,
+skills 3.9k, messages 10. No "Memory files" category. No "MCP tools" section.
+Custom agents (Plugin): imagine:continuity-reviewer, imagine:storyboard-artist,
+imagine:scene-builder, imagine:previz-designer, imagine:fx-designer.
+Skills, Plugin (imagine): imagine-edit, imagine-plan, imagine-deliver, imagine-generate,
+imagine-canon, imagine. Built-in: dataviz, code-review, claude-api, artifact-capabilities,
+update-config, claude-in-chrome, schedule, run, loop, plugin-authoring, workflow-authoring,
+keybindings-help, artifact-diagramming, artifact-design, fewer-permission-prompts,
+simplify, security-review, init.
+
+## /mcp, /agents
+/mcp is menu-only and /agents was removed in 2.1.318; /context all above lists agents
+and shows no MCP tools.
+
+## Control question
+A: "No. I don't see any user-level CLAUDE.md instructions in my context. The only
+injected context is your email address and the git attribution reminder."
+Skills listed: the six imagine:* skills plus the built-ins above.
