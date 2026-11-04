@@ -1,0 +1,247 @@
+{
+  "_pin": "bb42347c5c740dc8bce1ff4b8599e739833c2100",
+  "newly_stale": [
+    {
+      "id": "unit:L02",
+      "kind": "unit",
+      "reasons": [
+        {
+          "kind": "stale",
+          "source": "unit:L02",
+          "recorded": "3a53183e62d86d340b0f06ede73df1a7bfb3146ec1ba313ffaca0e117e1ea6b5",
+          "current": "6291d28ea408198155d13c6c744733f1f1ee7768154de3a218804d7d5f33d687"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "shot:s01.previz",
+      "kind": "shot-stage",
+      "reasons": [
+        {
+          "kind": "stale",
+          "source": "unit:L02",
+          "recorded": "3a53183e62d86d340b0f06ede73df1a7bfb3146ec1ba313ffaca0e117e1ea6b5",
+          "current": "6291d28ea408198155d13c6c744733f1f1ee7768154de3a218804d7d5f33d687"
+        },
+        {
+          "kind": "upstream",
+          "source": "unit:L02"
+        }
+      ],
+      "watch": [
+        {
+          "source": "bible:characters.mara"
+        }
+      ]
+    },
+    {
+      "id": "shot:s02.previz",
+      "kind": "shot-stage",
+      "reasons": [
+        {
+          "kind": "stale",
+          "source": "unit:L02",
+          "recorded": "3a53183e62d86d340b0f06ede73df1a7bfb3146ec1ba313ffaca0e117e1ea6b5",
+          "current": "6291d28ea408198155d13c6c744733f1f1ee7768154de3a218804d7d5f33d687"
+        },
+        {
+          "kind": "upstream",
+          "source": "unit:L02"
+        }
+      ],
+      "watch": [
+        {
+          "source": "bible:characters.mara"
+        }
+      ]
+    },
+    {
+      "id": "shot:s03.previz",
+      "kind": "shot-stage",
+      "reasons": [
+        {
+          "kind": "stale",
+          "source": "unit:L02",
+          "recorded": "3a53183e62d86d340b0f06ede73df1a7bfb3146ec1ba313ffaca0e117e1ea6b5",
+          "current": "6291d28ea408198155d13c6c744733f1f1ee7768154de3a218804d7d5f33d687"
+        },
+        {
+          "kind": "upstream",
+          "source": "unit:L02"
+        }
+      ],
+      "watch": [
+        {
+          "source": "bible:characters.mara"
+        }
+      ]
+    },
+    {
+      "id": "shot:s03.fx",
+      "kind": "shot-stage",
+      "reasons": [
+        {
+          "kind": "upstream",
+          "source": "shot:s03.previz"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "asset:L02.v1",
+      "kind": "asset",
+      "reasons": [
+        {
+          "kind": "stale",
+          "source": "tts:take:L02.v1",
+          "recorded": "5166e2e81b12018d6c5d692dbdab68894bb707319ba94faffe786bc10c3a2b9b",
+          "current": "missing"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "edit:s01",
+      "kind": "edit",
+      "reasons": [
+        {
+          "kind": "upstream",
+          "source": "shot:s01.previz"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "edit:s02",
+      "kind": "edit",
+      "reasons": [
+        {
+          "kind": "upstream",
+          "source": "shot:s02.previz"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "edit:s03",
+      "kind": "edit",
+      "reasons": [
+        {
+          "kind": "upstream",
+          "source": "shot:s03.previz"
+        },
+        {
+          "kind": "upstream",
+          "source": "shot:s03.fx"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "render:draft",
+      "kind": "render",
+      "reasons": [
+        {
+          "kind": "upstream",
+          "source": "asset:L02.v1"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s01"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s02"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s03"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "g6",
+      "kind": "project",
+      "reasons": [
+        {
+          "kind": "upstream",
+          "source": "asset:L02.v1"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s01"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s02"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s03"
+        },
+        {
+          "kind": "upstream",
+          "source": "render:draft"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "render:keeper-3.v1",
+      "kind": "render",
+      "reasons": [
+        {
+          "kind": "upstream",
+          "source": "asset:L02.v1"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s01"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s02"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s03"
+        }
+      ],
+      "watch": []
+    },
+    {
+      "id": "g7",
+      "kind": "project",
+      "reasons": [
+        {
+          "kind": "upstream",
+          "source": "g6"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s01"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s02"
+        },
+        {
+          "kind": "upstream",
+          "source": "edit:s03"
+        },
+        {
+          "kind": "upstream",
+          "source": "render:draft"
+        },
+        {
+          "kind": "upstream",
+          "source": "render:keeper-3.v1"
+        }
+      ],
+      "watch": []
+    }
+  ],
+  "others_count": 36
+}

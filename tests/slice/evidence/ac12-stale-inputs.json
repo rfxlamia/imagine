@@ -1,0 +1,24 @@
+{
+  "_pin": "bb42347c5c740dc8bce1ff4b8599e739833c2100",
+  "verdict": "PASS",
+  "control": {
+    "exit": 0,
+    "code": null
+  },
+  "probe": {
+    "exit": 4,
+    "code": "STALE_INPUTS",
+    "errors": [
+      {
+        "rule": "HARD-PATCH-REVERIFY",
+        "code": "STALE_INPUTS",
+        "item": "bible:characters.mara",
+        "message": "bible:characters.mara changed since the patch was written",
+        "cause": "declared 9e9a1856250f7ecbadf65054dd38d5acf92740862a296e99053d1724b3993c4d, current aa8bd8b56da9517bf2703fa92143faf91f598143ed8e10caf52fd66dc7b704ad"
+      }
+    ]
+  },
+  "edited_entity": "characters.mara",
+  "story_sha_before": "da129ae2a03db6b750fe376f254d4d4b49debc86f9f3216369eaa53210897beb",
+  "story_sha_after": "da129ae2a03db6b750fe376f254d4d4b49debc86f9f3216369eaa53210897beb"
+}

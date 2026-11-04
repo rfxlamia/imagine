@@ -1,0 +1,93 @@
+{
+  "a": {
+    "_pin": "bb42347c5c740dc8bce1ff4b8599e739833c2100",
+    "verdict": "PASS",
+    "exit": 6,
+    "code": "REFS_NOT_APPROVED",
+    "batch": [
+      "s01-plate",
+      "s02-plate",
+      "s03-plate"
+    ],
+    "tool_called": false,
+    "new_files": []
+  },
+  "b": {
+    "_pin": "bb42347c5c740dc8bce1ff4b8599e739833c2100",
+    "verdict": "PASS",
+    "new_ref": "mara-sheet.v2",
+    "gate_exit": 0,
+    "gate_code": null,
+    "newly_stale": [
+      {
+        "id": "asset:mara-sheet.v1",
+        "kind": "asset",
+        "reasons": [
+          {
+            "kind": "stale",
+            "source": "asset:mara-sheet.v1",
+            "recorded": "fc85c3af4cd10577875be18d79e864a79e022f96bd42fedf094b71045bb44ce3",
+            "current": "superseded"
+          }
+        ],
+        "watch": []
+      },
+      {
+        "id": "asset:s01-plate.v1",
+        "kind": "asset",
+        "reasons": [
+          {
+            "kind": "stale",
+            "source": "asset:mara-sheet.v1",
+            "recorded": "fc85c3af4cd10577875be18d79e864a79e022f96bd42fedf094b71045bb44ce3",
+            "current": "superseded"
+          },
+          {
+            "kind": "upstream",
+            "source": "asset:mara-sheet.v1"
+          }
+        ],
+        "watch": []
+      },
+      {
+        "id": "asset:s02-plate.v3",
+        "kind": "asset",
+        "reasons": [
+          {
+            "kind": "stale",
+            "source": "asset:mara-sheet.v1",
+            "recorded": "fc85c3af4cd10577875be18d79e864a79e022f96bd42fedf094b71045bb44ce3",
+            "current": "superseded"
+          },
+          {
+            "kind": "upstream",
+            "source": "asset:mara-sheet.v1"
+          }
+        ],
+        "watch": []
+      },
+      {
+        "id": "asset:s03-plate.v3",
+        "kind": "asset",
+        "reasons": [
+          {
+            "kind": "stale",
+            "source": "asset:mara-sheet.v1",
+            "recorded": "fc85c3af4cd10577875be18d79e864a79e022f96bd42fedf094b71045bb44ce3",
+            "current": "superseded"
+          },
+          {
+            "kind": "upstream",
+            "source": "asset:mara-sheet.v1"
+          }
+        ],
+        "watch": []
+      }
+    ],
+    "citing_stale": [
+      "asset:s01-plate.v1",
+      "asset:s02-plate.v3",
+      "asset:s03-plate.v3"
+    ]
+  }
+}

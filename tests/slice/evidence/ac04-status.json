@@ -1,0 +1,19 @@
+{
+  "_pin": "bb42347c5c740dc8bce1ff4b8599e739833c2100",
+  "newly_stale": [
+    {
+      "id": "bible:characters.mara",
+      "kind": "bible",
+      "reasons": [
+        {
+          "kind": "stale",
+          "source": "bible:characters.mara",
+          "recorded": "9e9a1856250f7ecbadf65054dd38d5acf92740862a296e99053d1724b3993c4d",
+          "current": "1a2d044bf862e4c5f5293bf9e6ad16f90a90b8e71bfeace0e73c8c7bda03ed77"
+        }
+      ],
+      "watch": []
+    }
+  ],
+  "others_count": 48
+}

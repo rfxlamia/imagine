@@ -1,0 +1,17 @@
+{
+  "_pin": "bb42347c5c740dc8bce1ff4b8599e739833c2100",
+  "verdict": "PASS",
+  "injected": "storyboard op 1 set.camera",
+  "exit": 1,
+  "code": "KEY_NOT_OWNED",
+  "errors": [
+    {
+      "rule": "HARD-PATCH-KEYS",
+      "code": "KEY_NOT_OWNED",
+      "item": "s01",
+      "message": "key \"camera\" is not owned by stage storyboard"
+    }
+  ],
+  "story_sha_before": "da129ae2a03db6b750fe376f254d4d4b49debc86f9f3216369eaa53210897beb",
+  "story_sha_after": "da129ae2a03db6b750fe376f254d4d4b49debc86f9f3216369eaa53210897beb"
+}

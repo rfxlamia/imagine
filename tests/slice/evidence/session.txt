@@ -3,3 +3,7 @@ plugin_commit=fdff64d4e20e9f3ecf7c2cedcc8233b627b04eeb
 claude_version=2.1.318 (Claude Code)
 launch=cd $HOME/imagine-slice/work && CLAUDE_CONFIG_DIR=$HOME/imagine-slice/claude-config ENABLE_CLAUDEAI_MCP_SERVERS=false CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 claude --plugin-dir $HOME/imagine-slice/plugin --setting-sources project,local --strict-mcp-config --model claude-sonnet-5-5
 note=first launch (plain --setting-sources/--strict-mcp-config) leaked user memory and MCP tools; launch amended before any slice work (imagine-z8p.6.8)
+date_r2=2026-11-04T15:48:35Z
+plugin_commit_r2=bb42347c5c740dc8bce1ff4b8599e739833c2100
+claude_version_r2=2.1.318 (Claude Code)
+launch_r2=cd $HOME/imagine-slice/work && CLAUDE_CONFIG_DIR=$HOME/imagine-slice/claude-config ENABLE_CLAUDEAI_MCP_SERVERS=false CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 claude --plugin-dir $HOME/imagine-slice/plugin-r2 --setting-sources project,local --strict-mcp-config --model claude-sonnet-5-5
