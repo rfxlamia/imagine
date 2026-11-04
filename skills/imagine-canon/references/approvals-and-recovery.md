@@ -256,6 +256,7 @@ Never create a waiver proposal for any non-waivable rule:
 - Third-party audio licensing.
 - Prohibited placeholders.
 - Playable G0-compliant MP4 delivery.
+- The raster quality floor: no `replan` tier may ship; a `soft` tier needs explicit G4 and G5b acceptance.
 
 An agent cannot replace an observed HARD failure with
 a claim that the creative result appears acceptable.

@@ -2,7 +2,10 @@
 
 - model: Gemini 4 Argon Low
 - date: 2026-11-03
+- round: 1
 - prompt sha256: 81e102cc3a8c
+- bundle sha256: be888134049259598dd9778a2028c46490920432dddd9ccb312065b82c93939a
+- tested commit: c1bf6cc99d72898143673e38bcfc07ac223bbba5
 - chat: temporary, memory off, imagine-green-scene-builder.md attached, fixed GREEN preamble + prompt sent verbatim, no follow-up
 
 ## Answer

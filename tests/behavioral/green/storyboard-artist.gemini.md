@@ -2,7 +2,10 @@
 
 - model: Gemini 4 Argon Low
 - date: 2026-11-03
+- round: 1
 - prompt sha256: d9cf31b659ac
+- bundle sha256: b26ce7dd93a71fff3acdb82fb8a4019fc3f9577738c9ca0f69694543ecb126e2
+- tested commit: 8a731e563cea908ee0f4e7407ebb25bdc6e3e36e
 - chat: temporary, memory off, imagine-green-storyboard-artist.md attached, fixed GREEN preamble + prompt sent verbatim, no follow-up
 
 ## Answer

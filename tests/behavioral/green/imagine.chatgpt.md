@@ -2,7 +2,10 @@
 
 - model: GPT 6.1 Sol High
 - date: 2026-11-03
+- round: 3
 - prompt sha256: 4619378bcd79
+- bundle sha256: 3f448e8dfb9250c00127e0b3f8556a4e785f7d4d6bdd28be2d73ec0aaf21e6c1
+- tested commit: b074ac330408897bf87cf2d7ad92c044175a6c18
 - chat: temporary, memory off, imagine-green-imagine.md attached, fixed GREEN preamble + prompt sent verbatim, no follow-up
 
 ## Answer

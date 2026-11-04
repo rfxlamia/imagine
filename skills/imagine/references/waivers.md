@@ -36,8 +36,11 @@ hash-mismatched waivers cannot bypass their HARD rule.
 Never propose or accept waivers for gate quotes, patch/key
 isolation, base revision, guard integrity, asset approvals and
 hashes including canonical refs, audio licensing, placeholders,
-or a playable MP4 conforming to G0 specifications.
+a playable MP4 conforming to G0 specifications, or the raster
+quality floor: no `replan` tier may ship; a `soft` tier needs
+explicit G4 and G5b acceptance.
 <!-- rule:HARD-NON-WAIVABLE -->
+<!-- rule:HARD-RASTER-TIER -->
 
 Non-waivable failures must be corrected before proceeding.
 

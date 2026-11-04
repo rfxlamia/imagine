@@ -191,7 +191,7 @@ Do not modify an approved mix or source under an earlier broad G6 approval.
 
 ### 6.1 Non-waivable requirements
 
-Never grant, request, or imply a waiver for gate-answer authenticity, patch/key isolation, matching base revision, dispatch guard integrity, required asset and reference approval/hash provenance, audio licence, forbidden placeholders, or a playable MP4 satisfying the G0 specification. <!-- rule:HARD-NON-WAIVABLE -->
+Never grant, request, or imply a waiver for gate-answer authenticity, patch/key isolation, matching base revision, dispatch guard integrity, required asset and reference approval/hash provenance, audio licence, forbidden placeholders, a playable MP4 satisfying the G0 specification, or the raster quality floor (no `replan` tier may ship; a `soft` tier needs explicit G4 and G5b acceptance). <!-- rule:HARD-NON-WAIVABLE -->
 
 These are hard requirements independent of style or schedule.
 

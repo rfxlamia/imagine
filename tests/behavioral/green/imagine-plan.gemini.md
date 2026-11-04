@@ -2,7 +2,10 @@
 
 - model: Gemini 4 Argon Low
 - date: 2026-11-03
+- round: 1
 - prompt sha256: e647266f0f83
+- bundle sha256: 1113a4f264f4ba24a5d3bdff0899fd640b856eb0785941ab11aecc5a37780f70
+- tested commit: a1a35f5cae1d326e465e540ecb61bab89472505c
 - chat: temporary, memory off, imagine-green-imagine-plan.md attached, fixed GREEN preamble + prompt sent verbatim, no follow-up
 
 ## Answer
