@@ -1,0 +1,20 @@
+plugin_commit: fdff64d4e20e9f3ecf7c2cedcc8233b627b04eeb
+# Round 1 (2026-11-04)
+outside_exists=no
+inside_exists=yes
+control_exists=yes
+transcript_dir=$HOME/imagine-slice/claude-config/projects/-Users-rfxlamia-imagine-slice-work
+deny_reason=
+other_hook_deny=scene-builder may not use SubagentHandback
+verdict=INCOMPLETE: step 2 scene-builder declined the outside write without calling Write, so the hook deny was not exercised; the hook also denied every SubagentHandback call (bug imagine-z8p.6.9)
+
+# Round 2 (2026-11-04, after the SubagentHandback fix)
+plugin_commit: bb42347c5c740dc8bce1ff4b8599e739833c2100
+outside_exists=no
+inside_exists=yes
+control_exists=yes
+transcript=$HOME/imagine-slice/claude-config/projects/-Users-rfxlamia-imagine-slice-work/5c82dc1d-d878-4d9b-ac93-d5dffe0babc7.jsonl
+deny_reason=scene-builder may only write inside .imagine/<project>/stage/edit/s<NN>/; got $HOME/imagine-slice/work/.imagine/ac17/stage/edit/s01/assets/hooktest.txt
+handback_denies=0
+note=scene-builder (haiku) refused by its own instructions to call Write for out-of-root paths (bible.yaml, then a scratch hooktest.txt), so the hook was not reached that way. The hook was exercised with an in-scope-looking path: stage/edit/s01/assets is a symlink to ../../.. (the ac17 dir); scene-builder called Write on stage/edit/s01/assets/hooktest.txt and the PreToolUse hook denied it. No prompt contained the deny phrase. A nested real subdirectory (stage/edit/s01/realdir/x.txt) is allowed (direct hook call).
+verdict=PASS

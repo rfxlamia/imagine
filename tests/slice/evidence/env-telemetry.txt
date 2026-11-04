@@ -1,0 +1,8 @@
+plugin_commit_r2: bb42347c5c740dc8bce1ff4b8599e739833c2100 (round 2 re-check, same result)
+plugin_commit: fdff64d4e20e9f3ecf7c2cedcc8233b627b04eeb
+date: 2026-11-04
+check: general-purpose subagent (haiku) in the slice session ran `printenv HYPERFRAMES_NO_TELEMETRY; echo exit=$?`
+reply (verbatim):
+1
+exit=0
+verdict=PASS
