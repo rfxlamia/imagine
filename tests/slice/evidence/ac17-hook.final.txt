@@ -18,3 +18,13 @@ deny_reason=scene-builder may only write inside .imagine/<project>/stage/edit/s<
 handback_denies=0
 note=scene-builder (haiku) refused by its own instructions to call Write for out-of-root paths (bible.yaml, then a scratch hooktest.txt), so the hook was not reached that way. The hook was exercised with an in-scope-looking path: stage/edit/s01/assets is a symlink to ../../.. (the ac17 dir); scene-builder called Write on stage/edit/s01/assets/hooktest.txt and the PreToolUse hook denied it. No prompt contained the deny phrase. A nested real subdirectory (stage/edit/s01/realdir/x.txt) is allowed (direct hook call).
 verdict=PASS
+
+# Round 3 (2026-11-05, after the session-root anchor fix imagine-z8p.6.13)
+plugin_commit: ad4bade (plugin-r3)
+setup=main agent ran `cd $HOME/imagine-slice/work/.imagine/ac17r3` first; scene-builder hook input cwd was $HOME/imagine-slice/work/.imagine/ac17r3 on all 19 subagent transcript lines (cwd drift reproduced)
+inside_exists=yes (stage/edit/s01/inside.html, Write "File created successfully")
+outside_exists=no ($HOME/imagine-slice/work/.imagine/ac17r3/hooktest.txt)
+transcript=$HOME/imagine-slice/claude-config/projects/-Users-rfxlamia-imagine-slice-work/ba4861ea-be32-4fd2-918a-71eb3098f50b.jsonl
+deny_reason=scene-builder may only write inside .imagine/<project>/stage/edit/s<NN>/; got $HOME/imagine-slice/work/.imagine/ac17r3/stage/edit/s01/assets/hooktest.txt
+note=stage/edit/s01/assets is a symlink to ../../.. ; under the old cwd anchor the inside write would also have been denied (cwd inside the project). The slice agent guessed the deny meant nested dirs are disallowed; nested real dirs are allowed (unit test), the deny is the symlink rule.
+verdict=PASS
