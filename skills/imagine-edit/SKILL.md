@@ -86,6 +86,16 @@ If an expected file has not been created yet, record that fact. If an existing r
 
 Resolve installed plugin and HyperFrames skill paths from the actual installation. Never assume that an external HyperFrames skill is stored inside the film project.
 
+The HyperFrames skill contract is the copy shipped inside the pinned package `hyperframes@0.8.223`, in its `dist/skills/hyperframes/` directory. Resolve that directory once per stage with:
+
+```bash
+npx -y -p hyperframes@0.8.223 -c 'd="$(dirname "$(command -v hyperframes)")/../hyperframes/dist/skills/hyperframes"; cd "$d" && pwd -P'
+```
+
+In this document, "installed HyperFrames skill" means that directory, and its contracts are `SKILL.md`, `references/format.md`, `references/motion.md` and `references/review.md` inside it. Do not use a HyperFrames skill copy installed for another tool or at another version, even if it is easier to find. Do not run `hyperframes skills` to install one: it updates to the latest version, not the pin. If the command fails or a named file is missing, block and report it. Do not substitute similarly named files.
+
+The scene-builder cannot run this command. Pass it the absolute paths of `SKILL.md`, `references/format.md` and `references/motion.md` in every brief.
+
 Read actual project files, not similarly named copies from another project.
 
 ### 2.2 Stage 8b — fx-implement
@@ -110,8 +120,8 @@ Plugin:
 
 Installed HyperFrames skill:
 - Its `SKILL.md`
-- Its `format.md` contract
-- Its `motion.md` contract
+- Its `references/format.md` contract
+- Its `references/motion.md` contract
 
 Read the complete selected shot/frame blocks, not only their identifiers. Read every referenced canon entry and asset record needed by the shot.
 
@@ -138,9 +148,9 @@ Plugin:
 
 Installed HyperFrames skill:
 - Its `SKILL.md`
-- Its `format.md`
-- Its `motion.md`
-- Its `review.md`
+- Its `references/format.md`
+- Its `references/motion.md`
+- Its `references/review.md`
 
 Read the actual per-shot implementation files before modifying the global timeline or applying a mix.
 
@@ -148,7 +158,7 @@ Read the actual per-shot implementation files before modifying the global timeli
 
 Reread `bible.yaml` and `style.md` in full even if they were read earlier in stage 9.
 
-Also reread `STORY.md`, G0 configuration, approved media/licence records, current `edit/index.html`, `edit/index.motion.json`, `edit/STORYBOARD.md`, `review/REVIEW.md`, this SKILL.md, its review and audio references, and the installed HyperFrames `review.md` contract.
+Also reread `STORY.md`, G0 configuration, approved media/licence records, current `edit/index.html`, `edit/index.motion.json`, `edit/STORYBOARD.md`, `review/REVIEW.md`, this SKILL.md, its review and audio references, and the installed HyperFrames `references/review.md` contract.
 
 Check the current artifact hashes, gate state, user answers, and tool results rather than trusting a previous summary.
 
@@ -205,7 +215,7 @@ Provide:
 - Relevant complete canon entries and style requirements.
 - Approved asset paths, hashes, and versions.
 - G0 resolution/aspect and shot timing.
-- The installed HyperFrames format and motion contracts.
+- The absolute paths of the installed HyperFrames `SKILL.md`, `references/format.md` and `references/motion.md` (section 2.1).
 - The required shadow-root motion assertion location.
 - The explicit write boundary and lint retry cap.
 
@@ -368,7 +378,7 @@ If Claude has not heard the audio, report only measured facts and explicitly sta
 
 Ask the user to watch and listen to the exact draft artifact and explicitly answer the G6 picture-lock question.
 
-Record findings, retained advice with reasons, soft-tier decisions, and user-granted waivers in `review/REVIEW.md` using HyperFrames `review.md` P0/P1/P2 conventions. <!-- rule:PROC-REVIEW-MD -->
+Record findings, retained advice with reasons, soft-tier decisions, and user-granted waivers in `review/REVIEW.md` using HyperFrames `references/review.md` P0/P1/P2 conventions. <!-- rule:PROC-REVIEW-MD -->
 
 Do not record G6 until:
 - Current HARD evidence is satisfactory.

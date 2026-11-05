@@ -128,7 +128,7 @@ All files below are additional to section 2.1.
 | Operation | Additional project files, read in full when textual |
 |---|---|
 | Preflight / G6 verification | `edit/hyperframes.json`, `edit/STORYBOARD.md`, `edit/index.html`, `edit/index.motion.json`, every referenced `edit/compositions/<sNN>.html`, `review/check.json` if present, existing `review/qc.json` |
-| Final strict check | All current edit source files, referenced media metadata, motion assertions, applicable installed HyperFrames `SKILL.md`, `format.md`, `motion.md`, and `review.md` |
+| Final strict check | All current edit source files, referenced media metadata, motion assertions, applicable installed HyperFrames `SKILL.md`, `references/format.md`, `references/motion.md`, and `references/review.md` (located as in imagine-edit SKILL.md section 2.1) |
 | Final render | All preflight files, applicable `assets/CREDITS.md`, current approved asset records, current audio source records, G6 draft evidence |
 | Final QC | The actual rendered MP4, current asset manifest, `assets/plan.yaml` if applicable, `assets/CREDITS.md` if applicable, `review/qc.json`, recorded G0 requirements |
 | Delivery review / G7 | All current QC and check reports, `review/REVIEW.md`, G6 decision and quote, final MP4 metadata, current source and gate state |
@@ -315,7 +315,7 @@ Never convert a D10 automatic advisory demotion into a user waiver, or use an ex
 
 ### 8.1 Review record
 
-Record findings, retained advice with reasons, soft tiers, scoped waivers, and applicable technical evidence in `review/REVIEW.md`, using the installed HyperFrames `review.md` P0/P1/P2 conventions. <!-- rule:PROC-REVIEW-MD -->
+Record findings, retained advice with reasons, soft tiers, scoped waivers, and applicable technical evidence in `review/REVIEW.md`, using the installed HyperFrames `references/review.md` P0/P1/P2 conventions. <!-- rule:PROC-REVIEW-MD -->
 
 A finding should identify its timestamp, location, problem, exact change, and what stays.
 
