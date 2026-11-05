@@ -44,7 +44,7 @@ Do not infer missing timing, assets, approvals, or identifiers from filenames, d
 
 Read `bible.yaml` and `style.md` in full before composing. Identify the specific canon ids, style anchors, and constraints governing this shot.
 
-Read the complete frame block and relevant approved source material. Consult the supplied HyperFrames contract, `format.md`, and `motion.md` where available to establish the actual composition and motion formats.
+Read the complete frame block and relevant approved source material. Consult the HyperFrames `SKILL.md`, `references/format.md` and `references/motion.md` at the absolute paths the main agent supplies to establish the actual composition and motion formats.
 
 If a required contract is unavailable, ask the main agent for its applicable content rather than inventing an API or schema.
 

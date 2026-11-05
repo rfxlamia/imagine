@@ -32,7 +32,7 @@ The project review ledger is:
 
 `review/REVIEW.md`
 
-Follow the installed HyperFrames `review.md` convention.
+Follow the installed HyperFrames `references/review.md` convention (SKILL.md section 2.1 says how to locate it).
 
 Use P0/P1/P2 classifications, not a free-form PASS/FAIL report in place of structured findings.
 
@@ -53,7 +53,7 @@ P2:
 - Editorial advice, refinement, and non-blocking preferences.
 - Soft quality-tier findings with reasons and disposition.
 
-The exact severity convention from HyperFrames `review.md` takes precedence where it provides a more specific classification.
+The exact severity convention from HyperFrames `references/review.md` takes precedence where it provides a more specific classification.
 
 Do not downgrade a HARD violation to P2 to bypass blocking behavior.
 

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { copyFileSync, linkSync, mkdtempSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { decide } from "./scene-builder-scope-lib.mjs";
@@ -13,9 +13,10 @@ function fixture() {
   mkdirSync(join(shadow, "compositions"), { recursive: true });
   return { cwd, shadow };
 }
-const sb = (cwd, tool_name, tool_input) =>
-  decide({ cwd, tool_name, tool_input, agent_id: "a1", agent_type: "imagine:scene-builder" });
-const bash = (cwd, command) => sb(cwd, "Bash", { command });
+// The env is explicit so the real process env never leaks into a decision.
+const sb = (cwd, tool_name, tool_input, env = {}) =>
+  decide({ cwd, tool_name, tool_input, agent_id: "a1", agent_type: "imagine:scene-builder" }, env);
+const bash = (cwd, command, env = {}) => sb(cwd, "Bash", { command }, env);
 
 test("scene-builder may write inside its shadow project", () => {
   const { cwd, shadow } = fixture();
@@ -42,7 +43,7 @@ test("symlinked ancestor resolving outside is denied", () => {
 });
 
 test("missing cwd is denied for scene-builder", () => {
-  assert.equal(decide({ tool_name: "Write", tool_input: { file_path: "/x" }, agent_type: "imagine:scene-builder" }).decision, "deny");
+  assert.equal(decide({ tool_name: "Write", tool_input: { file_path: "/x" }, agent_type: "imagine:scene-builder" }, {}).decision, "deny");
 });
 
 test("nonexistent cwd is denied, not thrown", () => {
@@ -91,12 +92,12 @@ test("other bash is denied", () => {
 
 test("other agent types pass through", () => {
   const { cwd } = fixture();
-  assert.equal(decide({ cwd, tool_name: "Write", tool_input: { file_path: join(cwd, "x") }, agent_type: "imagine:previz-designer" }).decision, "pass");
+  assert.equal(decide({ cwd, tool_name: "Write", tool_input: { file_path: join(cwd, "x") }, agent_type: "imagine:previz-designer" }, {}).decision, "pass");
 });
 
 test("main agent (no agent_type) passes through", () => {
   const { cwd } = fixture();
-  assert.equal(decide({ cwd, tool_name: "Write", tool_input: { file_path: join(cwd, "x") } }).decision, "pass");
+  assert.equal(decide({ cwd, tool_name: "Write", tool_input: { file_path: join(cwd, "x") } }, {}).decision, "pass");
 });
 
 test("unreadable stdin blocks with exit code 2", () => {
@@ -169,7 +170,7 @@ test("NotebookEdit checks notebook_path and rejects conflicting keys", () => {
 
 test("other agents still pass for non-allowlisted tools", () => {
   const { cwd } = fixture();
-  assert.equal(decide({ cwd, tool_name: "Monitor", tool_input: {}, agent_type: "imagine:previz-designer" }).decision, "pass");
+  assert.equal(decide({ cwd, tool_name: "Monitor", tool_input: {}, agent_type: "imagine:previz-designer" }, {}).decision, "pass");
 });
 
 test("snapshot without a shadow DIR is denied", () => {
@@ -275,9 +276,12 @@ test("hook entry run through a symlinked path still decides", () => {
   symlinkSync(hooksDir, join(linkBase, "hooks"));
   const entry = join(linkBase, "hooks", "scene-builder-scope.mjs");
   const { cwd, shadow } = fixture();
+  const childEnv = { ...process.env };
+  delete childEnv.CLAUDE_PROJECT_DIR;
   const run = (file_path) => spawnSync(process.execPath, [entry], {
     input: JSON.stringify({ cwd, tool_name: "Write", tool_input: { file_path, content: "x" }, agent_type: "imagine:scene-builder" }),
     encoding: "utf8",
+    env: childEnv,
   });
   const bad = run(join(cwd, ".imagine", "p1", "bible.yaml"));
   assert.equal(bad.status, 0);
@@ -310,3 +314,107 @@ test("entry exits 2 when the logic module cannot load", () => {
 });
 
 
+
+test("scene-builder may hand its report back to the parent via SubagentHandback", () => {
+  const { cwd } = fixture();
+  const r = sb(cwd, "SubagentHandback", { message: "done" });
+  assert.equal(r.decision, "allow");
+  assert.equal(r.reason, "report to the parent agent");
+});
+
+test("near-miss SubagentHandback tool names are still denied", () => {
+  const { cwd } = fixture();
+  for (const name of ["subagenthandback", "SubagentHandbackX", "XSubagentHandback", "SubagentHandback "]) {
+    const r = sb(cwd, name, { message: "done" });
+    assert.equal(r.decision, "deny", name);
+    assert.equal(r.reason, `scene-builder may not use ${name}`);
+  }
+});
+
+test("unknown tools stay denied for scene-builder", () => {
+  const { cwd } = fixture();
+  const r = sb(cwd, "WebFetch", { url: "https://example.com" });
+  assert.equal(r.decision, "deny");
+  assert.equal(r.reason, "scene-builder may not use WebFetch");
+});
+
+
+// --- anchor is CLAUDE_PROJECT_DIR (session start root), falling back to the hook cwd ---
+
+function anchored() {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "imagine-root-")));
+  const projectDir = join(root, ".imagine", "p1");
+  const shadow = join(projectDir, "stage", "edit", "s01");
+  mkdirSync(join(shadow, "compositions"), { recursive: true });
+  return { root, projectDir, shadow, env: { CLAUDE_PROJECT_DIR: root } };
+}
+
+test("anchored: cwd moved into the project dir still allows shadow writes", () => {
+  const { projectDir, shadow, env } = anchored();
+  assert.equal(sb(projectDir, "Write", { file_path: join(shadow, "compositions", "a.html") }, env).decision, "allow");
+});
+
+test("anchored: an unrelated cwd tree with its own shadow is denied", () => {
+  const { root, env } = anchored();
+  const other = realpathSync(mkdtempSync(join(tmpdir(), "imagine-other-")));
+  const otherShadow = join(other, ".imagine", "p9", "stage", "edit", "s01");
+  mkdirSync(otherShadow, { recursive: true });
+  const input = { file_path: join(otherShadow, "a.html") };
+  assert.equal(sb(other, "Write", input, {}).decision, "allow");
+  assert.equal(sb(other, "Write", input, env).decision, "deny");
+  assert.notEqual(root, other);
+});
+
+test("anchored: symlink escape out of the shadow is denied", () => {
+  const { root, projectDir, shadow, env } = anchored();
+  symlinkSync("../../..", join(shadow, "assets"));
+  assert.equal(sb(projectDir, "Write", { file_path: join(shadow, "assets", "hooktest.txt") }, env).decision, "deny");
+  assert.equal(sb(root, "Write", { file_path: join(shadow, "assets", "hooktest.txt") }, env).decision, "deny");
+});
+
+test("anchored: bash lint on the shadow dir with cwd in the project dir is allowed", () => {
+  const { projectDir, shadow, env } = anchored();
+  assert.equal(bash(projectDir, `npx hyperframes@0.8.223 lint ${shadow}`, env).decision, "allow");
+});
+
+test("anchored: NotebookEdit and snapshot output follow the anchor too", () => {
+  const { projectDir, shadow, env } = anchored();
+  assert.equal(sb(projectDir, "NotebookEdit", { notebook_path: join(shadow, "n.ipynb") }, env).decision, "allow");
+  assert.equal(bash(projectDir, `npx hyperframes@0.8.223 snapshot ${shadow} -o ${shadow}/snaps`, env).decision, "allow");
+});
+
+test("anchored: unset or empty CLAUDE_PROJECT_DIR falls back to the hook cwd", () => {
+  const { cwd, shadow } = fixture();
+  for (const env of [{}, { CLAUDE_PROJECT_DIR: "" }]) {
+    assert.equal(sb(cwd, "Write", { file_path: join(shadow, "compositions", "a.html") }, env).decision, "allow");
+    assert.equal(sb(cwd, "Write", { file_path: join(cwd, ".imagine", "p1", "STORY.md") }, env).decision, "deny");
+  }
+});
+
+test("anchored: nonexistent CLAUDE_PROJECT_DIR is denied, no cwd fallback", () => {
+  const { cwd, shadow } = fixture();
+  const env = { CLAUDE_PROJECT_DIR: "/nonexistent-imagine-root" };
+  assert.equal(sb(cwd, "Write", { file_path: join(shadow, "compositions", "a.html") }, env).decision, "deny");
+  assert.equal(bash(cwd, `npx hyperframes@0.8.223 lint ${shadow}`, env).decision, "deny");
+});
+
+test("anchored: missing hook cwd is still denied even with CLAUDE_PROJECT_DIR set", () => {
+  const { shadow, env } = anchored();
+  const r = decide({ tool_name: "Write", tool_input: { file_path: join(shadow, "a.html") }, agent_type: "imagine:scene-builder" }, env);
+  assert.equal(r.decision, "deny");
+  assert.equal(r.reason, "scene-builder call without cwd");
+});
+
+test("anchored: relative CLAUDE_PROJECT_DIR is denied, no cwd fallback", () => {
+  const { cwd, shadow } = fixture();
+  // A relative path that would resolve to the real root from the hook process cwd.
+  const env = { CLAUDE_PROJECT_DIR: relative(process.cwd(), cwd) };
+  assert.equal(sb(cwd, "Write", { file_path: join(shadow, "compositions", "a.html") }, env).decision, "deny");
+});
+
+test("anchored: symlinked CLAUDE_PROJECT_DIR pointing at the real root is allowed", () => {
+  const { cwd, shadow } = fixture();
+  const alias = join(mkdtempSync(join(tmpdir(), "imagine-alias-")), "root");
+  symlinkSync(cwd, alias);
+  assert.equal(sb(cwd, "Write", { file_path: join(shadow, "compositions", "a.html") }, { CLAUDE_PROJECT_DIR: alias }).decision, "allow");
+});

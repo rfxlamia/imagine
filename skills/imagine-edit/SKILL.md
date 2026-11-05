@@ -86,6 +86,16 @@ If an expected file has not been created yet, record that fact. If an existing r
 
 Resolve installed plugin and HyperFrames skill paths from the actual installation. Never assume that an external HyperFrames skill is stored inside the film project.
 
+The HyperFrames skill contract is the copy shipped inside the pinned package `hyperframes@0.8.223`, in its `dist/skills/hyperframes/` directory. Resolve that directory once per stage with:
+
+```bash
+npx -y -p hyperframes@0.8.223 -c 'd="$(dirname "$(command -v hyperframes)")/../hyperframes/dist/skills/hyperframes"; cd "$d" && pwd -P'
+```
+
+In this document, "installed HyperFrames skill" means that directory, and its contracts are `SKILL.md` and, in its `references` folder, `format.md`, `motion.md` and `review.md`. Do not use a HyperFrames skill copy installed for another tool or at another version, even if it is easier to find. Do not run `hyperframes skills` to install one: it updates to the latest version, not the pin. If the command fails or a named file is missing, block and report it. Do not substitute similarly named files.
+
+The scene-builder cannot run this command. Pass it the absolute paths of `SKILL.md`, `format.md` and `motion.md` in every brief.
+
 Read actual project files, not similarly named copies from another project.
 
 ### 2.2 Stage 8b — fx-implement
@@ -205,7 +215,7 @@ Provide:
 - Relevant complete canon entries and style requirements.
 - Approved asset paths, hashes, and versions.
 - G0 resolution/aspect and shot timing.
-- The installed HyperFrames format and motion contracts.
+- The absolute paths of the installed HyperFrames `SKILL.md`, `format.md` and `motion.md` (section 2.1).
 - The required shadow-root motion assertion location.
 - The explicit write boundary and lint retry cap.
 

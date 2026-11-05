@@ -18,7 +18,7 @@ It contains:
 7. Waivers.
 8. Delivery note.
 
-Follow the installed HyperFrames `review.md` conventions.
+Follow the installed HyperFrames `references/review.md` conventions (located as in imagine-edit SKILL.md section 2.1).
 
 ## 2. Finding format
 
