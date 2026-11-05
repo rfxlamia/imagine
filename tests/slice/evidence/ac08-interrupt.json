@@ -1,0 +1,13 @@
+{
+  "_pin": "bb42347c5c740dc8bce1ff4b8599e739833c2100",
+  "verdict": "PASS",
+  "committed_before_signal": "s01-plate.v1",
+  "signal": "INT",
+  "signalled": [
+    56394
+  ],
+  "survivors": {
+    "kit": [],
+    "codex": []
+  }
+}
