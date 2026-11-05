@@ -11,7 +11,7 @@ Two films were delivered end to end: slice-landscape (`2026-11-04-keeper-3`) and
 | 3 | deferred: guard cut; instruction-level restore observed in WP7 GREEN runs | | deferred |
 | 4 | `ac04-status.json`, `ac04-impact.md` | bb42347 | FAIL: only bible:characters.mara goes stale; the ref and plates follow the contract (they record plan.yaml, not the bible). Decision bead imagine-z8p.6.15 |
 | 5 | `ac05-status.json`, `ac05-impact.md` | bb42347 | FAIL (partial): L02 VO and s02 previz go stale, but so do s01/s03 previz (patch-level inputs). Bead imagine-z8p.6.16 |
-| 6 | `ac06-g5a.md` | bb42347 | PASS (slice-portrait; carried over from landscape) |
+| 6 | `ac06-g5a.md` | bb42347 | PASS (run on slice-portrait, missed on landscape; L02 redone by seed, L01/L03 unchanged. The agent added unrequested takes v3/v4, and no seed fixed the pause complaint: 0.25-0.34 s) |
 | 7 | `qc-slice-landscape.json` (raster), `ac07-delivery-note.md`, `portrait-band-g6.md` | bb42347 | PASS (both delivery notes list every soft raster with its G4/G5b acceptance) |
 | 8 | `ac08-interrupt.json`, `ac08-resume.log` | bb42347 | PASS (slice-portrait; no survivors, no duplicate versions) |
 | 9 | deferred: safe-band cut; manual G6 check in `portrait-band-g6.md` | bb42347 | deferred (manual check partial: the user's G6 quote does not state the band, imagine-z8p.6.17) |
