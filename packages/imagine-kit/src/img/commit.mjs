@@ -76,6 +76,50 @@ export async function commitAsset(ctx, dir, { entry, source, summary, clearBlock
   });
 }
 
+export async function commitAssets(ctx, dir, { items, extraFiles = [], summary, clearBlocked }) {
+  return withLock(dir, async () => {
+    const fresh = createContext(dir);
+    const manifest = fresh.manifest;
+
+    for (const extra of extraFiles) {
+      const dest = safePath(dir, extra.rel);
+      if (!dest) throw new KitError("HARD", `${extra.rel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: extra.rel });
+      if (existsSync(dest) && sha256File(dest) === sha256File(extra.source)) {
+        // already exists with matching hash; do not copy again
+      } else {
+        if (existsSync(dest)) unlinkSync(dest);
+        placeFile(extra.source, dest);
+      }
+    }
+
+    const resultEntries = [];
+    for (const item of items) {
+      const entry = item.entry;
+      const dest = safePath(dir, entry.path);
+      if (!dest) throw new KitError("HARD", `${entry.path} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${entry.id}.v${entry.v}` });
+      const existing = manifest.assets.find((a) => a.id === entry.id && a.v === entry.v);
+      if (existing) {
+        resultEntries.push({ kept: true, entry: existing });
+        continue;
+      }
+      if (item.source) {
+        if (existsSync(dest)) unlinkSync(dest);
+        placeFile(item.source, dest);
+      }
+      entry.sha256 = sha256File(dest);
+      manifest.assets.push(entry);
+      resultEntries.push({ kept: false, entry });
+    }
+
+    saveManifest(dir, manifest);
+    const project = fresh.project;
+    if (clearBlocked) project.blocked = project.blocked.filter((b) => b.step !== clearBlocked);
+    saveProject(dir, project);
+    const journal_id = appendJournal(dir, { command: summary.command, summary: summary.text, now: ctx.now() });
+    return { entries: resultEntries.map((r) => r.entry), journal_id };
+  });
+}
+
 export async function recordBlocked(ctx, dir, { step, command }) {
   return withLock(dir, async () => {
     const project = createContext(dir).project;

@@ -136,9 +136,17 @@ assets:
     size: 1024x1536                 # generator request, WxH
     refs: []                        # img only: ids of ref assets, each G5r-approved at its current version
     required_px: { w: 1080, h: 1920 }   # img: required (resolution budget, proposal section 7.2); ref: optional
+  - id: mara-climb
+    kind: img
+    sheet: mara-poses               # optional: pose-sheet group id (2-4 members with identical non-empty refs and size)
+    prompt: "Mara climbing lighthouse stairs, profile view"
+    framing: "medium shot, profile view"
+    size: 600x600                   # shared member size; grid request is cols*W x rows*H; order in plan.yaml = cell order
+    refs: [mara-sheet]              # identical non-empty refs across group; violations are HARD_NOT_RUN (PROC-POSE-SHEET)
+    required_px: { w: 500, h: 500 }
 ```
 
-- Raster files: `assets/refs/<id>.v<N>.png` and `assets/img/<id>.v<N>.png`; VO takes `assets/vo/<line>.v<N>.wav`. Versions are never overwritten. `img` work directories live in `tmp/img/<id>.v<N>/` (the generated `out.png` and `meta.json` with the compiled and revised prompt).
+- Raster files: `assets/refs/<id>.v<N>.png` and `assets/img/<id>.v<N>.png`; provenance sheets `assets/sheets/<group>.<sha12>.png`; VO takes `assets/vo/<line>.v<N>.wav`. Versions are never overwritten. `img` work directories live in `tmp/img/<id>.v<N>/` or `tmp/img/sheet-<group>.<rand>/` (the generated `out.png` and `meta.json` with the compiled and revised prompt). Pose-sheet assets record manifest fields `sheet`, `sheet_sha256`, and `cell` (1-indexed cell order).
 - `tmp/scratch-vo/<line>.wav` and `tmp/audition/<speaker>-<voice>.wav` are measurements, never assets.
 - Voice config (`bible.yaml`, `characters[].voice` or top-level `narrator.voice`):
   - `engine: pocket-tts`: `model: english|indonesian`, `source: builtin:<name>|file:<path inside the project>`, `seed_base` (integer), `temperature` (number, optional). Take `n` of a line uses seed `seed_base + n`.

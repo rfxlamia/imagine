@@ -296,6 +296,8 @@ The sum of the planned timeline, including transitions as defined by the actual 
 
 Prefer separated background, middle-ground, character, and foreground plates when parallax or reuse is needed; compose 9:16 natively rather than horizontally squeezing landscape imagery. <!-- rule:ADV-LAYERED-PLATES -->
 
+Every character that appears in two or more distinct poses, expressions or motion phases is planned in `assets/plan.yaml` as pose-sheet groups (`sheet: <group>`, 2-4 members, identical `refs` and `size`); plan enough poses (emotions, anticipation / action / follow-through phases) that characters change pose between and within shots instead of only being slid around; a pose is planned as a single image only when its `required_px` is larger than a sheet cell delivers (about 627 px square from a ~1254 px output), and that reason is written into the G4 plan. <!-- rule:PROC-POSE-SHEET -->
+
 For 9:16 work, prefer roughly 1–2-second shots, approximately 1.35× title sizing, and no more than about five words per claim line where the approved style does not demand otherwise. <!-- rule:ADV-VERTICAL -->
 
 Advisory defaults guide underspecified style decisions. They never override the G0 specification, approved canon, or hard constraints. Record a short reason when intentionally departing from an advisory default.
@@ -309,7 +311,7 @@ Before requesting approval, assemble:
 1. Current `STORY.md` with applied storyboard, previz, and FX plans.
 2. Per-shot coverage of all locked script units.
 3. Compiled production prompts and asset requirements.
-4. Complete canonical reference list with characters, required poses, environment keys, and style frame.
+4. Complete canonical reference list with characters, required poses, pose-sheet groups and each cell's expected q, environment keys, and style frame.
 5. Per-layer resolution budgets and per-shot resolution tiers.
 6. Audio-mode clock and timing evidence.
 7. Production time, generation count, and quota or cost estimates with stated assumptions.

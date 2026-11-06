@@ -1,13 +1,57 @@
 #!/usr/bin/env node
 // Fake `npx --yes hyperframes@x <sub> ...`: records argv and the telemetry env, answers lint --json and render.
 // FAKE_NPX_MODE: ok | lint-error | no-json | warn | render-fail | lint-ok-exit-nonzero | lint-timeout. render writes FAKE_NPX_MP4 (a path to copy) to the -o target.
-import { appendFileSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { encodeRgbaPng } from "../helpers/png.mjs";
 
 const argv = process.argv.slice(2);
-if (process.env.FAKE_NPX_LOG) appendFileSync(process.env.FAKE_NPX_LOG, `${JSON.stringify({ argv, telemetry_off: process.env.HYPERFRAMES_NO_TELEMETRY ?? null, cwd: process.cwd() })}\n`);
+const log = process.env.FAKE_NPX_LOG;
+const priorLines = log && existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean) : [];
+const rbCalls = priorLines.filter((l) => {
+  try { return JSON.parse(l).argv.includes("remove-background"); } catch { return false; }
+}).length;
+if (log) appendFileSync(log, `${JSON.stringify({ argv, telemetry_off: process.env.HYPERFRAMES_NO_TELEMETRY ?? null, cwd: process.cwd() })}\n`);
 const mode = process.env.FAKE_NPX_MODE ?? "ok";
 const sub = argv.find((a) => ["lint", "render", "init"].includes(a));
+if (argv.includes("remove-background")) {
+  const rbModes = (process.env.FAKE_NPX_RB_MODE ?? "ok").split(",");
+  const rbMode = rbModes[Math.min(rbCalls, rbModes.length - 1)];
+  if (rbMode === "fail") {
+    process.stderr.write("simulated remove-background failure\n");
+    process.exit(1);
+  }
+  if (rbMode === "nofile") {
+    process.exit(0);
+  }
+  const inputIdx = argv.indexOf("remove-background") + 1;
+  const inputPath = argv[inputIdx];
+  const inBytes = readFileSync(inputPath);
+  const w = inBytes.readUInt32BE(16);
+  const h = inBytes.readUInt32BE(20);
+  const out = argv[argv.indexOf("-o") + 1];
+  mkdirSync(dirname(out), { recursive: true });
+
+  let pixel;
+  if (rbMode === "empty") {
+    pixel = () => [0, 0, 0, 0];
+  } else if (rbMode === "edge") {
+    pixel = () => [255, 255, 255, 255];
+  } else {
+    const minX = Math.floor(w * 0.25);
+    const maxX = Math.floor(w * 0.75);
+    const minY = Math.floor(h * 0.25);
+    const maxY = Math.floor(h * 0.75);
+    pixel = (x, y) => {
+      if (x >= minX && x < maxX && y >= minY && y < maxY) {
+        return [((x * 7 + y * 13) ^ (x >> 3)) & 255, ((x * 11 + y * 5) ^ (y >> 2)) & 255, 128, 255];
+      }
+      return [0, 0, 0, 0];
+    };
+  }
+  writeFileSync(out, encodeRgbaPng(w, h, pixel));
+  process.exit(0);
+}
 if (sub === "lint") {
   if (process.env.FAKE_NPX_HOOK_FILE && process.env.FAKE_NPX_HOOK_CONTENT !== undefined) {
     writeFileSync(process.env.FAKE_NPX_HOOK_FILE, process.env.FAKE_NPX_HOOK_CONTENT);

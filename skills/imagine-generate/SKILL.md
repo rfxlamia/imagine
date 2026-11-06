@@ -289,6 +289,10 @@ A valid output must be a real, non-uniform PNG raster with measured dimensions a
 
 Use `HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 remove-background` for cutout transparency when available; do not trust unverified generator alpha. <!-- rule:PROC-CUTOUT-FALLBACK -->
 
+When generating pose sheets, `img --batch <id>` naming any sheet member expands to every member of that group lacking a current version and draws them in a single grid image. The kit crops each cell with ffmpeg and runs background removal via `npx --yes hyperframes@0.8.223 remove-background` (with telemetry off) inside the kit. The resulting cutout assets are already transparent PNGs committed under `assets/img/<id>.v<N>.png`, so never run remove-background on them again. Running `img --batch <id> --redo <id> --note <why>` regenerates only that pose as a 1×1 sheet while preserving approved sibling poses. Review and G5b approval proceed per individual pose, presenting the provenance sheet image for context. <!-- rule:PROC-POSE-SHEET -->
+
+Each extracted cell undergoes an alpha check after background removal: fill below 1% fails as empty, and more than 2% opaque pixels in the 2-px border band fails as touching the cell edge. Any failing cell fails the whole sheet attempt and counts toward the 3-attempt `PROC-IMG-RETRY` limit; a failure of the background-removal tool itself blocks execution immediately under `PROC-CUTOUT-FALLBACK`. <!-- rule:HARD-SHEET-CELL -->
+
 Detailed compilation, reference conditioning, validation, and attempts are in `references/image-and-resolution.md`.
 
 ### 7.2 Raster resolution
@@ -369,6 +373,7 @@ Detailed state, waiver, and recovery procedures are in `references/state-and-rev
 - [ ] Protected-file hashes and dispatch snapshots were verified.
 - [ ] Canonical refs passed continuity review and each received current G5r approval.
 - [ ] Batch images use approved refs, passed real raster checks, and received per-item G5b decisions.
+- [ ] Pose-sheet groups expanded, cells verified against alpha constraints, and cutouts committed with provenance.
 - [ ] Final audio uses correct mode, one line per WAV when narrated, and complete G5a decisions or recorded N/A.
 - [ ] All immutable versions, revised prompts, hashes, source IDs, and measured resolution budgets agree with the manifest.
 - [ ] Stale/rejected/blocked items and downstream invalidations are accurately recorded; no HARD result is overridden.
