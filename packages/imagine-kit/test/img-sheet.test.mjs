@@ -259,6 +259,37 @@ t("HARD-SHEET-CELL, PROC-IMG-RETRY: edge and empty fail attempt and record block
   }
 });
 
+t("HARD-SHEET-CELL, PROC-IMG-RETRY: a resized cutout fails the attempt; resize,ok retries and records measured dimensions", async () => {
+  {
+    const p = await sheetProject();
+    await generateAndApproveRef(p);
+    const callsBefore = p.calls().length;
+    const r = await p.run({ FAKE_CODEX_SIZE: "1200x1200", FAKE_NPX_RB_MODE: "resize" }, "img", "--batch", "rooster-crow");
+    assert.notEqual(r.exit, 0);
+    assert.equal(p.calls().slice(callsBefore).length, 3);
+    assert.equal(r.env.errors[0].rule, "PROC-IMG-RETRY");
+    assert.match(r.env.errors[0].message, /cutout is 599x599, expected 600x600/);
+    assert.equal(getManifest(p.dir).assets.filter((a) => a.kind === "img").length, 0);
+  }
+  {
+    const p = await sheetProject();
+    await generateAndApproveRef(p);
+    const callsBefore = p.calls().length;
+    const r = await p.run({ FAKE_CODEX_SIZE: "1200x1200", FAKE_NPX_RB_MODE: "resize,ok" }, "img", "--batch", "rooster-crow");
+    assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+    assert.equal(p.calls().slice(callsBefore).length, 2);
+    const entries = getManifest(p.dir).assets.filter((a) => a.kind === "img");
+    assert.equal(entries.length, 4);
+    for (const entry of entries) {
+      assert.equal(entry.w, 600);
+      assert.equal(entry.h, 600);
+      const buf = readFileSync(join(p.dir, entry.path));
+      assert.equal(buf.readUInt32BE(16), entry.w);
+      assert.equal(buf.readUInt32BE(20), entry.h);
+    }
+  }
+});
+
 // 7. Cutout tool fallback
 t("PROC-CUTOUT-FALLBACK: hyperframes failure blocks immediately without retrying codex", async () => {
   const p = await sheetProject();

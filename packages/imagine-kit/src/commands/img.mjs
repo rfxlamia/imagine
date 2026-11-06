@@ -261,15 +261,21 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
         throw new KitError("BLOCKED", `hyperframes remove-background failed: ${tail}`, { rule: "PROC-CUTOUT-FALLBACK", item: members[k - 1].id });
       }
 
-      const rAlpha = ensureTool(await runTool(ctx, "ffmpeg", ["-v", "error", "-i", cutPng, "-vf", "format=rgba,alphaextract", "-f", "rawvideo", "-"]), "ffmpeg", "HARD-SHEET-CELL");
-      if (rAlpha.status !== 0 || rAlpha.stdoutBuf.length < cw * ch) throw new KitError("HARD_NOT_RUN", `ffmpeg alphaextract failed: ${rAlpha.stderr}`, { rule: "HARD-SHEET-CELL" });
+      const cutInfo = pngInfo(readFileSync(cutPng));
+      if (!cutInfo || cutInfo.w !== cw || cutInfo.h !== ch) {
+        cellProblem = `cell ${k} (${members[k - 1].id}) cutout is ${cutInfo ? `${cutInfo.w}x${cutInfo.h}` : "not a PNG"}, expected ${cw}x${ch}`;
+        break;
+      }
 
-      const check = checkCellAlpha(rAlpha.stdoutBuf, cw, ch, { k, id: members[k - 1].id });
+      const rAlpha = ensureTool(await runTool(ctx, "ffmpeg", ["-v", "error", "-i", cutPng, "-vf", "format=rgba,alphaextract", "-f", "rawvideo", "-"]), "ffmpeg", "HARD-SHEET-CELL");
+      if (rAlpha.status !== 0 || rAlpha.stdoutBuf.length < cutInfo.w * cutInfo.h) throw new KitError("HARD_NOT_RUN", `ffmpeg alphaextract failed: ${rAlpha.stderr}`, { rule: "HARD-SHEET-CELL" });
+
+      const check = checkCellAlpha(rAlpha.stdoutBuf, cutInfo.w, cutInfo.h, { k, id: members[k - 1].id });
       if (check.problem) {
         cellProblem = check.problem;
         break;
       }
-      cuts.push(cutPng);
+      cuts.push({ path: cutPng, w: cutInfo.w, h: cutInfo.h });
     }
 
     if (cellProblem) {
@@ -278,7 +284,7 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
       continue;
     }
 
-    cellCuts = { cw, ch, cuts };
+    cellCuts = { cuts };
   }
 
   if (!cellCuts) {
@@ -296,7 +302,8 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
     const member = members[k - 1];
     const v = versions[k - 1];
     const rel = `assets/img/${member.id}.v${v}.png`;
-    const q = member.required_px ? rasterQ(cellCuts.cw, cellCuts.ch, member.required_px) : null;
+    const cut = cellCuts.cuts[k - 1];
+    const q = member.required_px ? rasterQ(cut.w, cut.h, member.required_px) : null;
     const entry = {
       id: member.id,
       kind: "img",
@@ -309,8 +316,8 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
       sheet: sheetRel,
       sheet_sha256: sheetSha,
       cell: k,
-      w: cellCuts.cw,
-      h: cellCuts.ch,
+      w: cut.w,
+      h: cut.h,
       ...(q === null ? {} : { q: round2(q), tier: tierOf(q) }),
       ...(revised ? { revised_prompt: revised } : {}),
       ...(note ? { note } : {}),
@@ -318,10 +325,10 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
     };
     if (!revised) advice.push({ rule: "PROC-REVISED-PROMPT", item: `${member.id}.v${v}`, source: "codex session log", message: "the revised prompt was not found in the Codex session log; only the compiled prompt is recorded" });
     if (entry.tier === "replan") advice.push({ rule: "HARD-RASTER-TIER", item: `${member.id}.v${v}`, source: "assets/plan.yaml", message: `q ${entry.q} is below 0.75 (replan tier); regenerate larger or re-plan the shot, export-hf will refuse it` });
-    items.push({ entry, source: cellCuts.cuts[k - 1] });
+    items.push({ entry, source: cut.path });
   }
 
-  const summaryText = `sheet ${group}: ${items.map((i) => `${i.entry.id}.v${i.entry.v}`).join(" ")} ${cellCuts.cw}x${cellCuts.ch}`;
+  const summaryText = `sheet ${group}: ${items.map((i) => `${i.entry.id}.v${i.entry.v} ${i.entry.w}x${i.entry.h}`).join(" ")}`;
   const summary = { command: "img", text: summaryText };
   const done = await commitAssets(ctx, dir, { items, extraFiles, summary, clearBlocked: `img:sheet-${group}` });
   return done.entries;
