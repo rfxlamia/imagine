@@ -2,7 +2,7 @@
 
 ## Structure
 
-The repository root is the Claude Code plugin. `.claude-plugin/plugin.json` names it `imagine` at version 0.1.0.
+The repository root is the Claude Code plugin. `.claude-plugin/plugin.json` names it `imagine` at version 0.1.0. `.claude-plugin/marketplace.json` declares marketplace `rfxlamia` with a single entry (`source: "./"`).
 
 | Path | Role |
 | --- | --- |

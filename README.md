@@ -17,14 +17,25 @@ Imagine is a Claude Code plugin, version 0.1.0, for one short film at a time. A 
 
 The kit is not published to npm, and it is not assumed to be on `PATH`.
 
+Inside Claude Code, add the marketplace and install the plugin:
+
+```
+/plugin marketplace add rfxlamia/imagine
+/plugin install imagine@rfxlamia
+```
+
+Update later with `/plugin marketplace update rfxlamia`.
+
+Invoke `/imagine` from your own working directory. Projects land in `./.imagine/` there. The shorter first-run path is the [quick start](docs/quick-start.md). The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
+
+### Develop from a clone
+
 ```bash
 git clone https://github.com/rfxlamia/imagine.git
 cd imagine
 npm install --prefix packages/imagine-kit
 claude --plugin-dir "$PWD"
 ```
-
-In that session, invoke `/imagine`. The shorter first-run path is the [quick start](docs/quick-start.md). The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
 
 One project is one format, both at 30 fps: landscape 1920×1080 or portrait 1080×1920. A second format is a second project. Phase 1 accepts platform `generic` only.
 
@@ -72,7 +83,7 @@ A silent `text-led` film needs `silence: intentional` at G0. If you bring music 
 
 | Tool | Why it has to be available |
 | --- | --- |
-| Claude Code | Loads this directory with `--plugin-dir`. Checked here on 2.1.314 and 2.1.318 |
+| Claude Code | Installs the plugin from the `rfxlamia` marketplace, or loads a clone with `--plugin-dir`. Checked here on 2.1.314 and 2.1.318 for `--plugin-dir` |
 | Node.js 22 or later | `imagine-kit` and the plugin hooks |
 | `codex` | Still images, via `codex exec` |
 | `ffmpeg` | Decodes rasters and measures loudness |
@@ -139,7 +150,7 @@ npm run check:names
 npm run check:rules
 ```
 
-The root install is for the repo checks. It is not required to load the plugin.
+The root dependencies also serve the kit when the plugin is installed from the marketplace (Claude Code installs them automatically); from a clone, run `npm install` at the root or `--prefix packages/imagine-kit`.
 
 ## Contracts
 

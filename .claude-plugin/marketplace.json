@@ -1,0 +1,15 @@
+{
+  "name": "rfxlamia",
+  "owner": {
+    "name": "rfxlamia"
+  },
+  "description": "Claude Code plugins by rfxlamia.",
+  "plugins": [
+    {
+      "name": "imagine",
+      "source": "./",
+      "description": "Turn a rough script into a 40-60 s motion-graphics MP4 with gated canon, planning, generation, edit and delivery.",
+      "version": "0.1.0"
+    }
+  ]
+}
