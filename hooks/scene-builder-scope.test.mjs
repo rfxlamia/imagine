@@ -102,7 +102,9 @@ test("main agent (no agent_type) passes through", () => {
 
 test("unreadable stdin blocks with exit code 2", () => {
   const hook = fileURLToPath(new URL("./scene-builder-scope.mjs", import.meta.url));
-  const r = spawnSync(process.execPath, [hook], { input: "not json", encoding: "utf8" });
+  const childEnv = { ...process.env };
+  delete childEnv.GROK_HOOK_EVENT;
+  const r = spawnSync(process.execPath, [hook], { input: "not json", encoding: "utf8", env: childEnv });
   assert.equal(r.status, 2);
   assert.equal(r.stdout, "");
   assert.match(r.stderr, /unreadable hook input/);
@@ -278,6 +280,7 @@ test("hook entry run through a symlinked path still decides", () => {
   const { cwd, shadow } = fixture();
   const childEnv = { ...process.env };
   delete childEnv.CLAUDE_PROJECT_DIR;
+  delete childEnv.GROK_HOOK_EVENT;
   const run = (file_path) => spawnSync(process.execPath, [entry], {
     input: JSON.stringify({ cwd, tool_name: "Write", tool_input: { file_path, content: "x" }, agent_type: "imagine:scene-builder" }),
     encoding: "utf8",
@@ -289,6 +292,8 @@ test("hook entry run through a symlinked path still decides", () => {
   const good = run(join(shadow, "compositions", "ok.html"));
   assert.equal(good.status, 0);
   assert.match(good.stdout, /"permissionDecision":"allow"/);
+  assert.doesNotMatch(good.stdout, /updatedInput/);
+  assert.doesNotMatch(bad.stdout, /updatedInput/);
 });
 
 test("non-normalised paths are denied (symlink + .. escape)", () => {
@@ -307,7 +312,9 @@ test("non-normalised paths are denied (symlink + .. escape)", () => {
 test("entry exits 2 when the logic module cannot load", () => {
   const dir = mkdtempSync(join(tmpdir(), "imagine-noload-"));
   copyFileSync(fileURLToPath(new URL("./scene-builder-scope.mjs", import.meta.url)), join(dir, "scene-builder-scope.mjs"));
-  const r = spawnSync(process.execPath, [join(dir, "scene-builder-scope.mjs")], { input: "{}", encoding: "utf8" });
+  const childEnv = { ...process.env };
+  delete childEnv.GROK_HOOK_EVENT;
+  const r = spawnSync(process.execPath, [join(dir, "scene-builder-scope.mjs")], { input: "{}", encoding: "utf8", env: childEnv });
   assert.equal(r.status, 2);
   assert.equal(r.stdout, "");
   assert.match(r.stderr, /hook failed/);
