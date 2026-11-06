@@ -75,3 +75,7 @@ copilot/
 /.beads/PRIME.md
 /.pi/
 /.workbuddy-ai/
+
+# Local Claude cache and skills. Only project settings stay tracked.
+/.claude/*
+!/.claude/settings.json
