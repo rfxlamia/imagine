@@ -24,7 +24,18 @@ A missing tool exits 3 (`BLOCKED`). Nothing is substituted.
 
 ## 2. Load the plugin
 
-The kit is not on `PATH`. Install its dependencies, then start Claude Code with this repo as the plugin:
+The kit is not on `PATH`. Inside Claude Code, add the marketplace and install the plugin:
+
+```
+/plugin marketplace add rfxlamia/imagine
+/plugin install imagine@rfxlamia
+```
+
+Update later with `/plugin marketplace update rfxlamia`.
+
+### Develop from a clone
+
+To run from a local checkout instead:
 
 ```bash
 git clone https://github.com/rfxlamia/imagine.git

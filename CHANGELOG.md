@@ -8,10 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `rfxlamia` marketplace catalog at `.claude-plugin/marketplace.json`.
+- Installation commands via the marketplace: `/plugin marketplace add rfxlamia/imagine` and `/plugin install imagine@rfxlamia`.
 - Plugin README, with the logo at `img/logo.png` exempted from the generated-media ignore rule.
 - Quick start at `docs/quick-start.md`.
 - This changelog.
 - Structure section in `AGENTS.md`, matching the shipped plugin tree.
+
+### Changed
+
+- Root `package.json` now depends on `ajv` 8.20.0 so the kit's deps resolve in a marketplace install.
+- README and quick start lead with marketplace install.
 
 ## [0.1.0] - 2026-11-05
 
