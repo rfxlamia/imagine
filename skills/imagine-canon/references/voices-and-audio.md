@@ -73,7 +73,8 @@ not support.
 In narrated mode, cast every speaker with audible lines
 before approving the affected G2 entity.
 
-Use English built-in voices as the default for English narration and offline work.
+Use English built-in voices as the default for English narration and offline English work.
+Offline non-English Pocket casts need a `file:` voice source, not an English built-in name (section 2.3).
 For a non-English G0 language, recommend auditioning an ElevenLabs voice
 (see `elevenlabs-voices.md`) next to the experimental Pocket option;
 the user chooses by listening. <!-- rule:ADV-HOSTED-TTS-NON-ENGLISH -->

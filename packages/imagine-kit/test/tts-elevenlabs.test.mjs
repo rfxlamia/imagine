@@ -121,6 +121,31 @@ test("missing key (no env, HOME pointing to an empty temp dir) -> exit 7, code N
   }
 });
 
+test("mixed cast with a missing ElevenLabs key fails before the Pocket worker runs", async () => {
+  const p = await ttsProject({
+    edit: (text) => text.replace("L02 [narrator]: Tonight the sea was quiet, and no ship was coming.", "L02 [mara]: Tonight the sea was quiet, and no ship was coming."),
+  });
+  const bible = readFileSync(join(p.dir, "bible.yaml"), "utf8");
+  put(p.dir, "bible.yaml", bible.replace(
+    "    voice:\n      engine: pocket-tts\n      source: builtin:eve",
+    "    voice:\n      engine: elevenlabs\n      voice_id: 21m00Tcm4TlvDq8ikWAM\n      model_id: eleven_v4"
+  ));
+  await approveThrough(p.cwd, "G2");
+
+  const emptyHome = mkdtempSync(join(tmpdir(), "imagine-empty-home-"));
+  try {
+    const r = await p.run({ HOME: emptyHome, ELEVENLABS_API_KEY: "" }, "tts", "L01,L02");
+    assert.equal(r.exit, 7);
+    assert.equal(r.env.code, "NEEDS_USER");
+    assert.equal(r.env.errors[0].rule, "HARD-SECRET-NEVER-WRITTEN");
+    assert.equal(p.calls().length, 0, "Pocket TTS must not run before the ElevenLabs key is resolved");
+    assert.equal(existsSync(join(p.dir, "assets/vo/L01.v1.wav")), false);
+    assert.equal(existsSync(join(p.dir, "assets/vo/L02.v1.wav")), false);
+  } finally {
+    rmSync(emptyHome, { recursive: true, force: true });
+  }
+});
+
 test("eleven-401 -> exit 3 BLOCKED, nothing committed", async () => {
   const p = await ttsProject({ narrator: ELEVEN_NARRATOR });
   const r = await p.run({ ELEVENLABS_API_KEY: DEFAULT_KEY, FAKE_UV_MODE: "eleven-401" }, "tts", "L01");

@@ -319,7 +319,7 @@ Hosted TTS takes record provider, voice, model, plan tier and licence terms in t
 
 Before requesting G5a, read `data.total_duration_s`, `data.duration_range` and `data.missing_lines` from `tts`; when the `ADV-VO-DURATION-RANGE` advice appears, present the total and the G0 range to the user and resolve it (trim or revise the script and its approval, or change G0 with the user's approval) before asking for G5a; never trim audio silently. <!-- rule:ADV-VO-DURATION-RANGE -->
 
-Disclose characters sent to ElevenLabs (`data.characters`) as the primary cost driver before generating production takes.
+Before generating production takes, estimate and disclose the character count of the selected `tts_text`. After the run, check that estimate against `data.characters`, the count actually sent.
 
 Allowed pronunciation/delivery levers are lexicon, punctuation, voice, seed, and temperature, plus engine-specific `voice_settings` and `model_id` levers for elevenlabs voices only; SSML, audio tags, phonemes, native pitch, or emotion controls remain not allowed. <!-- rule:PROC-PRONUNCIATION-LEVERS -->
 
