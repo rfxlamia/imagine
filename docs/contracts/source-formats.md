@@ -144,6 +144,14 @@ assets:
     size: 600x600                   # shared member size; grid request is cols*W x rows*H; order in plan.yaml = cell order
     refs: [mara-sheet]              # identical non-empty refs across group; violations are HARD_NOT_RUN (PROC-POSE-SHEET)
     required_px: { w: 500, h: 500 }
+  - id: mara-pause
+    kind: img
+    sheet: mara-poses               # same group, refs, and size as mara-climb (a one-member group is invalid)
+    prompt: "Mara paused on the lighthouse stairs, three-quarter view"
+    framing: "medium shot, three-quarter view"
+    size: 600x600
+    refs: [mara-sheet]
+    required_px: { w: 500, h: 500 }
 ```
 
 - Raster files: `assets/refs/<id>.v<N>.png` and `assets/img/<id>.v<N>.png`; provenance sheets `assets/sheets/<group>.<sha12>.png`; VO takes `assets/vo/<line>.v<N>.wav`. Versions are never overwritten. `img` work directories live in `tmp/img/<id>.v<N>/` or `tmp/img/sheet-<group>.<rand>/` (the generated `out.png` and `meta.json` with the compiled and revised prompt). Pose-sheet assets record manifest fields `sheet`, `sheet_sha256`, and `cell` (1-indexed cell order).

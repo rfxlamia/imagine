@@ -32,16 +32,22 @@ if (argv.includes("remove-background")) {
   const out = argv[argv.indexOf("-o") + 1];
   mkdirSync(dirname(out), { recursive: true });
 
+  let outW = w;
+  let outH = h;
+  if (rbMode === "resize") {
+    outW = Math.max(1, w - 1);
+    outH = Math.max(1, h - 1);
+  }
   let pixel;
   if (rbMode === "empty") {
     pixel = () => [0, 0, 0, 0];
   } else if (rbMode === "edge") {
     pixel = () => [255, 255, 255, 255];
   } else {
-    const minX = Math.floor(w * 0.25);
-    const maxX = Math.floor(w * 0.75);
-    const minY = Math.floor(h * 0.25);
-    const maxY = Math.floor(h * 0.75);
+    const minX = Math.floor(outW * 0.25);
+    const maxX = Math.floor(outW * 0.75);
+    const minY = Math.floor(outH * 0.25);
+    const maxY = Math.floor(outH * 0.75);
     pixel = (x, y) => {
       if (x >= minX && x < maxX && y >= minY && y < maxY) {
         return [((x * 7 + y * 13) ^ (x >> 3)) & 255, ((x * 11 + y * 5) ^ (y >> 2)) & 255, 128, 255];
@@ -49,7 +55,7 @@ if (argv.includes("remove-background")) {
       return [0, 0, 0, 0];
     };
   }
-  writeFileSync(out, encodeRgbaPng(w, h, pixel));
+  writeFileSync(out, encodeRgbaPng(outW, outH, pixel));
   process.exit(0);
 }
 if (sub === "lint") {
