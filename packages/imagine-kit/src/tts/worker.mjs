@@ -91,6 +91,8 @@ export async function runTts(ctx, jobs) {
     }
   }
 
+  const key = elevenJobs.length > 0 ? loadElevenLabsKey(ctx) : null;
+
   let pocketResults = [];
   if (pocketJobs.length > 0) {
     pocketResults = await runWorker(ctx, pocketJobs.map((p) => p.job));
@@ -99,7 +101,6 @@ export async function runTts(ctx, jobs) {
   let elevenResults = [];
   let tier = null;
   if (elevenJobs.length > 0) {
-    const key = loadElevenLabsKey(ctx);
     const elevenRun = await runElevenLabsWorker(ctx, elevenJobs.map((e) => e.job), key);
     elevenResults = elevenRun.results;
     tier = elevenRun.tier;

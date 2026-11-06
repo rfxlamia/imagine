@@ -22,9 +22,10 @@ Using ElevenLabs requires:
 - A paid subscription tier if the film is intended for commercial use.
 
 Before generating auditions or production takes, disclose the
-estimated cost in characters. Each generation passes script
-text to the ElevenLabs API, and `imagine-kit tts` reports
-`data.characters` as the primary cost driver.
+estimated cost in characters. Count the selected `tts_text`
+before invoking `imagine-kit tts`. The kit reports
+`data.characters` only after synthesis; use that field to check
+the count, not to make the disclosure.
 
 ## 3. Provider API key setup
 
