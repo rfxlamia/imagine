@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Plugin README, with the logo at `img/logo.png` exempted from the generated-media ignore rule.
 - Quick start at `docs/quick-start.md`.
 - This changelog.
+- Structure section in `AGENTS.md`, matching the shipped plugin tree.
 
 ## [0.1.0] - 2026-11-05
 

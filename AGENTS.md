@@ -1,9 +1,37 @@
 # Guide for agents working in this repository
 
-### How to work in here
+## Structure
 
-Store skill packages and dependencies within the `packages` directory.
-Store skills in the `skills` directory.
+The repository root is the Claude Code plugin. `.claude-plugin/plugin.json` names it `imagine` at version 0.1.0.
+
+| Path | Role |
+| --- | --- |
+| `skills/imagine` | Workspace, G0, routing, gates |
+| `skills/imagine-canon` | Script, bible, voice, style |
+| `skills/imagine-plan` | Storyboard, previz, effects plan, G4 |
+| `skills/imagine-generate` | References, audio, batch images |
+| `skills/imagine-edit` | Shot implementation, mix, G6 |
+| `skills/imagine-deliver` | Final render, QC, G7 |
+| `agents/` | `storyboard-artist`, `previz-designer`, `fx-designer`, `continuity-reviewer`, `scene-builder` |
+| `hooks/` | SessionStart sets `HYPERFRAMES_NO_TELEMETRY=1`. PreToolUse denies a `scene-builder` write outside `.imagine/<project>/stage/edit/<id>/` |
+| `packages/imagine-kit/` | CLI. Not on `PATH` |
+| `docs/contracts/` | Shipped command, source, and rule contracts |
+| `docs/quick-start.md` | First-run path |
+| `tests/behavioral`, `tests/slice` | Instruction scenarios and slice evidence |
+| `tools/` | `check-forbidden-names.mjs`, `check-traceability.mjs` |
+| `img/logo.png` | README mark. Other images stay ignored |
+
+Invoke the kit as `node packages/imagine-kit/bin/imagine-kit.mjs`. Phase 1 commands are `new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, and `qc`. A row marked deferred in `docs/contracts/cli-contract.md` is not implemented. Do not invent a flag or a successful result.
+
+Planning agents return a patch. They do not write `STORY.md`. `patch apply` is the only writer of planning keys. `style.md#output` is generated from G0 and is read-only. A gate `--quote` is the user's verbatim answer to that gate.
+
+Film projects are created under `.imagine/` and are gitignored. Do not commit them.
+
+Not shipped, and not production dependencies:
+
+- `packages/hyperframes/` and `packages/pocket-tts/` are research clones. Production calls `npx hyperframes@0.8.223` and `uv run --with 'pocket-tts[audio]==4.0.1'`.
+- `skills/placeholder`, `agents/placeholder.md`, and `packages/placeholder` are templates. Ask before deleting them.
+- `.internal/`, `spikes/`, and `docs/architecture-proposal.md` are planning material. New planning notes go in `.internal/`, not into `docs/contracts/`.
 
 ## Languages
 
