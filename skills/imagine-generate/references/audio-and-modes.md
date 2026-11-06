@@ -61,11 +61,11 @@ Do not treat an unexpected missing music/VO stream as intentional silence.
 
 ## 2. TTS production identity
 
-The production worker uses pinned Pocket TTS code and a known model/configuration revision.
+The production worker uses pinned Pocket TTS code or the pinned ElevenLabs SDK (`elevenlabs==2.73.0` executed via `uv run`).
 
 Run through the supported `imagine-kit tts` adapter. Do not replace its production mechanism with a generic untracked TTS call.
 
-For each production take, identity includes:
+For Pocket TTS production takes, identity includes:
 - Script line ID and approved text revision.
 - Exact `tts_text`.
 - Model configuration and revision.
@@ -74,9 +74,23 @@ For each production take, identity includes:
 - Resulting immutable WAV hash.
 - Explicit take number.
 
-The worker may load the model once for multiple lines, but each line is a distinct WAV and review item.
+For ElevenLabs production takes, identity includes:
+- Script line ID and approved text revision.
+- Exact `tts_text`.
+- Engine (`elevenlabs`).
+- `model_id` (e.g. `eleven_v4`).
+- `voice_id` and optional `voice_name`.
+- `language_code`.
+- `voice_settings` levers (`stability`, `similarity_boost`, etc.).
+- Best-effort seed (`seed_base + take`, 0..4294966295).
+- `provider_tier` (`creator` or other paid plan, `free`, or `unknown`).
+- Pinned SDK environment (`elevenlabs==2.73.0`).
+- Resulting immutable WAV hash.
+- Explicit take number.
 
-Use a stable seed policy, such as `seed_base + take`, and record the observed parameters.
+The worker may load the model or session once for multiple lines, but each line is a distinct WAV and review item.
+
+Use a stable seed policy, such as `seed_base + take`, and record the observed parameters. ElevenLabs seeds are best-effort.
 
 Do not depend on bit-exact regeneration, including across languages, runtime versions, or hardware.
 
@@ -88,9 +102,9 @@ Production files live in `assets/vo/` with immutable `.vN` names.
 
 Each file contains one complete source script line.
 
-Expected format:
+Expected format across all engines:
 - WAV container.
-- 24 kHz sample rate.
+- 24 kHz sample rate (ElevenLabs outputs `pcm_24000` wrapped to WAV).
 - Mono.
 - 16-bit PCM.
 - Duration measured from actual frame count.
@@ -99,7 +113,7 @@ Verify the physical format, decode success, duration, file hash, and identity be
 
 Do not accept a model-complete text message as evidence of a valid waveform.
 
-Use `KPOCKET_TTS_ERROR_WITHOUT_EOS=1` so a missing end-of-sequence condition fails rather than silently producing an apparently complete take.
+For Pocket TTS, use `KPOCKET_TTS_ERROR_WITHOUT_EOS=1` so a missing end-of-sequence condition fails rather than silently producing an apparently complete take. This requirement applies to Pocket TTS only; ElevenLabs streams raw PCM.
 
 ## 4. Audition, scratch, and production separation
 
@@ -219,6 +233,8 @@ For narrated work:
 5. Request a per-line approve/redo decision after listening.
 6. Record the explicit user answer and exact approved version.
 7. Regenerate only rejected or invalidated lines.
+
+Before requesting G5a, read `data.total_duration_s`, `data.duration_range` and `data.missing_lines` from `tts`. When the `ADV-VO-DURATION-RANGE` advice appears, present the total and the G0 range to the user and resolve it (trim or revise the script and its approval, or change G0 with the user's approval) before asking for G5a; never trim audio silently.
 
 There is no Phase 1 generated audio listening webpage.
 

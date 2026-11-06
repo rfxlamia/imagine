@@ -311,7 +311,17 @@ Set `KPOCKET_TTS_ERROR_WITHOUT_EOS=1` for the Pocket TTS worker to fail explicit
 
 When using a voice audio file, require the loaded worker to report `has_voice_cloning = true` before proceeding; fallback non-cloning weights are not acceptable. <!-- rule:HARD-HAS-VOICE-CLONING -->
 
-Allowed pronunciation/delivery levers are lexicon, punctuation, voice, seed, and temperature; do not invent SSML, phonemes, native speed, pitch, or emotion controls. <!-- rule:PROC-PRONUNCIATION-LEVERS -->
+Provider API keys come only from the environment or a mode-600 file outside the project and never reach stdout, stderr, the journal, envelopes or project files. <!-- rule:HARD-SECRET-NEVER-WRITTEN -->
+
+Any ElevenLabs API, network, or worker failure exits with code 3 (BLOCKED), and a missing or badly permissioned key exits 7 (NEEDS_USER); never silently fall back to Pocket TTS or swap engines.
+
+Hosted TTS takes record provider, voice, model, plan tier and licence terms in the manifest and assets/CREDITS.md automatically; free or unverified plans are flagged. <!-- rule:PROC-HOSTED-TTS-LICENCE -->
+
+Before requesting G5a, read `data.total_duration_s`, `data.duration_range` and `data.missing_lines` from `tts`; when the `ADV-VO-DURATION-RANGE` advice appears, present the total and the G0 range to the user and resolve it (trim or revise the script and its approval, or change G0 with the user's approval) before asking for G5a; never trim audio silently. <!-- rule:ADV-VO-DURATION-RANGE -->
+
+Disclose characters sent to ElevenLabs (`data.characters`) as the primary cost driver before generating production takes.
+
+Allowed pronunciation/delivery levers are lexicon, punctuation, voice, seed, and temperature, plus engine-specific `voice_settings` and `model_id` levers for elevenlabs voices only; SSML, audio tags, phonemes, native pitch, or emotion controls remain not allowed. <!-- rule:PROC-PRONUNCIATION-LEVERS -->
 
 Supported fallbacks are Kokoro through pinned HyperFrames TTS (without Indonesian support) or a user-recorded WAV for each script line; disclose the tradeoffs and never silently swap engines. <!-- rule:PROC-TTS-FALLBACK -->
 

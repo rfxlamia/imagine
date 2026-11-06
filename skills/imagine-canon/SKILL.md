@@ -156,10 +156,10 @@ Stage-specific mandatory files:
 | Stage | Additional plugin files | Project files |
 |---|---|---|
 | 2 / G1 ingestion | `R/skills/imagine-canon/references/story-and-style.md`, `R/skills/imagine-canon/references/approvals-and-recovery.md` | `P/script/raw.md`, `U?`, `P/bible.yaml?`, `P/style.md?`, `P/review/REVIEW.md?` |
-| 3 / G2 interview and casting | `R/skills/imagine-canon/references/voices-and-audio.md`, `R/skills/imagine-canon/references/approvals-and-recovery.md` | `U`, `P/script/raw.md`, `P/bible.yaml?`, `P/style.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
+| 3 / G2 interview and casting | `R/skills/imagine-canon/references/voices-and-audio.md`, `R/skills/imagine-canon/references/elevenlabs-voices.md`, `R/skills/imagine-canon/references/approvals-and-recovery.md` | `U`, `P/script/raw.md`, `P/bible.yaml?`, `P/style.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
 | 4 / G3 style | `R/skills/imagine-canon/references/story-and-style.md`, `R/skills/imagine-canon/references/approvals-and-recovery.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md?`, `P/review/REVIEW.md?` |
-| Canon impact/change | All three canon references | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
-| Canon audit/review | All three canon references | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
+| Canon impact/change | All four canon references | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
+| Canon audit/review | All four canon references | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
 | G1/G2/G3 decision recording | Applicable stage references plus approvals reference | Applicable stage sources, `P/project.yaml`, `P/journal.md`, `P/review/REVIEW.md?` |
 
 A trailing `?` means read in full if the file exists; it need not
