@@ -24,7 +24,7 @@ npm install --prefix packages/imagine-kit
 claude --plugin-dir "$PWD"
 ```
 
-In that session, invoke `/imagine`. The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
+In that session, invoke `/imagine`. The shorter first-run path is the [quick start](docs/quick-start.md). The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
 
 One project is one format, both at 30 fps: landscape 1920×1080 or portrait 1080×1920. A second format is a second project. Phase 1 accepts platform `generic` only.
 
