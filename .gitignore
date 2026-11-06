@@ -32,6 +32,8 @@
 *.mkv
 *.gif
 *.png
+# Brand mark referenced by README.md. Other images stay ignored.
+!img/logo.png
 *.jpg
 *.jpeg
 *.webp
