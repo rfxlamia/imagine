@@ -104,7 +104,8 @@ function rasterReport(dir, sctx, derived, errors, advice) {
 
 // HARD-AUDIO-LICENCE: the manifest schema already refuses music or sfx without license, source and credit (the load fails with that rule),
 // so qc only lists what ships in the credits.
-const creditsReport = (sctx) => currentAssets(sctx.manifest).filter((a) => ["music", "sfx"].includes(a.kind))
+export const creditsReport = (sctx) => currentAssets(sctx.manifest)
+  .filter((a) => ["music", "sfx"].includes(a.kind) || (a.kind === "vo" && a.license))
   .map((a) => ({ id: a.id, v: a.v, kind: a.kind, license: a.license, source: a.source, credit: a.credit }));
 
 export default {

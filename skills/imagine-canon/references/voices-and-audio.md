@@ -73,7 +73,10 @@ not support.
 In narrated mode, cast every speaker with audible lines
 before approving the affected G2 entity.
 
-Use English built-in voices as the default.
+Use English built-in voices as the default for English narration and offline work.
+For a non-English G0 language, recommend auditioning an ElevenLabs voice
+(see `elevenlabs-voices.md`) next to the experimental Pocket option;
+the user chooses by listening. <!-- rule:ADV-HOSTED-TTS-NON-ENGLISH -->
 Voice cloning is not the default and must not be inferred
 from the presence of an example WAV.
 
@@ -95,6 +98,10 @@ Treat Indonesian Pocket TTS as EXPERIMENTAL; audition each
 candidate configuration and judge usability separately for
 each clip instead of assuming English-quality output.
 <!-- rule:PROC-ID-EXPERIMENTAL -->
+
+For non-English narration such as Indonesian, recommend
+auditioning an ElevenLabs voice alongside the experimental
+Pocket option (see `elevenlabs-voices.md`).
 
 The experimental community configuration is identified as:
 
@@ -147,7 +154,8 @@ restriction and offer only documented supported alternatives.
 
 ## 4. Voice representation
 
-Use documented voice fields in `bible.yaml`, for example:
+Use documented voice fields in `bible.yaml`. For Pocket TTS,
+for example:
 
 ```yaml
 characters:
@@ -189,6 +197,7 @@ project-relative `file:` path and provenance.
 
 Do not invent unrecognized voice configuration controls.
 Use the parser and adapter contract for supported fields.
+For ElevenLabs voice configuration, see `elevenlabs-voices.md`.
 
 ## 5. Casting workflow
 

@@ -33,6 +33,7 @@ rules:
   - { id: PROC-NO-GATED-LOGIN, source: "D11", text: "Imagine never accepts gated model terms or logs in to HF for the user" }
   - { id: PROC-VOICE-CONSENT, source: "D11", text: "Cloned voice needs the voice owner's written consent recorded in the bible" }
   - { id: PROC-ID-EXPERIMENTAL, source: "D9", text: "Indonesian TTS is EXPERIMENTAL; voice prompts judged per clip at casting" }
+  - { id: PROC-HOSTED-TTS-LICENCE, source: "GH #9", text: "Hosted TTS takes record provider, voice, model, plan tier and licence terms in the manifest and assets/CREDITS.md automatically; free or unverified plans are flagged", cover: both }
   - { id: PROC-REMOTE-LISTEN, source: "section 7.3", text: "No audio page in Phase 1: list WAV paths; on another device send the WAVs with SendUserFile", replan: "audio-page deferred" }
   - { id: PROC-REVISED-PROMPT, source: "section 7.1", text: "Record the image tool's revised prompt beside the compiled prompt", cover: both }
   - { id: PROC-FRAMING-IN-PROMPT, source: "section 7.1", text: "Every batch prompt states framing explicitly", cover: both }
@@ -146,6 +147,7 @@ rules:
   - { id: HARD-HAS-VOICE-CLONING, source: "section 7.3", text: "File voice requires has_voice_cloning = true", cover: both }
   - { id: HARD-REAL-RASTER, source: "section 7.1", text: "Image is a real raster: PNG, not uniform, measured dims; prompt forbids scripting a PNG", cover: both }
   - { id: HARD-TTS-EOS, source: "section 7.3", text: "KPOCKET_TTS_ERROR_WITHOUT_EOS=1", cover: both }
+  - { id: HARD-SECRET-NEVER-WRITTEN, source: "GH #9", text: "Provider API keys come only from the environment or a mode-600 file outside the project and never reach stdout, stderr, the journal, envelopes or project files", cover: both }
   - { id: HARD-STYLE-OUTPUT-READONLY, source: "section 5.2", text: "style.md#output is generated from G0 and read-only", cover: both }
   - { id: HARD-STORY-WRITERS, source: "section 5.3", text: "STORY.md written only by patch apply (planning keys) and imagine-kit (edit keys); HyperFrames editStoryboard never used", cover: both }
   - { id: HARD-STATUS-DERIVED, source: "section 6.1", text: "stale is derived by status from recorded hashes, never hand-edited; needs_review is recorded by the main agent from an impact report", cover: both, replan: "status computes hash-based stale only; needs_review is agent-judged from an impact report" }
@@ -163,6 +165,8 @@ rules:
   - { id: ADV-BANNED, source: "section 3.5", text: "style.md#banned and HyperFrames BANNED defaults unless style allows" }
   - { id: ADV-CHECK-WARNINGS, source: "section 8.2", text: "line_unread/dead_stretch/text_below_floor reported as advice" }
   - { id: ADV-FILM-SILENT, source: "section 4.1", text: "film_silent suppressed with reason when G0 silence intentional" }
+  - { id: ADV-HOSTED-TTS-NON-ENGLISH, source: "GH #9", text: "For non-English narration recommend auditioning an ElevenLabs voice; Pocket TTS stays the default for English and offline work", cover: instructions }
+  - { id: ADV-VO-DURATION-RANGE, source: "GH #9", text: "tts reports total VO duration against the G0 range before G5a", cover: both }
   # Dependency DAG
   - { id: DAG-G0-FORMAT, source: "section 6.2", text: "G0.format → style#output,#typography needs_review → all shots, images, edit, render stale", cover: both, replan: "status computes hash-based stale only; needs_review is agent-judged from an impact report" }
   - { id: DAG-G0-LANGUAGE, source: "section 6.2", text: "G0.language → voices needs_review → all VO stale", cover: both, replan: "status computes hash-based stale only; needs_review is agent-judged from an impact report" }
