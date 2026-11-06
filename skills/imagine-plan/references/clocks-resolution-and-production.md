@@ -288,6 +288,12 @@ Typical roles are:
 
 Each independently transformed raster gets its own budget.
 
+#### Pose-sheet resolution and grid limits
+
+Characters with two or more poses are planned as pose-sheet groups (`sheet: <group>`, 2–4 members sharing identical `refs` and `size`). Grid layout is: n=1 → 1×1, n=2 → 2×1 (2 columns, 1 row), n=3 or 4 → 2×2 (2 columns, 2 rows, with cell 4 left empty when n=3). Requested generation size is `cols × W` by `rows × H`, and cells are cut from the measured output as `floor(W / cols) × floor(H / rows)`.
+
+With measured generator output ceilings around 1254 × 1254 (or 1672 × 941), a 2×2 grid yields cells of roughly 627 px square. A 3×2 grid would reduce cell resolution below typical character `required_px` (590–760 px), driving `q` below 0.75 into the `replan` tier. For this reason, a pose-sheet group is capped at 4 members. A character pose is planned as a single standalone image only when its required resolution exceeds what a sheet cell can provide (about 627 px square from ~1254 px output), with that reason documented in the G4 plan.
+
 For 9:16:
 
 - Recompose scenes around a clear primary subject.
@@ -342,6 +348,7 @@ For every shot, compile:
 - Required character and environment IDs.
 - Canonical-reference dependencies.
 - Required image types and layers.
+- Pose-sheet group (`sheet`) for each character pose, or the reason it is a single image.
 - Prompt content grounded in bible and style.
 - Negative or banned constraints derived from style.
 - Target aspect ratio and required source pixels.
@@ -366,6 +373,8 @@ List:
 - Intended reference use, such as conditioning or cutout composition.
 
 G4 approves the planned reference inventory, not the images that do not yet exist.
+
+The character reference sheet (G5r) is the canonical identity source, and pose sheets are batch production assets conditioned on it.
 
 At G5r, the actual reference images must be generated, continuity-reviewed, and individually approved.
 

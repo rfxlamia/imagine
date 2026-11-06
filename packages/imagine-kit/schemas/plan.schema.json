@@ -18,6 +18,7 @@
           "framing": { "type": "string", "pattern": "\\S" },
           "size": { "type": "string", "pattern": "^[1-9][0-9]*x[1-9][0-9]*$" },
           "refs": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$" } },
+          "sheet": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$" },
           "required_px": {
             "type": "object",
             "required": ["w", "h"],

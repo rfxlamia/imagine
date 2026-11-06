@@ -9,9 +9,11 @@ import { isUniformImage, pngInfo } from "../media.mjs";
 import { resolveProject } from "../project.mjs";
 import { rasterQ, round2, tierOf } from "../raster.mjs";
 import { createContext, resolveRef } from "../sources.mjs";
-import { compilePrompt, generate, revisedPrompt } from "../img/adapter.mjs";
-import { commitAsset, recordBlocked, safePath } from "../img/commit.mjs";
+import { compilePrompt, compileSheetPrompt, generate, revisedPrompt } from "../img/adapter.mjs";
+import { commitAsset, commitAssets, recordBlocked, safePath } from "../img/commit.mjs";
 import { loadPlan } from "../img/plan.mjs";
+import { checkCellAlpha, sheetLayout } from "../img/sheet.mjs";
+import { ensureTool, runTool, HYPERFRAMES, HF_ENV } from "../tools.mjs";
 
 const RETRIES = 2;
 
@@ -145,6 +147,186 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   return done.entry;
 }
 
+async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
+  const n = members.length;
+  const layout = sheetLayout(n);
+  const [mw, mh] = members[0].size.split("x").map(Number);
+  const reqSize = `${layout.cols * mw}x${layout.rows * mh}`;
+
+  const versions = members.map((m) => {
+    const all = sctx.manifest.assets.filter((a) => a.id === m.id);
+    const latest = all.reduce((b, a) => (!b || a.v > b.v ? a : b), null);
+    return (latest?.v ?? 0) + 1;
+  });
+
+  const refEntries = (members[0].refs ?? []).map((r) => currentAsset(sctx.manifest, r));
+  const refPaths = refEntries.map((e) => {
+    const s = safePath(dir, e.path);
+    if (!s) throw new KitError("HARD", `${e.path} is outside the project`, { rule: "HARD-REFS-APPROVED", item: members[0].id });
+    return s;
+  });
+
+  const text = compileSheetPrompt({ members, refs: members[0].refs ?? [], size: reqSize, cols: layout.cols, rows: layout.rows });
+  const stamp = sha256(`${text}\n${refEntries.map((e) => e.sha256).join(",")}\n${members.map((m, i) => `${m.id}.v${versions[i]}`).join(",")}`);
+
+  const safeImgRoot = safePath(dir, "tmp/img");
+  let adopted = null;
+  if (safeImgRoot && existsSync(safeImgRoot)) {
+    const candidates = readdirSync(safeImgRoot, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && e.name.startsWith(`sheet-${group}.`))
+      .map((e) => `tmp/img/${e.name}`);
+    for (const workRel of candidates) {
+      const metaPath = safePath(dir, `${workRel}/meta.json`);
+      const outPath = safePath(dir, `${workRel}/out.png`);
+      if (!metaPath || !outPath || !existsSync(metaPath) || !existsSync(outPath)) continue;
+      let meta;
+      try { meta = JSON.parse(readFileSync(metaPath, "utf8")); } catch { continue; }
+      if (meta.prompt_sha256 !== stamp) continue;
+      if (sha256File(outPath) === meta.png_sha256 && pngInfo(readFileSync(outPath))) {
+        adopted = { workRel, outPath, revised: meta.revised_prompt ?? null };
+        break;
+      }
+    }
+  }
+
+  let workRel;
+  let work;
+  let sheetPng = null;
+  let revised = null;
+
+  if (adopted) {
+    workRel = adopted.workRel;
+    work = safePath(dir, workRel);
+    sheetPng = adopted.outPath;
+    revised = adopted.revised;
+    advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: group, source: "assets", message: `adopted ${adopted.workRel}/out.png left by an interrupted run; nothing was regenerated` });
+  } else {
+    const workBaseRel = `tmp/img/sheet-${group}`;
+    if (!safePath(dir, workBaseRel)) throw new KitError("HARD", `${workBaseRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
+    workRel = `${workBaseRel}.${randomBytes(6).toString("hex")}`;
+    work = safePath(dir, workRel);
+    if (!work) throw new KitError("HARD", `${workRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
+    mkdirSync(work, { recursive: true });
+  }
+
+  let lastWhy = "";
+  let cellCuts = null;
+
+  for (let attempt = 0; attempt <= RETRIES && !cellCuts; attempt += 1) {
+    if (!sheetPng) {
+      const prevOut = safePath(dir, `${workRel}/out.png`);
+      if (prevOut) rmSync(prevOut, { force: true });
+      const prevMeta = safePath(dir, `${workRel}/meta.json`);
+      if (prevMeta) rmSync(prevMeta, { force: true });
+
+      const r = await generate(ctx, { workDir: work, text, refPaths });
+      const out = safePath(dir, `${workRel}/out.png`);
+      if (!out) throw new KitError("HARD", `${workRel}/out.png is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
+      const info = r.ok && existsSync(out) ? pngInfo(readFileSync(out)) : null;
+      if (!r.ok) { lastWhy = `codex exited with an error ${r.stderr}`.trim(); continue; }
+      if (!existsSync(out)) { lastWhy = "codex produced no out.png"; continue; }
+      if (!info) { lastWhy = "out.png is not a real PNG"; continue; }
+      if (await isUniformImage(ctx, out)) { lastWhy = "out.png is a uniform (blank) image"; continue; }
+
+      sheetPng = out;
+      revised = revisedPrompt(ctx, r.stdout);
+      const curMeta = safePath(dir, `${workRel}/meta.json`);
+      if (!curMeta) throw new KitError("HARD", `${workRel}/meta.json is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
+      writeFileSync(curMeta, JSON.stringify({ revised_prompt: revised, prompt_sha256: stamp, png_sha256: sha256File(sheetPng) }));
+    }
+
+    const info = pngInfo(readFileSync(sheetPng));
+    const cw = Math.floor(info.w / layout.cols);
+    const ch = Math.floor(info.h / layout.rows);
+    let cellProblem = null;
+    const cuts = [];
+
+    for (let k = 1; k <= n; k++) {
+      const x = ((k - 1) % layout.cols) * cw;
+      const y = Math.floor((k - 1) / layout.cols) * ch;
+      const cellRel = `${workRel}/cell-${k}.png`;
+      const cellPng = safePath(dir, cellRel);
+      if (!cellPng) throw new KitError("HARD", `${cellRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
+
+      const rCrop = ensureTool(await runTool(ctx, "ffmpeg", ["-v", "error", "-y", "-i", sheetPng, "-vf", `crop=${cw}:${ch}:${x}:${y}`, cellPng]), "ffmpeg", "PROC-POSE-SHEET");
+      if (rCrop.status !== 0 || !existsSync(cellPng)) throw new KitError("HARD_NOT_RUN", `ffmpeg crop failed: ${rCrop.stderr}`, { rule: "PROC-POSE-SHEET" });
+
+      const cutRel = `${workRel}/cut-${k}.png`;
+      const cutPng = safePath(dir, cutRel);
+      if (!cutPng) throw new KitError("HARD", `${cutRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
+
+      const rRb = ensureTool(await runTool(ctx, "npx", ["--yes", HYPERFRAMES, "remove-background", cellPng, "-o", cutPng], { cwd: work, env: HF_ENV, timeoutMs: 900000 }), "npx", "PROC-CUTOUT-FALLBACK");
+      if (rRb.status !== 0 || rRb.timedOut || !existsSync(cutPng)) {
+        const tail = (rRb.stderr || rRb.stdout).slice(-300).trim();
+        throw new KitError("BLOCKED", `hyperframes remove-background failed: ${tail}`, { rule: "PROC-CUTOUT-FALLBACK", item: members[k - 1].id });
+      }
+
+      const rAlpha = ensureTool(await runTool(ctx, "ffmpeg", ["-v", "error", "-i", cutPng, "-vf", "format=rgba,alphaextract", "-f", "rawvideo", "-"]), "ffmpeg", "HARD-SHEET-CELL");
+      if (rAlpha.status !== 0 || rAlpha.stdoutBuf.length < cw * ch) throw new KitError("HARD_NOT_RUN", `ffmpeg alphaextract failed: ${rAlpha.stderr}`, { rule: "HARD-SHEET-CELL" });
+
+      const check = checkCellAlpha(rAlpha.stdoutBuf, cw, ch, { k, id: members[k - 1].id });
+      if (check.problem) {
+        cellProblem = check.problem;
+        break;
+      }
+      cuts.push(cutPng);
+    }
+
+    if (cellProblem) {
+      lastWhy = cellProblem;
+      sheetPng = null;
+      continue;
+    }
+
+    cellCuts = { cw, ch, cuts };
+  }
+
+  if (!cellCuts) {
+    await recordBlocked(ctx, dir, { step: `img:sheet-${group}`, command: `img --batch ${members.map((m) => m.id).join(",")}` });
+    throw new KitError("BLOCKED", `${group}: no usable sheet after ${RETRIES + 1} attempts (${lastWhy})`, { rule: "PROC-IMG-RETRY", item: group });
+  }
+
+  const sheetSha = sha256File(sheetPng);
+  const sha12 = sheetSha.slice(0, 12);
+  const sheetRel = `assets/sheets/${group}.${sha12}.png`;
+  const extraFiles = [{ source: sheetPng, rel: sheetRel }];
+
+  const items = [];
+  for (let k = 1; k <= n; k++) {
+    const member = members[k - 1];
+    const v = versions[k - 1];
+    const rel = `assets/img/${member.id}.v${v}.png`;
+    const q = member.required_px ? rasterQ(cellCuts.cw, cellCuts.ch, member.required_px) : null;
+    const entry = {
+      id: member.id,
+      kind: "img",
+      v,
+      path: rel,
+      status: "pending",
+      ...(member.refs?.length ? { refs: refEntries.map((e) => e.id) } : {}),
+      ...(member.required_px ? { required_px: member.required_px } : {}),
+      prompt: text,
+      sheet: sheetRel,
+      sheet_sha256: sheetSha,
+      cell: k,
+      w: cellCuts.cw,
+      h: cellCuts.ch,
+      ...(q === null ? {} : { q: round2(q), tier: tierOf(q) }),
+      ...(revised ? { revised_prompt: revised } : {}),
+      ...(note ? { note } : {}),
+      sha256: "0".repeat(64),
+    };
+    if (!revised) advice.push({ rule: "PROC-REVISED-PROMPT", item: `${member.id}.v${v}`, source: "codex session log", message: "the revised prompt was not found in the Codex session log; only the compiled prompt is recorded" });
+    if (entry.tier === "replan") advice.push({ rule: "HARD-RASTER-TIER", item: `${member.id}.v${v}`, source: "assets/plan.yaml", message: `q ${entry.q} is below 0.75 (replan tier); regenerate larger or re-plan the shot, export-hf will refuse it` });
+    items.push({ entry, source: cellCuts.cuts[k - 1] });
+  }
+
+  const summaryText = `sheet ${group}: ${items.map((i) => `${i.entry.id}.v${i.entry.v}`).join(" ")} ${cellCuts.cw}x${cellCuts.ch}`;
+  const summary = { command: "img", text: summaryText };
+  const done = await commitAssets(ctx, dir, { items, extraFiles, summary, clearBlocked: `img:sheet-${group}` });
+  return done.entries;
+}
+
 export default {
   locks: false,   // the project lock is held only around each commit (cli-contract "Decisions frozen" WP2)
   options: { ref: { type: "string" }, batch: { type: "string" }, redo: { type: "string" }, note: { type: "string" } },
@@ -171,12 +353,31 @@ export default {
     }
     const byId = new Map(plan.map((a) => [a.id, a]));
     const want = values.ref !== undefined ? "ref" : "img";
-    const planned = wanted.map((id) => {
+    for (const id of wanted) {
       const p = byId.get(id);
       if (!p) throw new UsageError(`"${id}" is not in assets/plan.yaml`);
       if (p.kind !== want) throw new UsageError(`"${id}" is a ${p.kind} asset; use ${p.kind === "ref" ? "--ref" : "--batch"}`);
-      return p;
-    });
+    }
+
+    const planned = [];
+    const seenIds = new Set();
+    for (const id of wanted) {
+      const p = byId.get(id);
+      if (p.sheet && values.redo !== p.id) {
+        const groupMembers = plan.filter((a) => a.sheet === p.sheet);
+        for (const gm of groupMembers) {
+          if (!seenIds.has(gm.id)) {
+            seenIds.add(gm.id);
+            planned.push(gm);
+          }
+        }
+      } else {
+        if (!seenIds.has(p.id)) {
+          seenIds.add(p.id);
+          planned.push(p);
+        }
+      }
+    }
 
     const problems = refsGate(dir, sctx, planned, byId, derived);
     if (problems.length) {
@@ -185,19 +386,54 @@ export default {
 
     const advice = [];
     const out = [];
+    const processedSheets = new Set();
+
     for (const p of planned) {
-      const fresh = createContext(dir);
-      const all = fresh.manifest.assets.filter((a) => a.id === p.id);
-      const latest = all.reduce((b, a) => (!b || a.v > b.v ? a : b), null);
-      const cur = currentAsset(fresh.manifest, p.id);
-      const redo = values.redo === p.id;
-      if (cur && !redo) {
-        advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${p.id}.v${cur.v}`, source: "assets/manifest.yaml", message: `${p.id} v${cur.v} already exists; nothing was regenerated (use --redo ${p.id} --note <why> for a new version)` });
-        out.push(report(cur));
-        continue;
+      if (!p.sheet) {
+        const fresh = createContext(dir);
+        const all = fresh.manifest.assets.filter((a) => a.id === p.id);
+        const latest = all.reduce((b, a) => (!b || a.v > b.v ? a : b), null);
+        const cur = currentAsset(fresh.manifest, p.id);
+        const redo = values.redo === p.id;
+        if (cur && !redo) {
+          advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${p.id}.v${cur.v}`, source: "assets/manifest.yaml", message: `${p.id} v${cur.v} already exists; nothing was regenerated (use --redo ${p.id} --note <why> for a new version)` });
+          out.push(report(cur));
+          continue;
+        }
+        const made = await makeOne(ctx, dir, fresh, p, (latest?.v ?? 0) + 1, redo ? values.note : undefined, advice);
+        if (made) out.push(report(made));
+      } else if (values.redo === p.id) {
+        const fresh = createContext(dir);
+        const madeEntries = await makeSheet(ctx, dir, fresh, [p], p.sheet, { note: values.note, advice });
+        for (const made of madeEntries) {
+          out.push(report(made));
+        }
+      } else {
+        if (processedSheets.has(p.sheet)) continue;
+        processedSheets.add(p.sheet);
+
+        const groupMembers = plan.filter((a) => a.sheet === p.sheet);
+        const fresh = createContext(dir);
+        const toGenerate = [];
+        for (const m of groupMembers) {
+          const cur = currentAsset(fresh.manifest, m.id);
+          if (cur) {
+            advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${m.id}.v${cur.v}`, source: "assets/manifest.yaml", message: `${m.id} v${cur.v} already exists; nothing was regenerated (use --redo ${m.id} --note <why> for a new version)` });
+          } else {
+            toGenerate.push(m);
+          }
+        }
+
+        if (toGenerate.length > 0) {
+          await makeSheet(ctx, dir, fresh, toGenerate, p.sheet, { advice });
+        }
+
+        const freshAfter = createContext(dir);
+        for (const m of groupMembers) {
+          const curAfter = currentAsset(freshAfter.manifest, m.id);
+          if (curAfter) out.push(report(curAfter));
+        }
       }
-      const made = await makeOne(ctx, dir, fresh, p, (latest?.v ?? 0) + 1, redo ? values.note : undefined, advice);
-      if (made) out.push(report(made));
     }
     return { project: rel, advice, data: { assets: out } };
   },

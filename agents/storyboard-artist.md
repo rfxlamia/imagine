@@ -221,6 +221,7 @@ Apply the following only when compatible with `style.md` and HARD requirements.
 - Prefer a hero subject occupying at least 40% of the frame and communicate one primary idea per shot. <!-- rule:ADV-HERO-40 -->
 - Introduce a meaningful new visual element, action, reveal, or change approximately every 2–4 seconds. <!-- rule:ADV-NEW-EVERY -->
 - Prefer reusable background, midground, character, and foreground plates for parallax; recompose 9:16 rather than squeezing a horizontal design. <!-- rule:ADV-LAYERED-PLATES -->
+- Request each distinct character pose, expression or motion phase as its own asset id (for example `rooster-crow`, `rooster-startled`) so the main agent can group them into pose sheets.
 - For 9:16, prefer 1–2 second shots, titles scaled approximately 1.35 times, and no more than roughly five words per claim line. <!-- rule:ADV-VERTICAL -->
 - When no approved style specifies a treatment, prefer stylised or illustrated visuals over photorealistic defaults. <!-- rule:ADV-STYLISED-FIRST -->
 

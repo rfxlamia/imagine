@@ -14,6 +14,17 @@ export const PLAN = {
   ],
 };
 export const FAKE_CODEX = fileURLToPath(new URL("../fakes/codex.mjs", import.meta.url));
+export const FAKE_NPX = fileURLToPath(new URL("../fakes/npx.mjs", import.meta.url));
+
+export const ROOSTER_PLAN = {
+  assets: [
+    { id: "rooster-ref", kind: "ref", prompt: "A proud rooster, colorful feathers", framing: "full body", size: "600x600" },
+    { id: "rooster-stand", kind: "img", sheet: "rooster", prompt: "Rooster standing proud", framing: "full body", size: "600x600", refs: ["rooster-ref"], required_px: { w: 500, h: 500 } },
+    { id: "rooster-crow", kind: "img", sheet: "rooster", prompt: "Rooster crowing at dawn", framing: "full body", size: "600x600", refs: ["rooster-ref"], required_px: { w: 500, h: 500 } },
+    { id: "rooster-sleep", kind: "img", sheet: "rooster", prompt: "Rooster sleeping tucked in", framing: "full body", size: "600x600", refs: ["rooster-ref"], required_px: { w: 500, h: 500 } },
+    { id: "rooster-run", kind: "img", sheet: "rooster", prompt: "Rooster running flapping wings", framing: "full body", size: "600x600", refs: ["rooster-ref"], required_px: { w: 500, h: 500 } },
+  ],
+};
 
 // A narrated project with plan.yaml written before G4 (it is hashed into g4) and G4 approved.
 export async function imgProject(plan = PLAN) {
@@ -28,4 +39,23 @@ export async function imgProject(plan = PLAN) {
   const run = (env, ...args) => cliWith(p.cwd, ctxFor(env), ...args);
   const calls = () => (existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
   return { ...p, home, run, calls, ctxFor };
+}
+
+// Built like imgProject but with BOTH fakes wired (codex and npx).
+export async function sheetProject(plan = ROOSTER_PLAN) {
+  const p = await makeProject();
+  seedCanon(p.dir);
+  put(p.dir, "assets/plan.yaml", YAML.stringify(plan));
+  await approveThrough(p.cwd, "G4");
+  const home = mkdtempSync(join(tmpdir(), "imagine-sheet-home-"));
+  const log = join(home, "codex-calls.jsonl");
+  const npxLog = join(home, "npx-calls.jsonl");
+  const ctxFor = (env = {}) => ({
+    tools: { codex: [process.execPath, FAKE_CODEX], npx: [process.execPath, FAKE_NPX] },
+    env: { ...process.env, CODEX_HOME: home, FAKE_CODEX_LOG: log, FAKE_NPX_LOG: npxLog, ...env },
+  });
+  const run = (env, ...args) => cliWith(p.cwd, ctxFor(env), ...args);
+  const calls = () => (existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
+  const npxCalls = () => (existsSync(npxLog) ? readFileSync(npxLog, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
+  return { ...p, home, run, calls, npxCalls, ctxFor, log, npxLog };
 }

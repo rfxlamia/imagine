@@ -32,3 +32,26 @@ export function encodePng(w, h, pixel = (x, y) => ((x * 7 + y * 13) ^ (x >> 3)) 
   ihdr[8] = 8;
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw, { level: 1 })), chunk("IEND", Buffer.alloc(0))]);
 }
+
+// 8-bit RGBA PNG (colour type 6). `pixel(x, y)` returns [r, g, b, a].
+export function encodeRgbaPng(w, h, pixel) {
+  const rowBytes = 1 + w * 4;
+  const raw = Buffer.alloc(rowBytes * h);
+  for (let y = 0; y < h; y++) {
+    const row = y * rowBytes;
+    for (let x = 0; x < w; x++) {
+      const idx = row + 1 + x * 4;
+      const [r, g, b, a] = pixel(x, y);
+      raw[idx] = r;
+      raw[idx + 1] = g;
+      raw[idx + 2] = b;
+      raw[idx + 3] = a;
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw, { level: 1 })), chunk("IEND", Buffer.alloc(0))]);
+}

@@ -97,11 +97,16 @@ The prompt must explain the intended reference contribution, for example identit
 
 Explicitly restate framing because reference images can bias camera composition and pose.
 
-**Cutout compositing**
+**Cutout compositing and pose sheets**
 
-Generate reusable canonical poses or plates. Remove backgrounds with the pinned HyperFrames background-removal operation where supported, then reuse the approved layers across shots.
+Pose sheets are the default mechanism for characters with two or more poses. The kit manages the full pose-sheet pipeline:
 
-Do not declare native-alpha success without measuring actual alpha pixels.
+1. **Layout**: A group of 2–4 members sharing identical `refs` and `size` is laid out in a grid (`sheetLayout(n)`: n=1 → 1×1, n=2 → 2×1, n=3 or 4 → 2×2, with cell 4 empty when n=3). Requested image size is `cols × W` by `rows × H`.
+2. **Cutting**: Cells are cut from the measured generator output using ffmpeg crop (`cw = floor(W / cols)`, `ch = floor(H / rows)`).
+3. **Background removal**: Each cell runs `npx --yes hyperframes@0.8.223 remove-background` with `HYPERFRAMES_NO_TELEMETRY=1`. The resulting cutout assets are transparent RGBA PNGs; never run remove-background on them again.
+4. **Alpha checks**: Raw grayscale alpha bytes are inspected: fill below 1% fails as empty, and more than 2% opaque pixels in the 2-px border band fails as touching the edge (`HARD-SHEET-CELL`). Any failing cell fails the entire sheet attempt and counts toward the 3-attempt `PROC-IMG-RETRY` limit. A background-removal tool failure blocks immediately under `PROC-CUTOUT-FALLBACK`.
+5. **Files & manifest**: The raw provenance image is preserved at `assets/sheets/<group>.<sha12>.png`. Each pose is committed as `assets/img/<id>.v<N>.png` with manifest fields `sheet`, `sheet_sha256`, `cell`, and cell-measured `w`, `h`, `q`, `tier`. All poses in a sheet are committed in one locked write.
+6. **Redo**: Running `img --batch <id> --redo <id> --note <why>` regenerates only that pose as a 1×1 sheet, leaving approved sibling poses untouched (`GATE-PER-ITEM`).
 
 Both strategies require approved current canonical refs and valid hashes.
 
@@ -221,7 +226,7 @@ Do not invent one to rescue a failing raster.
 
 ## 7. G5b and post-approval measurements
 
-Run batch continuity review before presenting a contact sheet.
+Run batch continuity review before presenting a contact sheet. Continuity review compares every generated character pose against its approved character reference (G5r). Each pose is its own G5b item, reviewed and approved individually (with the provenance sheet image presented for visual context).
 
 Each sheet must allow identification of every image and version. Include:
 - Shot/asset ID and approved reference IDs.
