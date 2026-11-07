@@ -94,6 +94,21 @@ export function generationInfo(ctx, stdout, outPath) {
   return NONE;
 }
 
+export function lastRevisedPrompt(ctx, stdout) {
+  const id = stdout.match(SESSION_ID)?.[1];
+  const file = id ? findRollout(sessionRoot(ctx), id) : null;
+  if (!file) return null;
+  let found = null;
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    if (!line.includes("image_gen.generation")) continue;
+    try {
+      const item = JSON.parse(line)?.payload?.item;
+      if (item?.kind === "image_gen.generation" && typeof item.revisedPrompt === "string") found = item.revisedPrompt;
+    } catch { /* not a JSON line */ }
+  }
+  return found;
+}
+
 export const revisedPrompt = (ctx, stdout, outPath) => generationInfo(ctx, stdout, outPath).revisedPrompt;
 export const generationFlags = (ctx, stdout, outPath) => ({ transparentBackground: generationInfo(ctx, stdout, outPath).transparentBackground });
 
