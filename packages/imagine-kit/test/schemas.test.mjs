@@ -109,3 +109,17 @@ test("brief-manifest: stage maps to imagine/project/hyperframes lists", () => {
   assert.equal(v({ "audit-previz": { project: ["bible.yaml", "style.md"], imagine: ["plan/audit-checklist.md"] } }).valid, true);
   assert.equal(v({ "audit-previz": { imagine: ["plan/audit-checklist.md"] } }).valid, false);
 });
+
+test("manifest: cutout provenance fields are optional and closed-list validated", async () => {
+  const validate = loadValidator("manifest");   // loadValidator is already imported at the top of this file
+  const entry = { id: "pose", kind: "img", v: 1, path: "assets/img/pose.v1.png", sha256: "0".repeat(64), status: "pending" };
+  assert.equal(validate({ assets: [entry] }).valid, true);
+  const full = { ...entry, cutout_method: "native", transparent_requested: true, transparent_flag: null, alpha_metrics: { transparent: 0.8 },
+    integrity_flags: ["hyperframes_fallback", "foreground_loss", "edge_near", "fragmented", "ghosting"], review_composite: "assets/composites/pose.v1.png", codex_version: "codex-cli 0.166.0" };
+  assert.equal(validate({ assets: [full] }).valid, true);
+  assert.equal(validate({ assets: [{ ...entry, transparent_flag: false }] }).valid, true);
+  assert.equal(validate({ assets: [{ ...entry, cutout_method: "magic" }] }).valid, false);
+  assert.equal(validate({ assets: [{ ...entry, integrity_flags: ["mystery"] }] }).valid, false);
+  assert.equal(validate({ assets: [{ ...entry, review_composite: "../escape.png" }] }).valid, false);
+});
+

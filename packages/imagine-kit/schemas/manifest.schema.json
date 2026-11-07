@@ -32,7 +32,14 @@
       "listen_status": { "enum": ["pending", "ok", "redo"] }, "note": { "type": "string" },
       "engine": { "enum": ["pocket-tts", "elevenlabs"] },
       "model_id": { "type": "string" }, "voice_id": { "type": "string" },
-      "language_code": { "type": "string" }, "provider_tier": { "type": "string" }
+      "language_code": { "type": "string" }, "provider_tier": { "type": "string" },
+      "cutout_method": { "enum": ["native", "hyperframes-fallback"] },
+      "transparent_requested": { "type": "boolean" },
+      "transparent_flag": { "type": ["boolean", "null"] },
+      "alpha_metrics": { "type": "object" },
+      "integrity_flags": { "type": "array", "items": { "enum": ["hyperframes_fallback", "foreground_loss", "edge_near", "fragmented", "ghosting"] } },
+      "review_composite": { "type": "string", "pattern": "^assets/(?!.*\\.\\.)[A-Za-z0-9_./-]+\\.[A-Za-z0-9]+$" },
+      "codex_version": { "type": "string" }
     },
     "if": { "properties": { "kind": { "enum": ["music", "sfx"] } } },
     "then": {
