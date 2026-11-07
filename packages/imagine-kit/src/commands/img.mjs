@@ -125,7 +125,7 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
       else if (!existsSync(out)) lastWhy = "codex produced no out.png";
       else if (!info) lastWhy = "out.png is not a real PNG";
       else if (await isUniformImage(ctx, out)) lastWhy = "out.png is a uniform (blank) image";
-      else { png = out; revised = revisedPrompt(ctx, r.stdout); }
+      else { png = out; revised = revisedPrompt(ctx, r.stdout, out); }
     }
     if (!png) {
       await recordBlocked(ctx, dir, { step: `img:${p.id}.v${v}`, command: `img --batch ${p.id}` });
@@ -229,7 +229,7 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
       if (await isUniformImage(ctx, out)) { lastWhy = "out.png is a uniform (blank) image"; continue; }
 
       sheetPng = out;
-      revised = revisedPrompt(ctx, r.stdout);
+      revised = revisedPrompt(ctx, r.stdout, sheetPng);
       const curMeta = safePath(dir, `${workRel}/meta.json`);
       if (!curMeta) throw new KitError("HARD", `${workRel}/meta.json is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
       writeFileSync(curMeta, JSON.stringify({ revised_prompt: revised, prompt_sha256: stamp, png_sha256: sha256File(sheetPng) }));
