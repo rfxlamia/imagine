@@ -66,9 +66,9 @@ const NONE = { revisedPrompt: null, transparentBackground: null };
 
 // Binds a session-log item to the image being processed: the item's saved file must live under
 // <CODEX_HOME>/generated_images/ (realpath) and hash equal to outPath. No match means nulls, never "the last item".
-export function generationInfo(ctx, stdout, outPath) {
+export function generationInfo(ctx, trace, outPath) {
   if (!outPath) return NONE;
-  const id = stdout.match(SESSION_ID)?.[1];
+  const id = trace.match(SESSION_ID)?.[1];
   const file = id ? findRollout(sessionRoot(ctx), id) : null;
   if (!file) return NONE;
   let root;
@@ -94,8 +94,8 @@ export function generationInfo(ctx, stdout, outPath) {
   return NONE;
 }
 
-export function lastRevisedPrompt(ctx, stdout) {
-  const id = stdout.match(SESSION_ID)?.[1];
+export function lastRevisedPrompt(ctx, trace) {
+  const id = trace.match(SESSION_ID)?.[1];
   const file = id ? findRollout(sessionRoot(ctx), id) : null;
   if (!file) return null;
   let found = null;
@@ -109,8 +109,8 @@ export function lastRevisedPrompt(ctx, stdout) {
   return found;
 }
 
-export const revisedPrompt = (ctx, stdout, outPath) => generationInfo(ctx, stdout, outPath).revisedPrompt;
-export const generationFlags = (ctx, stdout, outPath) => ({ transparentBackground: generationInfo(ctx, stdout, outPath).transparentBackground });
+export const revisedPrompt = (ctx, trace, outPath) => generationInfo(ctx, trace, outPath).revisedPrompt;
+export const generationFlags = (ctx, trace, outPath) => ({ transparentBackground: generationInfo(ctx, trace, outPath).transparentBackground });
 
 export async function codexVersion(ctx) {
   const r = await runTool(ctx, "codex", ["--version"], { timeoutMs: 30000 });
@@ -120,5 +120,5 @@ export async function codexVersion(ctx) {
 export async function generate(ctx, { workDir, text, refPaths }) {
   const args = ["exec", "--skip-git-repo-check", "-s", "workspace-write", "-C", workDir, ...refPaths.map((p) => `--image=${p}`), text];
   const r = ensureTool(await runTool(ctx, "codex", args, { cwd: workDir, timeoutMs: 600000 }), "codex", "HARD-REAL-RASTER");
-  return { ok: r.status === 0 && !r.timedOut, stdout: r.stdout, stderr: r.stderr.slice(-400) };
+  return { ok: r.status === 0 && !r.timedOut, stdout: r.stdout, stderr: r.stderr.slice(-400), trace: r.stdout + "\n" + r.stderr };
 }
