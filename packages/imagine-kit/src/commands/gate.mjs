@@ -14,9 +14,18 @@ import { inputsFrom, validateStory } from "../story/validate.mjs";
 const USAGE = 'usage: gate <G0|G1|G2|G3|G4|G5r|G5a|G5b|G6|G7> approve|reject [--scope <id,…>] --quote "<user words>" [--note <text>]';
 
 // Approving G2 or G4 is refused while the sources it freezes are invalid (fail closed; a rejection is always recordable).
-function approvalChecks(gate, dir, sctx) {
+function approvalChecks(gate, dir, sctx, scope) {
   if (gate === "G2") {
     return badBibleIds(sctx.bible).map((id) => err("HARD-ENTITIES-EXIST", "HARD", `bible:${id}`, `bible id "${id.slice(id.indexOf(".") + 1)}" must match [A-Za-z0-9][A-Za-z0-9_-]* (no dots)`));
+  }
+  if (gate === "G5b") {
+    if (scope !== undefined) return []; // naming a flagged item in --scope is the acknowledgement; unnamed items stay untouched
+    const latest = new Map();
+    for (const a of sctx.manifest.assets) if (a.kind === "img" && (!latest.has(a.id) || a.v > latest.get(a.id).v)) latest.set(a.id, a);
+    return [...latest.values()]
+      .filter((a) => a.status === "pending" && a.integrity_flags?.length)
+      .map((a) => err("HARD-GATES-RECORDED", "HARD", `asset:${a.id}.v${a.v}`,
+        `${a.id}.v${a.v} has review flags (${a.integrity_flags.join(", ")}); open ${a.review_composite ?? "its cutout"}, then approve with --scope ${a.id}.v${a.v}`));
   }
   if (gate !== "G4") return [];
   const integrity = checkStoryIntegrity(dir);
@@ -45,7 +54,7 @@ export default {
         errors: blockers.map((g) => err("HARD-GATES-RECORDED", "HARD", g, `gate ${g} must be approved before ${gate} (state: ${gates[g].state})`)) };
     }
     if (decision === "approve") {
-      const refused = approvalChecks(gate, dir, sctx);
+      const refused = approvalChecks(gate, dir, sctx, values.scope);
       if (refused.length) return { project: rel, data: { gate, decision }, errors: refused };
     }
     const allowed = gateItems(gate, sctx);
