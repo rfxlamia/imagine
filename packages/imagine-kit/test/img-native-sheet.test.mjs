@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import YAML from "yaml";
 import { cli, cliWith, getManifest, put } from "./helpers/fixture.mjs";
-import { sheetProject, ROOSTER_PLAN } from "./helpers/img.mjs";
+import { sheetProject, ROOSTER_PLAN, PLAN } from "./helpers/img.mjs";
 import { hasFfmpeg } from "./helpers/media.mjs";
 
 const t = hasFfmpeg ? test : test.skip;
@@ -190,4 +190,53 @@ t("a sheet made under another background intent is never adopted", async () => {
   const res = await p.run(env("ok"), "img", "--batch", "rooster-stand");
   assert.equal(res.exit, 0, JSON.stringify(res.env.errors));
   assert.equal(p.calls().length, before + 1, "regenerated under the new intent");
+});
+
+
+// sheetProject wires both the codex and npx fakes, so it serves single-image plans too.
+const singlePlan = (bg) => ({ assets: PLAN.assets.map((a) => (a.id === "bg" || a.id === "hero" ? { ...a, ...(bg ? { background: bg } : {}) } : a)) });
+const refsDone = async (p) => {
+  for (const r of ["mara-ref", "lamp-ref"]) assert.equal((await p.run({}, "img", "--ref", r)).exit, 0);
+  assert.equal((await cli(p.cwd, "gate", "G5r", "approve", "--quote", "ok")).exit, 0);
+};
+
+t("single transparent image: native skips the remover and keeps alpha", async () => {
+  const p = await sheetProject(singlePlan("transparent"));
+  await refsDone(p);
+  const res = await p.run({ FAKE_CODEX_MODES: "native", FAKE_CODEX_SIZE: "1536x1024" }, "img", "--batch", "hero");
+  assert.equal(res.exit, 0, JSON.stringify(res.env.errors));
+  assert.equal(removerCalls(p), 0);
+  const e = getManifest(p.dir).assets.find((a) => a.id === "hero");
+  assert.equal(e.cutout_method, "native");
+  assert.ok(alphaOf(join(p.dir, e.path)).includes(0));
+});
+
+t("single opaque-intent and absent-intent images never reach the classifier or remover", async () => {
+  const p = await sheetProject(singlePlan(null));
+  await refsDone(p);
+  const res = await p.run({ FAKE_CODEX_MODES: "ok" }, "img", "--batch", "bg");
+  assert.equal(res.exit, 0, JSON.stringify(res.env.errors));
+  assert.equal(removerCalls(p), 0);
+  const e = getManifest(p.dir).assets.find((a) => a.id === "bg");
+  assert.equal(e.cutout_method, undefined);
+  assert.equal(e.transparent_requested, undefined);
+});
+
+t("single transparent image: opaque result is cut once and flagged", async () => {
+  const p = await sheetProject(singlePlan("transparent"));
+  await refsDone(p);
+  const res = await p.run({ FAKE_CODEX_MODES: "ok", FAKE_CODEX_SIZE: "1536x1024" }, "img", "--batch", "hero");
+  assert.equal(res.exit, 0, JSON.stringify(res.env.errors));
+  assert.equal(removerCalls(p), 1);
+  const e = getManifest(p.dir).assets.find((a) => a.id === "hero");
+  assert.equal(e.cutout_method, "hyperframes-fallback");
+  assert.ok(e.integrity_flags.includes("hyperframes_fallback"));
+});
+
+t("single transparent image: suspect result spends retries then blocks", async () => {
+  const p = await sheetProject(singlePlan("transparent"));
+  await refsDone(p);
+  const res = await p.run({ FAKE_CODEX_MODES: "native-edge", FAKE_CODEX_SIZE: "1536x1024" }, "img", "--batch", "hero");
+  assert.notEqual(res.exit, 0);
+  assert.match(JSON.stringify(res.env.errors), /PROC-IMG-RETRY/);
 });

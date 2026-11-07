@@ -9,7 +9,7 @@ import { isUniformImage, pngInfo } from "../media.mjs";
 import { resolveProject } from "../project.mjs";
 import { rasterQ, round2, tierOf } from "../raster.mjs";
 import { createContext, resolveRef } from "../sources.mjs";
-import { compilePrompt, compileSheetPrompt, codexVersion, generate, generationInfo, revisedPrompt } from "../img/adapter.mjs";
+import { compilePrompt, compileSheetPrompt, codexVersion, generate, generationInfo } from "../img/adapter.mjs";
 import { commitAsset, commitAssets, recordBlocked, safePath } from "../img/commit.mjs";
 import { loadPlan, resolveBackground } from "../img/plan.mjs";
 import { classifyAlpha, computeAlphaMetrics } from "../img/alpha.mjs";
@@ -32,7 +32,7 @@ function adoptable(dir, workRels, finalPath, stamp) {
     try { meta = JSON.parse(readFileSync(metaPath, "utf8")); } catch { continue; }
     if (meta.prompt_sha256 !== stamp) continue;
     for (const file of [finalPath, outputPath]) {
-      if (existsSync(file) && sha256File(file) === meta.png_sha256 && pngInfo(readFileSync(file))) return { file, revised: meta.revised_prompt ?? null, work: workRel };
+      if (existsSync(file) && sha256File(file) === meta.png_sha256 && pngInfo(readFileSync(file))) return { file, revised: meta.revised_prompt ?? null, work: workRel, flag: meta.transparent_flag ?? null, version: meta.codex_version ?? null };
     }
   }
   return null;
@@ -59,7 +59,9 @@ function refsGate(dir, sctx, planned, byId, derived) {
 
 async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   const kind = p.kind;
-  const rel = `assets/${DIR_OF[kind]}/${p.id}.v${v}.png`;
+  const intent = resolveBackground(p);
+  const transparent = intent === "transparent";
+  const rel = `assets/${DIR_OF[kind]}/${p.id}.v${v}.png`;   // verbatim
   const finalPath = safePath(dir, rel);
   if (!finalPath) throw new KitError("HARD", `${rel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
 
@@ -83,13 +85,13 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
     if (!s) throw new KitError("HARD", `${e.path} is outside the project`, { rule: "HARD-REFS-APPROVED", item: p.id });
     return s;
   });
-  const text = compilePrompt({ prompt: p.prompt, framing: p.framing, size: p.size, refs: p.refs ?? [] });
+  const text = compilePrompt({ prompt: p.prompt, framing: p.framing, size: p.size, refs: p.refs ?? [], background: intent });
   const base = { id: p.id, kind, v, path: rel, status: "pending", ...(p.refs?.length ? { refs: refEntries.map((e) => e.id) } : {}),
     ...(p.required_px ? { required_px: p.required_px } : {}), prompt: text, ...(note ? { note } : {}) };
 
   // Crash recovery: a finished file that never reached the manifest is adopted, not regenerated, but only when meta.json proves
   // it was made from this exact prompt and these exact ref files and the file is still the bytes that were checked.
-  const stamp = sha256(`${text}\n${refEntries.map((e) => e.sha256).join(",")}`);
+  const stamp = sha256(`${text}\n${refEntries.map((e) => e.sha256).join(",")}${transparent ? "\nbackground:transparent" : ""}`);
   const adopted = finalPath;
   const safeImgRoot = safePath(dir, "tmp/img");
   const priorWorkRels = [];
@@ -103,6 +105,23 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   const found = adoptable(dir, priorWorkRels, adopted, stamp);
   let png = found?.file ?? null;
   let revised = found?.revised ?? null;
+  let genFlag = found?.flag ?? null;      // generation facts come from meta.json, never from the session log
+  let genVersion = found?.version ?? null;
+  let decided = null;                     // transparent only: { path, method, metrics, flags, composite }
+  const suspectLog = [];
+  if (png && transparent) {
+    // Verdicts are never cached: an adopted image is classified again from its pixels.
+    const tempRel = found.work ?? workRel;
+    const tempDir = safePath(dir, tempRel);
+    if (!tempDir) throw new KitError("HARD", `${tempRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
+    mkdirSync(tempDir, { recursive: true });
+    const adoptedInfo = pngInfo(readFileSync(png));
+    const again = await decideTransparent(ctx, dir, { work: tempDir, workRel: tempRel, srcPng: png, label: p.id, tag: "one", cw: adoptedInfo.w, ch: adoptedInfo.h });
+    if (again.problem) {
+      advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${p.id}.v${v}`, source: "assets", message: `the interrupted run's image is now classified suspect (${again.problem.reason}); regenerating` });
+      png = null;
+    } else decided = again;
+  }
   if (png) {
     advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: `${p.id}.v${v}`, source: "assets", message: `adopted ${png === adopted ? rel : `${found.work}/out.png`} left by an interrupted run; nothing was regenerated` });
   } else {
@@ -127,26 +146,52 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
       if (!r.ok) lastWhy = `codex exited with an error ${r.stderr}`.trim();
       else if (!existsSync(out)) lastWhy = "codex produced no out.png";
       else if (!info) lastWhy = "out.png is not a real PNG";
-      else if (await isUniformImage(ctx, out)) lastWhy = "out.png is a uniform (blank) image";
-      else { png = out; revised = revisedPrompt(ctx, r.stdout, out); }
+      else if (await (transparent ? isBlankImage(ctx, out) : isUniformImage(ctx, out))) lastWhy = "out.png is a uniform (blank) image";
+      else if (transparent) {
+        const mid = await decideTransparent(ctx, dir, { work: curWork, workRel, srcPng: out, label: p.id, tag: "one", cw: info.w, ch: info.h });
+        if (mid.problem) {
+          suspectLog.push(`attempt ${attempt + 1}: ${p.id} ${mid.problem.reason}`);
+          lastWhy = `${p.id} is suspect (${mid.problem.reason})`;
+        } else {
+          png = out;
+          decided = mid;
+          const gi = generationInfo(ctx, r.stdout, out);
+          revised = gi.revisedPrompt;
+          genFlag = gi.transparentBackground;
+          genVersion = await codexVersion(ctx);
+        }
+      } else { png = out; revised = generationInfo(ctx, r.stdout, out).revisedPrompt; }
     }
     if (!png) {
       await recordBlocked(ctx, dir, { step: `img:${p.id}.v${v}`, command: `img --batch ${p.id}` });
-      throw new KitError("BLOCKED", `${p.id}: no usable image after ${RETRIES + 1} attempts (${lastWhy})`, { rule: "PROC-IMG-RETRY", item: p.id });
+      throw new KitError("BLOCKED", `${p.id}: no usable image after ${RETRIES + 1} attempts (${lastWhy})${suspectLog.length ? `; ${suspectLog.join("; ")}` : ""}`, { rule: "PROC-IMG-RETRY", item: p.id });
     }
     const curMeta = safePath(dir, metaRel);
     if (!curMeta) throw new KitError("HARD", `${metaRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
-    writeFileSync(curMeta, JSON.stringify({ revised_prompt: revised, prompt_sha256: stamp, png_sha256: sha256File(png) }));
+    writeFileSync(curMeta, JSON.stringify({ revised_prompt: revised, prompt_sha256: stamp, png_sha256: sha256File(png),
+      ...(transparent ? { transparent_requested: true, transparent_flag: genFlag, codex_version: genVersion, suspect_log: suspectLog } : {}) }));
   }
   const curFinal = safePath(dir, rel);
   if (!curFinal) throw new KitError("HARD", `${rel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
-  const info = pngInfo(readFileSync(png));
+  const sourcePng = transparent ? decided.path : png;   // the cutout (or the native image) is what gets committed
+  const info = pngInfo(readFileSync(sourcePng));
   const q = p.required_px ? rasterQ(info.w, info.h, p.required_px) : null;
-  const entry = { ...base, w: info.w, h: info.h, ...(q === null ? {} : { q: round2(q), tier: tierOf(q) }), ...(revised ? { revised_prompt: revised } : {}), sha256: "0".repeat(64) };
+  const reviewRel = `assets/composites/${p.id}.v${v}.png`;
+  const entry = { ...base, w: info.w, h: info.h, ...(q === null ? {} : { q: round2(q), tier: tierOf(q) }), ...(revised ? { revised_prompt: revised } : {}),
+    ...(transparent ? { cutout_method: decided.method, transparent_requested: true, transparent_flag: genFlag, alpha_metrics: decided.metrics,
+      integrity_flags: decided.flags, review_composite: reviewRel, ...(genVersion ? { codex_version: genVersion } : {}) } : {}),
+    sha256: "0".repeat(64) };
   if (!revised) advice.push({ rule: "PROC-REVISED-PROMPT", item: `${p.id}.v${v}`, source: "codex session log", message: "the revised prompt was not found in the Codex session log; only the compiled prompt is recorded" });
   if (entry.tier === "replan") advice.push({ rule: "HARD-RASTER-TIER", item: `${p.id}.v${v}`, source: "assets/plan.yaml", message: `q ${entry.q} is below 0.75 (replan tier); regenerate larger or re-plan the shot, export-hf will refuse it` });
-  const done = await commitAsset(ctx, dir, { entry, source: png === adopted ? null : png, clearBlocked: `img:${p.id}.v${v}`,
-    summary: { command: "img", text: `${p.id}.v${v} ${info.w}x${info.h}${q === null ? "" : ` q=${round2(q)} ${tierOf(q)}`}` } });
+  const summary = { command: "img", text: `${p.id}.v${v} ${info.w}x${info.h}${q === null ? "" : ` q=${round2(q)} ${tierOf(q)}`}` };
+  if (transparent) {
+    if (decided.method === "hyperframes-fallback") advice.push({ rule: "PROC-CUTOUT-FALLBACK", item: `${p.id}.v${v}`, source: "hyperframes remove-background", message: `native alpha was not produced; HyperFrames cut this image, review ${reviewRel} at G5b` });
+    for (const f of decided.flags.filter((x) => x !== "hyperframes_fallback")) advice.push({ rule: "HARD-SHEET-CELL", item: `${p.id}.v${v}`, source: "alpha diagnostics", message: `integrity flag ${f}: review ${reviewRel} at G5b` });
+    const done = await commitAssets(ctx, dir, { items: [{ entry, source: sourcePng === adopted ? null : sourcePng }], extraFiles: [{ source: decided.composite, rel: reviewRel }],
+      summary, clearBlocked: `img:${p.id}.v${v}` });
+    return done.entries[0];
+  }
+  const done = await commitAsset(ctx, dir, { entry, source: png === adopted ? null : png, clearBlocked: `img:${p.id}.v${v}`, summary });   // verbatim semantics
   return done.entry;
 }
 
