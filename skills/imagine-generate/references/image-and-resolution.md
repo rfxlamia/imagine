@@ -58,15 +58,15 @@ Generator-supported functionality:
 - Size hint.
 - Reference-image conditioning when the adapter supports it.
 - Raster PNG output.
+- Native transparent foreground when requested by prompt for explicit `background: transparent` assets, verified by pixels (agent-mediated: tool setting cannot be forced; `transparent_flag` is provenance only and never gates).
 
-Not established:
+Unsupported functions:
 - Image editing or inpainting.
 - Arbitrary masks.
-- Reliable native transparency/alpha.
 - Guaranteed requested dimensions.
 - Native controllable upscaling.
 
-Do not rely on unsupported functions as a fallback.
+Do not rely on unsupported functions as a fallback. Do not assume edit or mask support.
 
 ## 4. Canonical reference strategy
 
@@ -99,14 +99,23 @@ Explicitly restate framing because reference images can bias camera composition 
 
 **Cutout compositing and pose sheets**
 
-Pose sheets are the default mechanism for characters with two or more poses. The kit manages the full pose-sheet pipeline:
+Pose sheets are the default mechanism for characters with two or more poses. Assets are planned in `assets/plan.yaml` with optional `background: transparent | opaque` (absent sheet members resolve to `legacy`, which runs HyperFrames background removal per cell; other assets resolve to `opaque`; sheet members with explicit `opaque` or mixed intents are rejected under `PROC-POSE-SHEET`; editing `background` after G4 approval reopens G4 via file hash). The kit manages the full pose-sheet pipeline:
 
 1. **Layout**: A group of 2–4 members sharing identical `refs` and `size` is laid out in a grid (`sheetLayout(n)`: n=1 → 1×1, n=2 → 2×1, n=3 or 4 → 2×2, with cell 4 empty when n=3). Requested image size is `cols × W` by `rows × H`.
 2. **Cutting**: Cells are cut from the measured generator output using ffmpeg crop (`cw = floor(W / cols)`, `ch = floor(H / rows)`).
-3. **Background removal**: Each cell runs `npx --yes hyperframes@0.8.223 remove-background` with `HYPERFRAMES_NO_TELEMETRY=1`. The resulting cutout assets are transparent RGBA PNGs; never run remove-background on them again.
-4. **Alpha checks**: Raw grayscale alpha bytes are inspected: fill below 1% fails as empty, and more than 2% opaque pixels in the 2-px border band fails as touching the edge (`HARD-SHEET-CELL`). Any failing cell fails the entire sheet attempt and counts toward the 3-attempt `PROC-IMG-RETRY` limit. A background-removal tool failure blocks immediately under `PROC-CUTOUT-FALLBACK`.
-5. **Files & manifest**: The raw provenance image is preserved at `assets/sheets/<group>.<sha12>.png`. Each pose is committed as `assets/img/<id>.v<N>.png` with manifest fields `sheet`, `sheet_sha256`, `cell`, and cell-measured `w`, `h`, `q`, `tier`. All poses in a sheet are committed in one locked write.
-6. **Redo**: Running `img --batch <id> --redo <id> --note <why>` regenerates only that pose as a 1×1 sheet, leaving approved sibling poses untouched (`GATE-PER-ITEM`).
+3. **Alpha classification and cutout**: For transparent-intent sheets, prompts ask Codex for transparent background generation (forbidding checkerboard, shadow, ground), but the setting is agent-mediated and cannot be forced; `transparent_flag` is provenance only and never gates. The kit verifies by pixels alone (`alpha.mjs`) in fixed order:
+   - `opaque` (min alpha >= 250, unless a painted checkerboard is detected): cut per cell by `npx --yes hyperframes@0.8.223 remove-background` (`HYPERFRAMES_NO_TELEMETRY=1`) as an audited fallback, committed with `hyperframes_fallback` flag; the sheet is not regenerated.
+   - `suspect` with reason from closed list `empty`, `edge`, `checkerboard`, `alpha_shape`: fails the attempt and counts toward `PROC-IMG-RETRY`.
+   - `native`: cell keeps its native alpha (ffmpeg crop with rgba pinned); HyperFrames is never run on it.
+   Legacy sheets (absent `background`) continue running HyperFrames remove-background on every cell with no new manifest fields.
+4. **Alpha checks, hard failures, and review findings**:
+   - Fill and edge checks apply to both native and fallback cells: fill below 1% fails as empty, and more than 2% opaque pixels in the 2-px border band fails as touching the edge (`HARD-SHEET-CELL`).
+   - Hard failures distinguish two separate paths (failing cells are never committed):
+     - Retry path: only a `suspect` classification (`empty`, `edge`, `checkerboard`, `alpha_shape`) fails the attempt and spends one of the 3 attempts (`PROC-IMG-RETRY`); after 3 attempts the batch is BLOCKED naming the cell and reason per attempt.
+     - Immediate block path (no retry, nothing committed): HyperFrames remove-background crash or timeout (`PROC-CUTOUT-FALLBACK`); fallback output whose size differs from the cell; fallback output that is empty or touches the cell edge (`HARD-SHEET-CELL`).
+   - Review findings: committed with `integrity_flags` (closed list: `hyperframes_fallback`, `foreground_loss`, `edge_near`, `fragmented`, `ghosting`). Advisory heuristics do not prove completeness; the review composite is the real defense.
+5. **Files, review composite & manifest**: The raw provenance image is preserved at `assets/sheets/<group>.<sha12>.png`. For every committed transparent-intent cutout, the kit writes review composite `assets/composites/<id>.v<N>.png` (cutout over saturated magenta beside raw crop, 2w x h). Derived review aid only: never an approved asset, never read by `export-hf`, `qc`, or `status`. Each pose is committed as `assets/img/<id>.v<N>.png` with manifest fields `sheet`, `sheet_sha256`, `cell`, cell-measured `w`, `h`, `q`, `tier`, plus transparent-intent fields `cutout_method` (`native` | `hyperframes-fallback`), `transparent_requested`, `transparent_flag` (provenance only), `alpha_metrics`, `integrity_flags`, `review_composite`, `codex_version`. All poses in a sheet are committed in one locked write.
+6. **Redo & G5b approval**: Running `img --batch <id> --redo <id> --note <why>` regenerates only that pose as a 1×1 sheet, leaving approved sibling poses untouched (`GATE-PER-ITEM`). `gate G5b approve` without `--scope` is refused (`HARD-GATES-RECORDED`) while pending current-version items have `integrity_flags`; the refusal message names the item, its flags, and the composite to open, instructing to approve with `--scope <id>.v<N>`. Running `gate G5b approve --scope <ids>` is accepted: naming a flagged item is the acknowledgement that the kit cannot verify, while unnamed flagged items stay pending. Rejection is never blocked.
 
 Both strategies require approved current canonical refs and valid hashes.
 
