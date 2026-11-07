@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { compilePrompt, compileSheetPrompt, generationInfo } from "../src/img/adapter.mjs";
+import { compilePrompt, compileSheetPrompt, generate, generationInfo } from "../src/img/adapter.mjs";
+import { FAKE_CODEX } from "./helpers/img.mjs";
 
 const members = [{ prompt: "stands", framing: "full body" }, { prompt: "sits", framing: "full body" }, { prompt: "runs", framing: "full body" }];
 const base = { members, refs: ["r1"], size: "1200x1200", cols: 2, rows: 2 };
@@ -77,4 +78,17 @@ test("generationInfo ignores a savedPath outside generated_images and symlink es
   symlinkSync(outside, link);
   r.log([{ revisedPrompt: "OUT", transparentBackground: true, savedPath: outside }, { revisedPrompt: "LINK", transparentBackground: true, savedPath: link }]);
   assert.deepEqual(generationInfo(r.ctx, r.stdout, r.out), { revisedPrompt: null, transparentBackground: null });
+});
+
+test("generate() returns trace with session id while stdout does not", async () => {
+  const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+  const workDir = mkdtempSync(join(tmpdir(), "codex-work-"));
+  const ctx = {
+    tools: { codex: [process.execPath, FAKE_CODEX] },
+    env: { ...process.env, CODEX_HOME: home },
+  };
+  const r = await generate(ctx, { workDir, text: "PROMPT: test\nFRAMING: full\nSIZE: 100x100", refPaths: [] });
+  assert.equal(r.ok, true);
+  assert.doesNotMatch(r.stdout, /session id:/i);
+  assert.match(r.trace, /session id:/i);
 });

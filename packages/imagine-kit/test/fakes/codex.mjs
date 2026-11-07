@@ -17,7 +17,7 @@ const mode = modes[Math.min(calls, modes.length - 1)];
 const [w, h] = (process.env.FAKE_CODEX_SIZE ?? "1536x1024").split("x").map(Number);
 const dir = argv[argv.indexOf("-C") + 1];
 const sid = randomUUID();
-process.stdout.write(`OpenAI Codex v0\n--------\nsession id: ${sid}\n--------\n`);
+process.stderr.write(`OpenAI Codex v0\n--------\nsession id: ${sid}\n--------\n`);
 const barrier = process.env.FAKE_CODEX_BARRIER;
 if (barrier) {
   mkdirSync(barrier, { recursive: true });

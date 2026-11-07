@@ -155,12 +155,12 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
         } else {
           png = out;
           decided = mid;
-          const gi = generationInfo(ctx, r.stdout, out);
+          const gi = generationInfo(ctx, r.trace, out);
           revised = gi.revisedPrompt;
           genFlag = gi.transparentBackground;
           genVersion = await codexVersion(ctx);
         }
-      } else { png = out; revised = lastRevisedPrompt(ctx, r.stdout); }
+      } else { png = out; revised = lastRevisedPrompt(ctx, r.trace); }
     }
     if (!png) {
       await recordBlocked(ctx, dir, { step: `img:${p.id}.v${v}`, command: `img --batch ${p.id}` });
@@ -339,12 +339,12 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
 
       sheetPng = out;
       if (transparent) {
-        const gi = generationInfo(ctx, r.stdout, out);
+        const gi = generationInfo(ctx, r.trace, out);
         revised = gi.revisedPrompt;
         genFlag = gi.transparentBackground;
         genVersion = await codexVersion(ctx);
       } else {
-        revised = lastRevisedPrompt(ctx, r.stdout);
+        revised = lastRevisedPrompt(ctx, r.trace);
         genFlag = null;
         genVersion = null;
       }
