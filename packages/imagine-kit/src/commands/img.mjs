@@ -9,10 +9,13 @@ import { isUniformImage, pngInfo } from "../media.mjs";
 import { resolveProject } from "../project.mjs";
 import { rasterQ, round2, tierOf } from "../raster.mjs";
 import { createContext, resolveRef } from "../sources.mjs";
-import { compilePrompt, compileSheetPrompt, generate, revisedPrompt } from "../img/adapter.mjs";
+import { compilePrompt, compileSheetPrompt, codexVersion, generate, generationInfo, revisedPrompt } from "../img/adapter.mjs";
 import { commitAsset, commitAssets, recordBlocked, safePath } from "../img/commit.mjs";
-import { loadPlan } from "../img/plan.mjs";
-import { checkCellAlpha, sheetLayout } from "../img/sheet.mjs";
+import { loadPlan, resolveBackground } from "../img/plan.mjs";
+import { classifyAlpha, computeAlphaMetrics } from "../img/alpha.mjs";
+import { fallbackLoss, nativeFlags } from "../img/integrity.mjs";
+import { cropCell, isBlankImage, readRgba, writeReviewComposite } from "../img/cutout.mjs";
+import { SHEET_EDGE_MAX, SHEET_MIN_FILL, checkCellAlpha, sheetLayout } from "../img/sheet.mjs";
 import { ensureTool, runTool, HYPERFRAMES, HF_ENV } from "../tools.mjs";
 
 const RETRIES = 2;
@@ -147,27 +150,82 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   return done.entry;
 }
 
+// Whole-image decision for background: transparent. Returns { problem } (retry) or { path, method, metrics, flags, composite }.
+// Throws BLOCKED for tool failures and for fallback output that fails a hard check. `tag` names the temp files (cell number or "one").
+async function decideTransparent(ctx, dir, { work, workRel, srcPng, label, tag, cw, ch }) {
+  const rgba = await readRgba(ctx, srcPng, cw, ch);
+  const metrics = computeAlphaMetrics(rgba, cw, ch);
+  const verdict = classifyAlpha(metrics, rgba);
+  if (verdict.cls === "suspect") return { problem: { reason: verdict.reason } };
+
+  let cutPng = srcPng;
+  let method = "native";
+  let finalMetrics = metrics;
+  let flags;
+  if (verdict.cls === "opaque") {
+    const cutRel = `${workRel}/cut-${tag}.png`;
+    cutPng = safePath(dir, cutRel);
+    if (!cutPng) throw new KitError("HARD", `${cutRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: label });
+    const rRb = ensureTool(await runTool(ctx, "npx", ["--yes", HYPERFRAMES, "remove-background", srcPng, "-o", cutPng], { cwd: work, env: HF_ENV, timeoutMs: 900000 }), "npx", "PROC-CUTOUT-FALLBACK");
+    if (rRb.status !== 0 || rRb.timedOut || !existsSync(cutPng)) {
+      throw new KitError("BLOCKED", `hyperframes remove-background failed: ${(rRb.stderr || rRb.stdout).slice(-300).trim()}`, { rule: "PROC-CUTOUT-FALLBACK", item: label });
+    }
+    const cutInfo = pngInfo(readFileSync(cutPng));
+    if (!cutInfo || cutInfo.w !== cw || cutInfo.h !== ch) {
+      throw new KitError("BLOCKED", `fallback cutout for ${label} is ${cutInfo ? `${cutInfo.w}x${cutInfo.h}` : "not a PNG"}, expected ${cw}x${ch}`, { rule: "PROC-CUTOUT-FALLBACK", item: label });
+    }
+    const cutRgba = await readRgba(ctx, cutPng, cw, ch);
+    finalMetrics = computeAlphaMetrics(cutRgba, cw, ch);
+    if (finalMetrics.fill < SHEET_MIN_FILL || finalMetrics.edge > SHEET_EDGE_MAX) {
+      throw new KitError("BLOCKED", `fallback cutout for ${label} is ${finalMetrics.fill < SHEET_MIN_FILL ? "empty" : "touching the cell edge"}; review before committing`, { rule: "HARD-SHEET-CELL", item: label });
+    }
+    method = "hyperframes-fallback";
+    flags = ["hyperframes_fallback", ...fallbackLoss(rgba, cutRgba, cw, ch).flags];
+  } else {
+    flags = nativeFlags(metrics, rgba, cw, ch);
+  }
+  const compRel = `${workRel}/review-${tag}.png`;
+  const composite = safePath(dir, compRel);
+  if (!composite) throw new KitError("HARD", `${compRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: label });
+  await writeReviewComposite(ctx, cutPng, srcPng, composite, { w: cw, h: ch });
+  return { path: cutPng, method, metrics: finalMetrics, flags, composite };
+}
+
+// Sheet cell: crop with alpha kept, then decide. Returns { problem: { cell, id, reason } } or { cut: { path, w, h, method, metrics, flags, composite } }.
+async function cutCellTransparent(ctx, dir, { work, workRel, sheetPng, k, member, cw, ch, x, y }) {
+  const cellRel = `${workRel}/cell-${k}.png`;
+  const cellPng = safePath(dir, cellRel);
+  if (!cellPng) throw new KitError("HARD", `${cellRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: member.id });
+  await cropCell(ctx, sheetPng, cellPng, { x, y, cw, ch, rgba: true });
+  const res = await decideTransparent(ctx, dir, { work, workRel, srcPng: cellPng, label: member.id, tag: String(k), cw, ch });
+  if (res.problem) return { problem: { cell: k, id: member.id, reason: res.problem.reason } };
+  return { cut: { path: res.path, w: cw, h: ch, method: res.method, metrics: res.metrics, flags: res.flags, composite: res.composite } };
+}
+
 async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
   const n = members.length;
   const layout = sheetLayout(n);
   const [mw, mh] = members[0].size.split("x").map(Number);
   const reqSize = `${layout.cols * mw}x${layout.rows * mh}`;
+  const intent = resolveBackground(members[0]);
+  const transparent = intent === "transparent";
 
-  const versions = members.map((m) => {
+  const versions = members.map((m) => {   // verbatim
     const all = sctx.manifest.assets.filter((a) => a.id === m.id);
     const latest = all.reduce((b, a) => (!b || a.v > b.v ? a : b), null);
     return (latest?.v ?? 0) + 1;
   });
 
-  const refEntries = (members[0].refs ?? []).map((r) => currentAsset(sctx.manifest, r));
+  const refEntries = (members[0].refs ?? []).map((r) => currentAsset(sctx.manifest, r));   // verbatim
   const refPaths = refEntries.map((e) => {
     const s = safePath(dir, e.path);
     if (!s) throw new KitError("HARD", `${e.path} is outside the project`, { rule: "HARD-REFS-APPROVED", item: members[0].id });
     return s;
   });
 
-  const text = compileSheetPrompt({ members, refs: members[0].refs ?? [], size: reqSize, cols: layout.cols, rows: layout.rows });
-  const stamp = sha256(`${text}\n${refEntries.map((e) => e.sha256).join(",")}\n${members.map((m, i) => `${m.id}.v${versions[i]}`).join(",")}`);
+  const text = compileSheetPrompt({ members, refs: members[0].refs ?? [], size: reqSize, cols: layout.cols, rows: layout.rows, background: intent });
+  // Legacy stamps are unchanged; an explicit intent is part of the stamp so a sheet made under another intent is never adopted.
+  const stamp = sha256(`${text}\n${refEntries.map((e) => e.sha256).join(",")}\n${members.map((m, i) => `${m.id}.v${versions[i]}`).join(",")}${intent === "legacy" ? "" : `\nbackground:${intent}`}`);
 
   const safeImgRoot = safePath(dir, "tmp/img");
   let adopted = null;
@@ -183,7 +241,8 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
       try { meta = JSON.parse(readFileSync(metaPath, "utf8")); } catch { continue; }
       if (meta.prompt_sha256 !== stamp) continue;
       if (sha256File(outPath) === meta.png_sha256 && pngInfo(readFileSync(outPath))) {
-        adopted = { workRel, outPath, revised: meta.revised_prompt ?? null };
+        // Generation facts come from meta.json, never from the session log; the cutout verdicts below are recomputed from pixels.
+        adopted = { workRel, outPath, revised: meta.revised_prompt ?? null, flag: meta.transparent_flag ?? null, version: meta.codex_version ?? null };
         break;
       }
     }
@@ -193,15 +252,19 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
   let work;
   let sheetPng = null;
   let revised = null;
+  let genFlag = null;
+  let genVersion = null;
 
   if (adopted) {
     workRel = adopted.workRel;
     work = safePath(dir, workRel);
     sheetPng = adopted.outPath;
     revised = adopted.revised;
+    genFlag = adopted.flag;
+    genVersion = adopted.version;
     advice.push({ rule: "PROC-RESUME-IDEMPOTENT", item: group, source: "assets", message: `adopted ${adopted.workRel}/out.png left by an interrupted run; nothing was regenerated` });
   } else {
-    const workBaseRel = `tmp/img/sheet-${group}`;
+    const workBaseRel = `tmp/img/sheet-${group}`;   // verbatim
     if (!safePath(dir, workBaseRel)) throw new KitError("HARD", `${workBaseRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
     workRel = `${workBaseRel}.${randomBytes(6).toString("hex")}`;
     work = safePath(dir, workRel);
@@ -211,10 +274,11 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
 
   let lastWhy = "";
   let cellCuts = null;
+  const suspectLog = [];
 
   for (let attempt = 0; attempt <= RETRIES && !cellCuts; attempt += 1) {
     if (!sheetPng) {
-      const prevOut = safePath(dir, `${workRel}/out.png`);
+      const prevOut = safePath(dir, `${workRel}/out.png`);   // verbatim
       if (prevOut) rmSync(prevOut, { force: true });
       const prevMeta = safePath(dir, `${workRel}/meta.json`);
       if (prevMeta) rmSync(prevMeta, { force: true });
@@ -226,13 +290,17 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
       if (!r.ok) { lastWhy = `codex exited with an error ${r.stderr}`.trim(); continue; }
       if (!existsSync(out)) { lastWhy = "codex produced no out.png"; continue; }
       if (!info) { lastWhy = "out.png is not a real PNG"; continue; }
-      if (await isUniformImage(ctx, out)) { lastWhy = "out.png is a uniform (blank) image"; continue; }
+      if (await (transparent ? isBlankImage(ctx, out) : isUniformImage(ctx, out))) { lastWhy = "out.png is a uniform (blank) image"; continue; }
 
       sheetPng = out;
-      revised = revisedPrompt(ctx, r.stdout, sheetPng);
+      const gi = generationInfo(ctx, r.stdout, out);
+      revised = gi.revisedPrompt;
+      genFlag = gi.transparentBackground;
+      genVersion = transparent ? await codexVersion(ctx) : null;
       const curMeta = safePath(dir, `${workRel}/meta.json`);
       if (!curMeta) throw new KitError("HARD", `${workRel}/meta.json is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
-      writeFileSync(curMeta, JSON.stringify({ revised_prompt: revised, prompt_sha256: stamp, png_sha256: sha256File(sheetPng) }));
+      writeFileSync(curMeta, JSON.stringify({ revised_prompt: revised, prompt_sha256: stamp, png_sha256: sha256File(sheetPng),
+        ...(transparent ? { transparent_requested: true, transparent_flag: genFlag, codex_version: genVersion } : {}) }));
     }
 
     const info = pngInfo(readFileSync(sheetPng));
@@ -244,6 +312,16 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
     for (let k = 1; k <= n; k++) {
       const x = ((k - 1) % layout.cols) * cw;
       const y = Math.floor((k - 1) / layout.cols) * ch;
+      if (transparent) {
+        const res = await cutCellTransparent(ctx, dir, { work, workRel, sheetPng, k, member: members[k - 1], cw, ch, x, y });
+        if (res.problem) {
+          suspectLog.push(`attempt ${attempt + 1}: cell ${res.problem.cell} (${res.problem.id}) ${res.problem.reason}`);
+          cellProblem = `cell ${res.problem.cell} (${res.problem.id}) is suspect (${res.problem.reason})`;
+          break;
+        }
+        cuts.push(res.cut);
+        continue;
+      }
       const cellRel = `${workRel}/cell-${k}.png`;
       const cellPng = safePath(dir, cellRel);
       if (!cellPng) throw new KitError("HARD", `${cellRel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
@@ -289,7 +367,16 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
 
   if (!cellCuts) {
     await recordBlocked(ctx, dir, { step: `img:sheet-${group}`, command: `img --batch ${members.map((m) => m.id).join(",")}` });
-    throw new KitError("BLOCKED", `${group}: no usable sheet after ${RETRIES + 1} attempts (${lastWhy})`, { rule: "PROC-IMG-RETRY", item: group });
+    throw new KitError("BLOCKED", `${group}: no usable sheet after ${RETRIES + 1} attempts (${lastWhy})${suspectLog.length ? `; ${suspectLog.join("; ")}` : ""}`, { rule: "PROC-IMG-RETRY", item: group });
+  }
+
+  if (transparent) {   // per-attempt suspect log lives in meta.json, next to the generation facts
+    const metaFile = safePath(dir, `${workRel}/meta.json`);
+    if (metaFile && existsSync(metaFile)) {
+      let m = {};
+      try { m = JSON.parse(readFileSync(metaFile, "utf8")); } catch { m = {}; }
+      writeFileSync(metaFile, JSON.stringify({ ...m, suspect_log: suspectLog }));
+    }
   }
 
   const sheetSha = sha256File(sheetPng);
@@ -304,6 +391,7 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
     const rel = `assets/img/${member.id}.v${v}.png`;
     const cut = cellCuts.cuts[k - 1];
     const q = member.required_px ? rasterQ(cut.w, cut.h, member.required_px) : null;
+    const reviewRel = `assets/composites/${member.id}.v${v}.png`;
     const entry = {
       id: member.id,
       kind: "img",
@@ -320,11 +408,20 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
       h: cut.h,
       ...(q === null ? {} : { q: round2(q), tier: tierOf(q) }),
       ...(revised ? { revised_prompt: revised } : {}),
+      ...(transparent ? {
+        cutout_method: cut.method, transparent_requested: true, transparent_flag: genFlag, alpha_metrics: cut.metrics,
+        integrity_flags: cut.flags, review_composite: reviewRel, ...(genVersion ? { codex_version: genVersion } : {}),
+      } : {}),
       ...(note ? { note } : {}),
       sha256: "0".repeat(64),
     };
     if (!revised) advice.push({ rule: "PROC-REVISED-PROMPT", item: `${member.id}.v${v}`, source: "codex session log", message: "the revised prompt was not found in the Codex session log; only the compiled prompt is recorded" });
     if (entry.tier === "replan") advice.push({ rule: "HARD-RASTER-TIER", item: `${member.id}.v${v}`, source: "assets/plan.yaml", message: `q ${entry.q} is below 0.75 (replan tier); regenerate larger or re-plan the shot, export-hf will refuse it` });
+    if (transparent) {
+      extraFiles.push({ source: cut.composite, rel: reviewRel });
+      if (cut.method === "hyperframes-fallback") advice.push({ rule: "PROC-CUTOUT-FALLBACK", item: `${member.id}.v${v}`, source: "hyperframes remove-background", message: `native alpha was not produced; HyperFrames cut this pose, review ${reviewRel} at G5b` });
+      for (const f of cut.flags.filter((x) => x !== "hyperframes_fallback")) advice.push({ rule: "HARD-SHEET-CELL", item: `${member.id}.v${v}`, source: "alpha diagnostics", message: `integrity flag ${f}: review ${reviewRel} at G5b` });
+    }
     items.push({ entry, source: cut.path });
   }
 
