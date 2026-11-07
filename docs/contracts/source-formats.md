@@ -139,6 +139,7 @@ assets:
   - id: mara-climb
     kind: img
     sheet: mara-poses               # optional: pose-sheet group id (2-4 members with identical non-empty refs and size)
+    background: transparent         # optional: transparent | opaque
     prompt: "Mara climbing lighthouse stairs, profile view"
     framing: "medium shot, profile view"
     size: 600x600                   # shared member size; grid request is cols*W x rows*H; order in plan.yaml = cell order
@@ -147,6 +148,7 @@ assets:
   - id: mara-pause
     kind: img
     sheet: mara-poses               # same group, refs, and size as mara-climb (a one-member group is invalid)
+    background: transparent
     prompt: "Mara paused on the lighthouse stairs, three-quarter view"
     framing: "medium shot, three-quarter view"
     size: 600x600
@@ -154,7 +156,22 @@ assets:
     required_px: { w: 500, h: 500 }
 ```
 
-- Raster files: `assets/refs/<id>.v<N>.png` and `assets/img/<id>.v<N>.png`; provenance sheets `assets/sheets/<group>.<sha12>.png`; VO takes `assets/vo/<line>.v<N>.wav`. Versions are never overwritten. `img` work directories live in `tmp/img/<id>.v<N>/` or `tmp/img/sheet-<group>.<rand>/` (the generated `out.png` and `meta.json` with the compiled and revised prompt). Pose-sheet assets record manifest fields `sheet`, `sheet_sha256`, and `cell` (1-indexed cell order).
+Optional per-asset field: `background: transparent | opaque`. Resolution when absent:
+
+| Asset kind / membership | When `background` absent | Behavior |
+|---|---|---|
+| Sheet member (`sheet: <group>`) | `legacy` | Opaque-background prompt, HyperFrames remove-background on every cell, no new manifest fields |
+| Other `img` (standalone, no `sheet`) | `opaque` | Standard opaque raster asset |
+| `ref` | `opaque` | Standard opaque reference asset |
+
+Rejected at load (`HARD_NOT_RUN`):
+1. Sheet member with explicit `opaque` (`PROC-POSE-SHEET`).
+2. A sheet group whose members resolve to different intents, including explicit vs absent (`PROC-POSE-SHEET`).
+3. `ref` with `transparent` (`HARD-ASSETS-APPROVED`).
+
+Any other value fails schema validation (`HARD-ASSETS-APPROVED`). Editing `background` after G4 approval changes the `file:assets/plan.yaml` hash, so `img` is refused with `HARD-ASSETS-APPROVED` and G4 reopens.
+
+- Raster files: `assets/refs/<id>.v<N>.png` and `assets/img/<id>.v<N>.png`; provenance sheets `assets/sheets/<group>.<sha12>.png`; review composites `assets/composites/<id>.v<N>.png` (derived review aid for transparent-intent cutouts, never an approved asset and never read by `export-hf`, `qc` or `status`, which read manifest entries only); VO takes `assets/vo/<line>.v<N>.wav`. Versions are never overwritten. `img` work directories live in `tmp/img/<id>.v<N>/` or `tmp/img/sheet-<group>.<rand>/` (the generated `out.png` and `meta.json` with the compiled and revised prompt). Pose-sheet assets record manifest fields `sheet`, `sheet_sha256`, and `cell` (1-indexed cell order).
 - `tmp/scratch-vo/<line>.wav` and `tmp/audition/<speaker>-<voice>.wav` are measurements, never assets.
 - Voice config (`bible.yaml`, `characters[].voice` or top-level `narrator.voice`):
   - `engine: pocket-tts`: `model: english|indonesian`, `source: builtin:<name>|file:<path inside the project>`, `seed_base` (integer), `temperature` (number, optional). Take `n` of a line uses seed `seed_base + n`.

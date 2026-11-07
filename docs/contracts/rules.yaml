@@ -66,8 +66,8 @@ rules:
   - { id: PROC-SFX-SOURCE, source: "section 7.4", text: "SFX via HyperFrames media-use: Openverse CC0/CC-BY with credits, then bundled offline library" }
   - { id: PROC-REPLAN-USER-CHOICE, source: "section 7.2", text: "On replan the user chooses: less scale/travel, less crop, layered rasters, vector ground, or lower delivery size" }
   - { id: PROC-OFFLINE-MIRROR, source: "section 7.5", text: "Offline render needs a GSAP/CDN mirror (HYPERFRAMES_GSAP_BASE_URL)" }
-  - { id: PROC-CUTOUT-FALLBACK, source: "section 7.1", text: "Transparency via hyperframes remove-background; generator alpha unverified" }
-  - { id: PROC-POSE-SHEET, source: "GH #11", text: "Characters with two or more poses are planned as pose-sheet groups (2-4 members, same refs and size); img draws one grid image, cuts each cell and removes its background; a single image only for a pose a sheet cell cannot resolve", cover: both }
+  - { id: PROC-CUTOUT-FALLBACK, source: "section 7.1", text: "Transparent-intent assets use native alpha when the decoded pixels show it; HyperFrames remove-background is a per-cell, audited fallback for effectively opaque cells; fallback and flagged cells need a scoped G5b approve" }
+  - { id: PROC-POSE-SHEET, source: "GH #11", text: "Characters with two or more poses are planned as pose-sheet groups (2-4 members, same refs and size); img draws one grid image, cuts each cell keeping native alpha or falling back to background removal per cell; a single image only for a pose a sheet cell cannot resolve", cover: both }
   - { id: PROC-OPT-IN-MANDATORY, source: "section 2.6, D11", text: "On-demand references become mandatory in the stage's file list once the user opts in (voice-cloning.md for casting)", cover: instructions, replan: "brief and stage start|finish cut; skill lists the files to read" }
   - { id: PROC-EN-BASELINE, source: "D1", text: "English is the baseline language" }
   - { id: ADV-STYLISED-FIRST, source: "D7", text: "Stylised/illustrated looks first" }
@@ -149,7 +149,7 @@ rules:
   - { id: HARD-REAL-RASTER, source: "section 7.1", text: "Image is a real raster: PNG, not uniform, measured dims; prompt forbids scripting a PNG", cover: both }
   - { id: HARD-TTS-EOS, source: "section 7.3", text: "KPOCKET_TTS_ERROR_WITHOUT_EOS=1", cover: both }
   - { id: HARD-SECRET-NEVER-WRITTEN, source: "GH #9", text: "Provider API keys come only from the environment or a mode-600 file outside the project and never reach stdout, stderr, the journal, envelopes or project files", cover: both }
-  - { id: HARD-SHEET-CELL, source: "GH #11", text: "A sheet cell that is empty or touches its cell edge after background removal fails the whole sheet attempt, which counts toward PROC-IMG-RETRY", cover: both }
+  - { id: HARD-SHEET-CELL, source: "GH #11", text: "A sheet cell that fails fill or edge checks under native alpha or fallback background removal fails the whole sheet attempt, which counts toward PROC-IMG-RETRY", cover: both }
   - { id: HARD-STYLE-OUTPUT-READONLY, source: "section 5.2", text: "style.md#output is generated from G0 and read-only", cover: both }
   - { id: HARD-STORY-WRITERS, source: "section 5.3", text: "STORY.md written only by patch apply (planning keys) and imagine-kit (edit keys); HyperFrames editStoryboard never used", cover: both }
   - { id: HARD-STATUS-DERIVED, source: "section 6.1", text: "stale is derived by status from recorded hashes, never hand-edited; needs_review is recorded by the main agent from an impact report", cover: both, replan: "status computes hash-based stale only; needs_review is agent-judged from an impact report" }
