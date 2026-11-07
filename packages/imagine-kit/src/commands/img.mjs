@@ -9,7 +9,7 @@ import { isUniformImage, pngInfo } from "../media.mjs";
 import { resolveProject } from "../project.mjs";
 import { rasterQ, round2, tierOf } from "../raster.mjs";
 import { createContext, resolveRef } from "../sources.mjs";
-import { compilePrompt, compileSheetPrompt, codexVersion, generate, generationInfo } from "../img/adapter.mjs";
+import { compilePrompt, compileSheetPrompt, codexVersion, generate, generationInfo, lastRevisedPrompt } from "../img/adapter.mjs";
 import { commitAsset, commitAssets, recordBlocked, safePath } from "../img/commit.mjs";
 import { loadPlan, resolveBackground } from "../img/plan.mjs";
 import { classifyAlpha, computeAlphaMetrics } from "../img/alpha.mjs";
@@ -160,7 +160,7 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
           genFlag = gi.transparentBackground;
           genVersion = await codexVersion(ctx);
         }
-      } else { png = out; revised = generationInfo(ctx, r.stdout, out).revisedPrompt; }
+      } else { png = out; revised = lastRevisedPrompt(ctx, r.stdout); }
     }
     if (!png) {
       await recordBlocked(ctx, dir, { step: `img:${p.id}.v${v}`, command: `img --batch ${p.id}` });
@@ -338,10 +338,16 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
       if (await (transparent ? isBlankImage(ctx, out) : isUniformImage(ctx, out))) { lastWhy = "out.png is a uniform (blank) image"; continue; }
 
       sheetPng = out;
-      const gi = generationInfo(ctx, r.stdout, out);
-      revised = gi.revisedPrompt;
-      genFlag = gi.transparentBackground;
-      genVersion = transparent ? await codexVersion(ctx) : null;
+      if (transparent) {
+        const gi = generationInfo(ctx, r.stdout, out);
+        revised = gi.revisedPrompt;
+        genFlag = gi.transparentBackground;
+        genVersion = await codexVersion(ctx);
+      } else {
+        revised = lastRevisedPrompt(ctx, r.stdout);
+        genFlag = null;
+        genVersion = null;
+      }
       const curMeta = safePath(dir, `${workRel}/meta.json`);
       if (!curMeta) throw new KitError("HARD", `${workRel}/meta.json is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: group });
       writeFileSync(curMeta, JSON.stringify({ revised_prompt: revised, prompt_sha256: stamp, png_sha256: sha256File(sheetPng),
