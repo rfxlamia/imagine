@@ -62,8 +62,8 @@ Never report a generated asset, gate approval, hash, revision, or successful val
 Read the listed files **in full** before beginning each applicable stage, and read them again after resume or context compaction. A remembered summary is not a substitute for the current files.
 
 Always load this `SKILL.md`. Load these references for their corresponding work:
-- `references/image-and-resolution.md` for prompt compilation, canonical refs, image batches, raster validation, and resolution measurement.
-- `references/audio-and-modes.md` for clock selection, auditions, scratch VO, production TTS, G5a, and non-narrated audio.
+- `references/image-and-resolution.md` for adapter HARD rules, prompt compilation, canonical refs, image batches, raster validation, and resolution measurement.
+- `references/audio-and-modes.md` for adapter HARD rules, clock selection, auditions, scratch VO, production TTS, G5a, and non-narrated audio.
 - `references/state-and-review.md` for audit, gate recording, dependency invalidation, manifest reconciliation, recovery, and downstream handoff.
 
 Project files required by activity:
@@ -277,67 +277,13 @@ Never use deadline pressure to bypass a retry limit, a gate, a measured failure,
 
 ## 7. Generation adapters
 
-### 7.1 Image adapter
+### 7.1 Image adapter and raster resolution
 
-Use `imagine-kit img` for generation and its recorded result. Its capabilities are prompt-based generation with size hints and reference images; do not assume edit or mask support.
+Before any `imagine-kit img` call, read `references/image-and-resolution.md` in full, and again after resume or compaction. It holds the adapter procedures and HARD image rules (a real PNG raster, never a uniform or placeholder image; measured dimensions).
 
-Store the image tool's actual revised prompt alongside the original compiled prompt, rather than treating the tool revision as the approved source prompt. <!-- rule:PROC-REVISED-PROMPT -->
+### 7.2 TTS adapter
 
-Every batch prompt explicitly describes the intended framing and composition, even when reference images are supplied. <!-- rule:PROC-FRAMING-IN-PROMPT -->
-
-When a raster post-check fails, allow at most two retries after the failed initial attempt (three total attempts); after the third failure, mark blocked and report instead of retrying again. <!-- rule:PROC-IMG-RETRY -->
-
-A valid output must be a real, non-uniform PNG raster with measured dimensions and sha256; prohibit asking the generator to script, fabricate, or otherwise write a placeholder PNG instead of generating an image. <!-- rule:HARD-REAL-RASTER -->
-
-For transparent-intent assets planned with `background: transparent`, the kit uses native alpha when decoded pixels demonstrate it. Prompts steer Codex by requesting transparent background generation, but the setting is agent-mediated and cannot be forced; `transparent_flag` is recorded for provenance only and never gates. The kit verifies by pixels alone. Native cells keep their alpha and HyperFrames is never run on them. Opaque cells trigger per-cell background removal via `HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 remove-background` as an audited fallback, committing with the `hyperframes_fallback` flag. Derived review composites (`assets/composites/<id>.v<N>.png`) present each cutout over saturated magenta beside the raw crop. Flagged assets require a scoped G5b approval (`gate G5b approve --scope <id>.v<N>`). <!-- rule:PROC-CUTOUT-FALLBACK -->
-
-When generating pose sheets, `img --batch <id>` naming any sheet member expands to every member of that group lacking a current version and draws them in a single grid image. The kit crops each cell with ffmpeg: native alpha is kept when present, otherwise the cell is cut by `npx --yes hyperframes@0.8.223 remove-background` (telemetry off) inside the kit and flagged with `hyperframes_fallback`. The resulting cutout assets are committed under `assets/img/figure/<id>.v<N>.png`, and downstream stages use them directly. Running `img --batch <id> --redo <id> --note <why>` regenerates only that pose as a 1×1 sheet while preserving approved sibling poses. Review and G5b approval proceed per individual pose, presenting the provenance sheet image and review composite for context. <!-- rule:PROC-POSE-SHEET -->
-
-Authoring rule: `background: transparent` is for figures only (characters, props, creatures as a cutout). The prompt of a transparent asset must describe only the figure: no background, backdrop, ground, floor, scenery, shadows or color-field wording, and nothing like "isolated on a plain grey background". The kit already adds the transparency instruction. Scenes, ground and backgrounds are planned as non-transparent (`opaque`) assets and saved under `assets/img/world`.
-
-Two distinct failure paths apply to transparent-intent pose-sheet extraction. Under the retry path, only a `suspect` classification (`empty`, `edge`, `checkerboard`, `alpha_shape`) fails the attempt and spends one of the 3 attempts (`PROC-IMG-RETRY`); after 3 attempts the batch is BLOCKED naming the cell and reason per attempt. Under the immediate block path (no retry, nothing committed), HyperFrames remove-background crash or timeout blocks immediately under `PROC-CUTOUT-FALLBACK`, while fallback output whose size differs from the cell or fallback output that is empty (fill < 1%) or touches the cell edge (> 2% opaque pixels in 2-px border) blocks immediately under `HARD-SHEET-CELL`. Review findings commit with `integrity_flags` (`hyperframes_fallback`, `foreground_loss`, `edge_near`, `fragmented`, `ghosting`); `gate G5b approve` without `--scope` is refused while flagged items exist, requiring `gate G5b approve --scope <id>.v<N>` to acknowledge. <!-- rule:HARD-SHEET-CELL -->
-
-Detailed compilation, reference conditioning, validation, and attempts are in `references/image-and-resolution.md`.
-
-### 7.2 Raster resolution
-
-No verified upscaler exists in the production stack; lanczos interpolation, DPR upsampling, and resizing never increase the measured raster quality factor `q`. <!-- rule:PROC-NO-UPSCALER -->
-
-Use `native` for `q >= 1`, `soft` for `0.75 <= q < 1` only with explicit G4 plan acceptance and per-asset G5b acceptance, and HARD-block `q < 0.75` rather than inventing a replan tier. <!-- rule:HARD-RASTER-TIER -->
-
-After G5b, recalculate each shot's budget using actual image dimensions; a failed budget reopens that shot's previz and affected downstream work. <!-- rule:DAG-MEASURED-BUDGET -->
-
-See `references/image-and-resolution.md` for exact formulas and alternatives.
-
-### 7.3 TTS adapter
-
-Use `imagine-kit tts` only for the applicable narrated workflow; casting auditions and scratch timing outputs remain in `tmp/` and never count as approved production assets. <!-- rule:PROC-SCRATCH-NOT-ASSET -->
-
-Synthesize exactly one approved script line per production WAV, with independent identity, duration, take number, and approval. <!-- rule:PROC-ONE-LINE-PER-WAV -->
-
-Set `KPOCKET_TTS_ERROR_WITHOUT_EOS=1` for the Pocket TTS worker to fail explicitly on incomplete generation. <!-- rule:HARD-TTS-EOS -->
-
-When using a voice audio file, require the loaded worker to report `has_voice_cloning = true` before proceeding; fallback non-cloning weights are not acceptable. <!-- rule:HARD-HAS-VOICE-CLONING -->
-
-Provider API keys come only from the environment or a mode-600 file outside the project and never reach stdout, stderr, the journal, envelopes or project files. <!-- rule:HARD-SECRET-NEVER-WRITTEN -->
-
-Any ElevenLabs API, network, or worker failure exits with code 3 (BLOCKED), and a missing or badly permissioned key exits 7 (NEEDS_USER); never silently fall back to Pocket TTS or swap engines.
-
-Hosted TTS takes record provider, voice, model, plan tier and licence terms in the manifest and assets/CREDITS.md automatically; free or unverified plans are flagged. <!-- rule:PROC-HOSTED-TTS-LICENCE -->
-
-Before requesting G5a, read `data.total_duration_s`, `data.duration_range` and `data.missing_lines` from `tts`; when the `ADV-VO-DURATION-RANGE` advice appears, present the total and the G0 range to the user and resolve it (trim or revise the script and its approval, or change G0 with the user's approval) before asking for G5a; never trim audio silently. <!-- rule:ADV-VO-DURATION-RANGE -->
-
-Before generating production takes, estimate and disclose the character count of the selected `tts_text`. After the run, check that estimate against `data.characters`, the count actually sent.
-
-Allowed pronunciation/delivery levers are lexicon, punctuation, voice, seed, and temperature, plus engine-specific `voice_settings` and `model_id` levers for elevenlabs voices only; SSML, audio tags, phonemes, native pitch, or emotion controls remain not allowed. <!-- rule:PROC-PRONUNCIATION-LEVERS -->
-
-Supported fallbacks are Kokoro through pinned HyperFrames TTS (without Indonesian support) or a user-recorded WAV for each script line; disclose the tradeoffs and never silently swap engines. <!-- rule:PROC-TTS-FALLBACK -->
-
-There is no Phase 1 audio review page: list actual WAV paths for playback and use `SendUserFile` to provide the files when review occurs on another device. <!-- rule:PROC-REMOTE-LISTEN -->
-
-Report actual measured audio facts and explicitly state that Claude did not hear the audio; only the human listener can approve what it sounds like. <!-- rule:PROC-NOT-HEARD -->
-
-See `references/audio-and-modes.md` for audio identity, language constraints, and G5a procedure.
+Before any `imagine-kit tts` call, read `references/audio-and-modes.md` in full, and again after resume or compaction. It holds the adapter procedures and HARD TTS rules (run with `KPOCKET_TTS_ERROR_WITHOUT_EOS=1`; a voice file requires `has_voice_cloning = true`; one approved script line per production WAV).
 
 ## 8. Verification and handoff
 
@@ -379,6 +325,7 @@ Detailed state, waiver, and recovery procedures are in `references/state-and-rev
 - [ ] Batch images use approved refs, passed real raster checks, and received per-item G5b decisions.
 - [ ] Pose-sheet groups expanded, cells verified against alpha constraints, and cutouts committed with provenance.
 - [ ] Final audio uses correct mode, one line per WAV when narrated, and complete G5a decisions or recorded N/A.
+- [ ] Image/TTS HARD rules in the two references were read this session and applied.
 - [ ] All immutable versions, revised prompts, hashes, source IDs, and measured resolution budgets agree with the manifest.
 - [ ] Stale/rejected/blocked items and downstream invalidations are accurately recorded; no HARD result is overridden.
 - [ ] Handoff contains only verified current approvals, exact paths, and honest review evidence.

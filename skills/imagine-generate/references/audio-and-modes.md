@@ -1,5 +1,41 @@
 # Audio Generation, Modes, and Human Listening
 
+## HARD rules in this file
+
+- HARD-TTS-EOS: TTS must run with KPOCKET_TTS_ERROR_WITHOUT_EOS=1 to fail explicitly on incomplete generation
+- HARD-HAS-VOICE-CLONING: a file voice requires has_voice_cloning = true before proceeding; fallback non-cloning weights are not acceptable
+- HARD-SECRET-NEVER-WRITTEN: provider API keys come only from the environment or a mode-600 file outside the project and never reach output or project files
+
+## TTS adapter (moved from SKILL.md 7.3)
+
+### 7.3 TTS adapter
+
+Use `imagine-kit tts` only for the applicable narrated workflow; casting auditions and scratch timing outputs remain in `tmp/` and never count as approved production assets. <!-- rule:PROC-SCRATCH-NOT-ASSET -->
+
+Synthesize exactly one approved script line per production WAV, with independent identity, duration, take number, and approval. <!-- rule:PROC-ONE-LINE-PER-WAV -->
+
+Set `KPOCKET_TTS_ERROR_WITHOUT_EOS=1` for the Pocket TTS worker to fail explicitly on incomplete generation. <!-- rule:HARD-TTS-EOS -->
+
+When using a voice audio file, require the loaded worker to report `has_voice_cloning = true` before proceeding; fallback non-cloning weights are not acceptable. <!-- rule:HARD-HAS-VOICE-CLONING -->
+
+Provider API keys come only from the environment or a mode-600 file outside the project and never reach stdout, stderr, the journal, envelopes or project files. <!-- rule:HARD-SECRET-NEVER-WRITTEN -->
+
+Any ElevenLabs API, network, or worker failure exits with code 3 (BLOCKED), and a missing or badly permissioned key exits 7 (NEEDS_USER); never silently fall back to Pocket TTS or swap engines.
+
+Hosted TTS takes record provider, voice, model, plan tier and licence terms in the manifest and assets/CREDITS.md automatically; free or unverified plans are flagged. <!-- rule:PROC-HOSTED-TTS-LICENCE -->
+
+Before requesting G5a, read `data.total_duration_s`, `data.duration_range` and `data.missing_lines` from `tts`; when the `ADV-VO-DURATION-RANGE` advice appears, present the total and the G0 range to the user and resolve it (trim or revise the script and its approval, or change G0 with the user's approval) before asking for G5a; never trim audio silently. <!-- rule:ADV-VO-DURATION-RANGE -->
+
+Before generating production takes, estimate and disclose the character count of the selected `tts_text`. After the run, check that estimate against `data.characters`, the count actually sent.
+
+Allowed pronunciation/delivery levers are lexicon, punctuation, voice, seed, and temperature, plus engine-specific `voice_settings` and `model_id` levers for elevenlabs voices only; SSML, audio tags, phonemes, native pitch, or emotion controls remain not allowed. <!-- rule:PROC-PRONUNCIATION-LEVERS -->
+
+Supported fallbacks are Kokoro through pinned HyperFrames TTS (without Indonesian support) or a user-recorded WAV for each script line; disclose the tradeoffs and never silently swap engines. <!-- rule:PROC-TTS-FALLBACK -->
+
+There is no Phase 1 audio review page: list actual WAV paths for playback and use `SendUserFile` to provide the files when review occurs on another device. <!-- rule:PROC-REMOTE-LISTEN -->
+
+Report actual measured audio facts and explicitly state that Claude did not hear the audio; only the human listener can approve what it sounds like. <!-- rule:PROC-NOT-HEARD -->
+
 ## 1. Mode selection
 
 Use the exact `audio_mode` approved at G0.
