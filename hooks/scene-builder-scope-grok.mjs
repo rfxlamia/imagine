@@ -48,6 +48,10 @@ export function adapt(input, env = process.env) {
   const claudeName = Object.prototype.hasOwnProperty.call(TOOL_NAMES, grokName) ? TOOL_NAMES[grokName] : grokName;
   const original = objectInput(input?.tool_input) ?? objectInput(input?.toolInput);
   const prepared = commandForDecide(claudeName, original);
+  const telemetryToken = TELEMETRY_PREFIX.trim();
+  if (claudeName === "Bash" && typeof prepared.remainder === "string" && prepared.remainder.includes(telemetryToken)) {
+    return { decision: "deny", reason: "doubled telemetry prefix" };
+  }
   const decision = decide({
     cwd: input?.cwd,
     agent_type: subagentType,

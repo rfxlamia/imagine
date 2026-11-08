@@ -222,3 +222,46 @@ test("grok tests do not rewrite the claude env contract file", () => {
   assert.match(hooks, /\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/scene-builder-scope\.mjs/);
   assert.doesNotMatch(hooks, /scene-builder-scope-grok/);
 });
+
+test("doubled telemetry prefix in grok adapter is denied with reason doubled telemetry prefix", () => {
+  const { cwd, shadow } = fixture();
+  const bare = `npx hyperframes@0.8.223 lint ${shadow}`;
+  const doubled = scene(cwd, "run_terminal_command", { command: `${PREFIX}${PREFIX}${bare}` });
+  assert.equal(doubled.decision, "deny");
+  assert.equal(doubled.reason, "doubled telemetry prefix");
+  assert.equal(doubled.updatedInput, undefined);
+});
+
+test("grok adapter denies commands with leading whitespace or BOM before telemetry prefix", () => {
+  const { cwd, shadow } = fixture();
+  const bare = `npx hyperframes@0.8.223 lint ${shadow}`;
+
+  const singleSpace = scene(cwd, "run_terminal_command", { command: ` ${PREFIX}${bare}` });
+  assert.equal(singleSpace.decision, "deny");
+  assert.equal(singleSpace.reason, "doubled telemetry prefix");
+  assert.equal(singleSpace.updatedInput, undefined);
+
+  const twoSpaces = scene(cwd, "run_terminal_command", { command: `  ${PREFIX}${bare}` });
+  assert.equal(twoSpaces.decision, "deny");
+  assert.equal(twoSpaces.reason, "doubled telemetry prefix");
+  assert.equal(twoSpaces.updatedInput, undefined);
+
+  const nbsp = scene(cwd, "run_terminal_command", { command: `\u00a0${PREFIX}${bare}` });
+  assert.equal(nbsp.decision, "deny");
+  assert.equal(nbsp.reason, "doubled telemetry prefix");
+  assert.equal(nbsp.updatedInput, undefined);
+
+  const bom = scene(cwd, "run_terminal_command", { command: `\ufeff${PREFIX}${bare}` });
+  assert.equal(bom.decision, "deny");
+  assert.equal(bom.reason, "doubled telemetry prefix");
+  assert.equal(bom.updatedInput, undefined);
+});
+
+test("grok adapter still allows and re-adds a single prefix for PREFIX + bare", () => {
+  const { cwd, shadow } = fixture();
+  const bare = `npx hyperframes@0.8.223 lint ${shadow}`;
+  const res = scene(cwd, "run_terminal_command", { command: `${PREFIX}${bare}`, description: "lint shot" });
+  assert.equal(res.decision, "allow");
+  assert.equal(res.updatedInput.command, `${PREFIX}${bare}`);
+  assert.equal(res.updatedInput.description, "lint shot");
+});

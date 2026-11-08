@@ -1,7 +1,6 @@
 // SessionStart hook logic: persist HYPERFRAMES_NO_TELEMETRY=1 for every Bash
-// command of the session through CLAUDE_ENV_FILE. scene-builder runs bare
-// `npx hyperframes@0.8.223 ...` commands (its PreToolUse hook denies an env
-// prefix), so the variable has to come from the session environment instead.
+// command of the session through CLAUDE_ENV_FILE as a second layer. scene-builder
+// writes the HYPERFRAMES_NO_TELEMETRY=1 prefix itself, which the core policy accepts.
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 
 export const ENV_LINE = "export HYPERFRAMES_NO_TELEMETRY=1";

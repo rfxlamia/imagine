@@ -13,7 +13,7 @@
 // - File mutation tools (Write, Edit, MultiEdit) require file_path inside shadow
 //   and deny if notebook_path is present.
 // - NotebookEdit requires notebook_path inside shadow and denies if file_path is present.
-// - Bash is restricted to 'npx hyperframes@0.8.223 lint|snapshot|check|validate'
+// - Bash is restricted to '[HYPERFRAMES_NO_TELEMETRY=1 ]npx hyperframes@0.8.223 lint|snapshot|check|validate'
 //   with a typed per-subcommand flag allowlist and exactly one required shadow DIR positional.
 // - SubagentHandback (exact name) is allowed: it only carries the final report to the parent agent.
 // All other tools are denied.
@@ -27,6 +27,7 @@ import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
 export const SCENE_BUILDER_TYPES = ["imagine:scene-builder", "scene-builder"];
+export const TELEMETRY_TOKEN = "HYPERFRAMES_NO_TELEMETRY=1";
 const ALIAS_FIELDS = [
   "agentType",
   "agent_name",
@@ -197,6 +198,12 @@ function decideBash(root, command) {
   if (typeof command !== "string" || /[\r\n\t]/.test(command)) return deny(usage);
   const tokens = command.trim().split(" ");
   if (tokens.some((t) => t === "" || !TOKEN_RE.test(t))) return deny(usage);
+  if (tokens[0] === TELEMETRY_TOKEN) {
+    if (!command.startsWith(TELEMETRY_TOKEN + " ")) {
+      return deny(usage);
+    }
+    tokens.shift();
+  }
   if (tokens[0] !== BASH_PREFIX[0] || tokens[1] !== BASH_PREFIX[1] || !BASH_SUBCOMMANDS.has(tokens[2])) {
     return deny(usage);
   }

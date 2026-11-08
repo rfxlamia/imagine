@@ -616,3 +616,43 @@ test("isSceneBuilderIdentity helper unit checks", async () => {
   assert.equal(isSceneBuilderIdentity(null), false);
   assert.equal(isSceneBuilderIdentity({}), false);
 });
+
+test("TELEMETRY_TOKEN is exported as HYPERFRAMES_NO_TELEMETRY=1", async () => {
+  const { TELEMETRY_TOKEN } = await import("./scene-builder-scope-lib.mjs");
+  assert.equal(TELEMETRY_TOKEN, "HYPERFRAMES_NO_TELEMETRY=1");
+});
+
+test("bash commands with HYPERFRAMES_NO_TELEMETRY=1 prefix are allowed", () => {
+  const { cwd, shadow } = fixture();
+  assert.equal(bash(cwd, `HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "allow");
+  assert.equal(bash(cwd, `HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 check --json ${shadow}`).decision, "allow");
+});
+
+test("bash commands without prefix (bare form) remain allowed", () => {
+  const { cwd, shadow } = fixture();
+  assert.equal(bash(cwd, `npx hyperframes@0.8.223 lint ${shadow}`).decision, "allow");
+  assert.equal(bash(cwd, `npx hyperframes@0.8.223 check --json ${shadow}`).decision, "allow");
+});
+
+test("invalid telemetry prefixes, positions, and commands are denied", () => {
+  const { cwd, shadow } = fixture();
+  assert.equal(bash(cwd, `HYPERFRAMES_NO_TELEMETRY=0 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `HYPERFRAMES_NO_TELEMETRY=true npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `HYPERFRAMES_NO_TELEMETRY= npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `HYPERFRAMES_NO_TELEMETRY=1 HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `FOO=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `env HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `export HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `npx hyperframes@0.8.223 HYPERFRAMES_NO_TELEMETRY=1 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, "HYPERFRAMES_NO_TELEMETRY=1 rm -rf /").decision, "deny");
+  assert.equal(bash(cwd, `HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${cwd}/outside`).decision, "deny");
+  assert.equal(bash(cwd, `HYPERFRAMES_NO_TELEMETRY=1  npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+});
+
+test("bash command with leading whitespace or BOM before telemetry prefix is denied", () => {
+  const { cwd, shadow } = fixture();
+  assert.equal(bash(cwd, ` HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `  HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `\u00a0HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+  assert.equal(bash(cwd, `\ufeffHYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
+});
