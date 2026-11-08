@@ -1,0 +1,137 @@
+{
+  "manifest_version": 1,
+  "generated_by": "tools/agent-manifest.mjs",
+  "source_dir": "agents",
+  "agents": [
+    {
+      "name": "continuity-reviewer",
+      "source": "agents/continuity-reviewer.md",
+      "source_sha256": "c8750b83032a60829cc196fc5007a4698893fa718970013835b383180d24c090",
+      "description": "Read-only visual continuity reviewer for Imagine. Compares canonical references before G5r, generated batch assets before G5b, and edit snapshot review sheets against the project bible, style, and approved references. Returns evidence-backed P0/P1/P2 findings and exact proposed corrections without modifying files or approving gates.",
+      "claude": {
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "model": "sonnet"
+      },
+      "portable": {
+        "actions": [
+          "read",
+          "search"
+        ],
+        "model_tier": "standard",
+        "writes": "none",
+        "output": "findings",
+        "requires_enforced_isolation": false,
+        "inline_fallback": "blocked"
+      }
+    },
+    {
+      "name": "fx-designer",
+      "source": "agents/fx-designer.md",
+      "source_sha256": "caa9a6ecbbffc98e1def12e9c8ca86698bbf4fc4f06a98cdf819f816dfc7af38",
+      "description": "Plans per-shot effects, grades, overlays, and finishing for Imagine. Returns a structured FX patch without writing files or approving work.",
+      "claude": {
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "model": "sonnet"
+      },
+      "portable": {
+        "actions": [
+          "read",
+          "search"
+        ],
+        "model_tier": "standard",
+        "writes": "none",
+        "output": "patch",
+        "requires_enforced_isolation": false,
+        "inline_fallback": "allowed-patch-only"
+      }
+    },
+    {
+      "name": "previz-designer",
+      "source": "agents/previz-designer.md",
+      "source_sha256": "24e4e4857079e1e5ef7ddc99e67ae383bc78c08cc0cfa065448343ad87ee70e4",
+      "description": "Plans shot timing, camera, parallax, motion, transitions, and beats in HyperFrames-native terms; returns a read-only previz patch for main-agent validation and application.",
+      "claude": {
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "model": "sonnet"
+      },
+      "portable": {
+        "actions": [
+          "read",
+          "search"
+        ],
+        "model_tier": "standard",
+        "writes": "none",
+        "output": "patch",
+        "requires_enforced_isolation": false,
+        "inline_fallback": "allowed-patch-only"
+      }
+    },
+    {
+      "name": "scene-builder",
+      "source": "agents/scene-builder.md",
+      "source_sha256": "77e5f20e83813b095e7a99381ef55ee798bf87e07669ee176bb11fb61f1d9427",
+      "description": "Build and validate one shot's isolated HyperFrames sub-composition inside its stage/edit/<id>/ shadow project, returning an evidence-backed proposal or a blocked report.",
+      "claude": {
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Write",
+          "Edit",
+          "Bash"
+        ],
+        "model": "sonnet"
+      },
+      "portable": {
+        "actions": [
+          "read",
+          "search",
+          "write",
+          "run-process"
+        ],
+        "model_tier": "standard",
+        "writes": "shadow-only",
+        "output": "proposal",
+        "requires_enforced_isolation": true,
+        "inline_fallback": "blocked"
+      }
+    },
+    {
+      "name": "storyboard-artist",
+      "source": "agents/storyboard-artist.md",
+      "source_sha256": "81dd118a107cabf718efa573afd9a6624e6c468bc6c807c94d60b1ecd34d9ee6",
+      "description": "Imagine planning subagent. Designs shot lists, composition, script-unit placement, and asset requirements from locked script and canon. Returns a structured storyboard patch proposal without writing files.",
+      "claude": {
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "model": "sonnet"
+      },
+      "portable": {
+        "actions": [
+          "read",
+          "search"
+        ],
+        "model_tier": "standard",
+        "writes": "none",
+        "output": "patch",
+        "requires_enforced_isolation": false,
+        "inline_fallback": "allowed-patch-only"
+      }
+    }
+  ]
+}
