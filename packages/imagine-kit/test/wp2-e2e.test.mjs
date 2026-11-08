@@ -72,12 +72,12 @@ t("AC-08: a batch that stops half way resumes without regenerating or duplicatin
   const broken = await p.run({ FAKE_CODEX_MODES: "ok,fail" }, "img", "--batch", "a,b");
   assert.equal(broken.exit, 3);
   assert.equal(p.calls().length, 4, "one good call for a, three failed attempts for b");
-  const sha = sha256File(join(p.dir, "assets/img/a.v1.png"));
+  const sha = sha256File(join(p.dir, "assets/img/world/a.v1.png"));
   const resumed = await p.run({}, "img", "--batch", "a,b");
   assert.equal(resumed.exit, 0, JSON.stringify(resumed.env.errors));
   assert.equal(p.calls().length, 5, "only b was generated again");
   assert.deepEqual(getManifest(p.dir).assets.map((a) => `${a.id}.v${a.v}`).sort(), ["a.v1", "b.v1"]);
-  assert.equal(sha256File(join(p.dir, "assets/img/a.v1.png")), sha);
+  assert.equal(sha256File(join(p.dir, "assets/img/world/a.v1.png")), sha);
   assert.deepEqual(getProject(p.dir).blocked, []);
-  assert.equal(existsSync(join(p.dir, "assets/img/b.v1.png")), true);
+  assert.equal(existsSync(join(p.dir, "assets/img/world/b.v1.png")), true);
 });

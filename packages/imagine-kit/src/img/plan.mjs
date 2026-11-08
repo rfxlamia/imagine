@@ -11,6 +11,12 @@ export function resolveBackground(a) {
   return a.sheet !== undefined ? "legacy" : "opaque";
 }
 
+export function imgDir(kind, intent) {
+  if (kind === "ref") return "refs";
+  if (intent === "transparent" || intent === "legacy") return "img/figure";
+  return "img/world";
+}
+
 // assets/plan.yaml (source-formats.md section 11): the planned rasters, written during the storyboard stage.
 export function loadPlan(dir) {
   const p = join(dir, "assets", "plan.yaml");

@@ -6,7 +6,7 @@ import { appendJournal } from "../journal.mjs";
 import { parseDuration, saveProject, slugify } from "../project.mjs";
 import { renderStyleOutput } from "../docs.mjs";
 
-const DIRS = ["script", "stage/storyboard", "stage/previz", "stage/fx", "stage/edit", "assets/refs", "assets/img", "assets/vo",
+const DIRS = ["script", "stage/storyboard", "stage/previz", "stage/fx", "stage/edit", "assets/refs", "assets/img/figure", "assets/img/world", "assets/vo",
   "assets/sfx", "assets/music", "assets/_rejected", "edit", "review", "tmp/scratch-vo", "tmp/audition", "post", ".history"];
 const MODES = ["narrated", "music-led", "text-led"];
 const PLATFORMS = ["generic", "tiktok", "reels", "shorts", "youtube"];
