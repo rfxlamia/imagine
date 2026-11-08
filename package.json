@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test 'hooks/*.test.mjs' 'tools/*.test.mjs' 'tests/behavioral/*.test.mjs' 'tests/slice/*.test.mjs'",
+    "test": "node --test 'hooks/*.test.mjs' 'tools/*.test.mjs' 'tests/behavioral/*.test.mjs' 'tests/slice/*.test.mjs' 'tests/portability/*.test.mjs'",
     "check:names": "node tools/check-forbidden-names.mjs",
     "check:rules": "node tools/check-traceability.mjs --registry-only"
   },

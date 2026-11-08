@@ -26,6 +26,9 @@ Before operating, read these repository contracts in full:
   ownership, patches, gates, and state formats.
 - `docs/contracts/claude-code-platform.md` — plugin runtime and dispatch
   constraints.
+- `docs/contracts/harness-portability.md`: cross-host contract.
+- `docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
+  `claude-code` on Claude Code.
 
 When a detail is unspecified, consult its contract. Never invent flags,
 schema fields, exceptions, or successful outcomes.
@@ -33,6 +36,8 @@ schema fields, exceptions, or successful outcomes.
 Invoke the kit using:
 
 `node "${CLAUDE_SKILL_DIR}/../../packages/imagine-kit/bin/imagine-kit.mjs" <command> ...`
+
+On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is not substituted: use `node "<R>/packages/imagine-kit/bin/imagine-kit.mjs" <command> ...`, where `<R>` is the absolute directory two levels above this SKILL.md, confirmed by `node "<R>/host/plugin-root.mjs" --skill-dir "<R>/skills/imagine"` printing `"ok":true` (protocol `imagine-root/1`, `docs/contracts/harness-portability.md` section 4). Never resolve the kit from the working directory, `PATH`, or a global install.
 
 Hereafter, `imagine-kit` means this invocation, not an assumed globally
 installed executable. Use only documented arguments.
@@ -116,7 +121,7 @@ Review subagents provide findings, not gate approvals or waivers.
 
 Use:
 
-- `R` = plugin root, `${CLAUDE_SKILL_DIR}/../..`.
+- `R` = plugin root, `${CLAUDE_SKILL_DIR}/../..`. On other hosts, R is resolved as described in docs/contracts/harness-portability.md section 4.
 - `P` = active project root, `.imagine/<project-id>`.
 - `U` = `P/script/narration.md` for `audio_mode: narrated`.
 - `U` = `P/script/copy.md` for `music-led` or `text-led`.
@@ -132,6 +137,9 @@ Every stage reads these common plugin files in full:
 - `R/docs/contracts/cli-contract.md`
 - `R/docs/contracts/source-formats.md`
 - `R/docs/contracts/claude-code-platform.md`
+- `R/docs/contracts/harness-portability.md`: cross-host contract.
+- `R/docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
+  `claude-code` on Claude Code.
 
 For an existing workspace, also read:
 
