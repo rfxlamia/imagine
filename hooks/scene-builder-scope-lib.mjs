@@ -5,8 +5,8 @@
 // agent, subagent, agent_id, agentId, subagent_id, subagentId, role, agent_role, agentRole)
 // or agent_type without exact match, or as nested values in arrays/objects (depth < 3),
 // with normalization (NFKC, zero-width characters stripped, Unicode dashes replaced with '-',
-// trimmed, lowercased, '_' replaced with '-', '.md' stripped, '@version' stripped,
-// instance suffix stripped), without a verified adapter, the call is denied instead of passed through.
+// trimmed, lowercased, '_' replaced with '-', and suffix strips for '.md', '@version', and
+// numeric instance suffixes repeated in a loop until stable, capped at 8 passes), without a verified adapter, the call is denied instead of passed through.
 // The path anchor is CLAUDE_PROJECT_DIR (the session start root), falling back to the hook input cwd.
 // Scene-builder is restricted to an allowlist of tools:
 // - Read-only tools (Read, Glob, Grep) are allowed.
@@ -55,9 +55,13 @@ export function isSceneBuilderIdentity(value, depth = 0) {
     s = s.replace(/\p{Pd}/gu, "-");
     s = s.trim().toLowerCase();
     s = s.replace(/_/g, "-");
-    s = s.replace(/\.md$/, "");
-    s = s.replace(/@[^@/:]*$/, "");
-    s = s.replace(/[#-]\d+$/, "");
+    for (let i = 0; i < 8; i++) {
+      const prev = s;
+      s = s.replace(/\.md$/, "");
+      s = s.replace(/@[^@/:]*$/, "");
+      s = s.replace(/[#-]\d+$/, "");
+      if (s === prev) break;
+    }
     return SCENE_BUILDER_TYPES.includes(s) || SCENE_BUILDER_RE.test(s);
   }
   if (Array.isArray(value) && depth < 3) {

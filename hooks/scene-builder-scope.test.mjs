@@ -656,3 +656,72 @@ test("bash command with leading whitespace or BOM before telemetry prefix is den
   assert.equal(bash(cwd, `\u00a0HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
   assert.equal(bash(cwd, `\ufeffHYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint ${shadow}`).decision, "deny");
 });
+
+
+test("composed identity suffixes: scene-builder variants deny write outside shadow with unrecognised identity reason", () => {
+  const { cwd } = fixture();
+  const outsidePath = join(cwd, "outside.txt");
+  const deniedVariants = [
+    "scene-builder.md@v1",
+    "scene-builder.md#2",
+    "imagine:scene-builder.md@v1",
+    "scene-builder@v1.md",
+    "Scene-Builder.MD@V2#3",
+  ];
+  for (const agent_type of deniedVariants) {
+    const r = decide({
+      cwd,
+      tool_name: "Write",
+      tool_input: { file_path: outsidePath },
+      agent_type,
+    }, {});
+    assert.equal(r.decision, "deny", `expected deny for agent_type=${agent_type}`);
+    assert.equal(
+      r.reason,
+      "scene-builder identity in an unrecognised host field; no verified adapter",
+      `expected unrecognised identity reason for agent_type=${agent_type}`
+    );
+  }
+});
+
+test("composed identity suffixes: regression non-scene-builder identities pass", () => {
+  const { cwd } = fixture();
+  const outsidePath = join(cwd, "outside.txt");
+  const passVariants = [
+    "imagine:storyboard-artist.md@v1",
+    "previz-designer@v1",
+    "continuity-reviewer.md#2",
+  ];
+  for (const agent_type of passVariants) {
+    const r = decide({
+      cwd,
+      tool_name: "Write",
+      tool_input: { file_path: outsidePath },
+      agent_type,
+    }, {});
+    assert.equal(r.decision, "pass", `expected pass for agent_type=${agent_type}`);
+    assert.equal(r.reason, "");
+  }
+});
+
+test("isSceneBuilderIdentity composed identity suffixes direct asserts", async () => {
+  const { isSceneBuilderIdentity } = await import("./scene-builder-scope-lib.mjs");
+  const positive = [
+    "scene-builder.md@v1",
+    "scene-builder.md#2",
+    "imagine:scene-builder.md@v1",
+    "scene-builder@v1.md",
+    "Scene-Builder.MD@V2#3",
+  ];
+  for (const str of positive) {
+    assert.equal(isSceneBuilderIdentity(str), true, `expected isSceneBuilderIdentity("${str}") to be true`);
+  }
+  const negative = [
+    "imagine:storyboard-artist.md@v1",
+    "previz-designer@v1",
+    "continuity-reviewer.md#2",
+  ];
+  for (const str of negative) {
+    assert.equal(isSceneBuilderIdentity(str), false, `expected isSceneBuilderIdentity("${str}") to be false`);
+  }
+});

@@ -98,7 +98,7 @@ Read all of these files in full:
 - `docs/contracts/rules.yaml`
 - `docs/contracts/cli-contract.md`
 - `docs/contracts/source-formats.md`
-- `docs/contracts/claude-code-platform.md`
+- `docs/contracts/claude-code-platform.md` (read only when the active host-id is `claude-code`)
 - `docs/contracts/harness-portability.md`: cross-host contract.
 - `docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
   `claude-code` on Claude Code.
