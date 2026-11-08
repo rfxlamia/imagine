@@ -425,3 +425,194 @@ test("anchored: symlinked CLAUDE_PROJECT_DIR pointing at the real root is allowe
   symlinkSync(cwd, alias);
   assert.equal(sb(cwd, "Write", { file_path: join(shadow, "compositions", "a.html") }, { CLAUDE_PROJECT_DIR: alias }).decision, "allow");
 });
+
+test("alias fields with scene-builder identity and no agent_type deny write outside shadow", () => {
+  const { cwd } = fixture();
+  const aliasFields = [
+    "agentType",
+    "agent_name",
+    "agentName",
+    "subagent_type",
+    "subagentType",
+    "subagent_name",
+    "subagentName",
+  ];
+  const identities = ["imagine:scene-builder", "scene-builder"];
+
+  for (const field of aliasFields) {
+    for (const id of identities) {
+      const r = decide({
+        cwd,
+        tool_name: "Write",
+        tool_input: { file_path: join(cwd, "outside.txt") },
+        [field]: id,
+      }, {});
+      assert.equal(
+        r.decision,
+        "deny",
+        `expected deny for alias ${field}=${id}`
+      );
+      assert.equal(
+        r.reason,
+        "scene-builder identity in an unrecognised host field; no verified adapter"
+      );
+    }
+  }
+});
+
+test("subagentType: 'storyboard-artist' with no agent_type gives pass", () => {
+  const { cwd } = fixture();
+  const r = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: join(cwd, "x") },
+    subagentType: "storyboard-artist",
+  }, {});
+  assert.equal(r.decision, "pass");
+});
+
+test("agent_type: 'imagine:scene-builder' plus an alias still follows normal policy (allowed shadow write is allow)", () => {
+  const { cwd, shadow } = fixture();
+  const r = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: join(shadow, "compositions", "ok.html") },
+    agent_type: "imagine:scene-builder",
+    subagentType: "imagine:scene-builder",
+  }, {});
+  assert.equal(r.decision, "allow");
+  assert.equal(r.reason, "inside shadow project");
+});
+
+test("hook entry point with unrecognised subagent_type: 'scene-builder' prints deny decision", () => {
+  const entry = join(dirname(fileURLToPath(import.meta.url)), "scene-builder-scope.mjs");
+  const { cwd } = fixture();
+  const childEnv = { ...process.env };
+  delete childEnv.CLAUDE_PROJECT_DIR;
+  delete childEnv.GROK_HOOK_EVENT;
+
+  const res = spawnSync(process.execPath, [entry], {
+    input: JSON.stringify({
+      cwd,
+      tool_name: "Write",
+      tool_input: { file_path: join(cwd, "outside.txt"), content: "hello" },
+      subagent_type: "scene-builder",
+    }),
+    encoding: "utf8",
+    env: childEnv,
+  });
+
+  assert.equal(res.status, 0);
+  assert.match(res.stdout, /"permissionDecision":"deny"/);
+  assert.match(res.stdout, /scene-builder identity in an unrecognised host field; no verified adapter/);
+});
+
+
+test("hardened identity match: agent_type variants deny write outside shadow", () => {
+  const { cwd } = fixture();
+  const outsidePath = join(cwd, "outside.txt");
+  const variants = [
+    "imagine/scene-builder",
+    "agents/scene-builder.md",
+    "Scene-Builder",
+    "scene_builder",
+    "imagine:scene-builder@0.1.0",
+    "scene-builder#1",
+    "scene-builder",
+  ];
+  for (const agent_type of variants) {
+    const r = decide({
+      cwd,
+      tool_name: "Write",
+      tool_input: { file_path: outsidePath },
+      agent_type,
+    }, {});
+    assert.equal(r.decision, "deny", `expected deny for agent_type=${agent_type}`);
+  }
+});
+
+test("hardened identity match: nested and extended alias fields deny write outside shadow", () => {
+  const { cwd } = fixture();
+  const outsidePath = join(cwd, "outside.txt");
+
+  const rArray = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: outsidePath },
+    subagent_type: ["scene-builder"],
+  }, {});
+  assert.equal(rArray.decision, "deny", "expected deny for subagent_type as ['scene-builder']");
+
+  const rObj = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: outsidePath },
+    subagent: { type: "scene-builder" },
+  }, {});
+  assert.equal(rObj.decision, "deny", "expected deny for subagent as { type: 'scene-builder' }");
+
+  for (const field of ["agent", "agent_id", "role", "agentRole"]) {
+    const r = decide({
+      cwd,
+      tool_name: "Write",
+      tool_input: { file_path: outsidePath },
+      [field]: "scene-builder",
+    }, {});
+    assert.equal(r.decision, "deny", `expected deny for ${field}=scene-builder`);
+  }
+});
+
+test("hardened identity match: subagent_type with whitespace and mixed case denies write outside shadow", () => {
+  const { cwd } = fixture();
+  const outsidePath = join(cwd, "outside.txt");
+  const r = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: outsidePath },
+    subagent_type: " Scene-Builder ",
+  }, {});
+  assert.equal(r.decision, "deny", "expected deny for subagent_type=' Scene-Builder '");
+});
+
+test("regression: non-scene-builder identities pass", () => {
+  const { cwd } = fixture();
+  const outsidePath = join(cwd, "outside.txt");
+
+  const r1 = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: outsidePath },
+    agent_type: "imagine:storyboard-artist",
+  }, {});
+  assert.equal(r1.decision, "pass");
+
+  const r2 = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: outsidePath },
+    agent_type: "imagine:previz-designer",
+  }, {});
+  assert.equal(r2.decision, "pass");
+
+  const r3 = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: outsidePath },
+  }, {});
+  assert.equal(r3.decision, "pass");
+
+  const r4 = decide({
+    cwd,
+    tool_name: "Write",
+    tool_input: { file_path: outsidePath },
+    agent_id: "a48ee51fefbcb4979",
+  }, {});
+  assert.equal(r4.decision, "pass");
+});
+
+test("isSceneBuilderIdentity helper unit checks", async () => {
+  const { isSceneBuilderIdentity } = await import("./scene-builder-scope-lib.mjs");
+  assert.equal(isSceneBuilderIdentity(42), false);
+  assert.equal(isSceneBuilderIdentity(null), false);
+  assert.equal(isSceneBuilderIdentity({}), false);
+});

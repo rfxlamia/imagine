@@ -212,6 +212,8 @@ Never accept a useful-looking output if it was produced alongside an unauthorize
 
 The scene-builder is allowed to write only inside `stage/edit/<id>/`; the PreToolUse hook must enforce this boundary, and a blocked write is not permission to choose another destination. <!-- rule:HARD-SHADOW-ONLY -->
 
+Before the first scene-builder dispatch of a session, and again after resume or compaction, run `node "<R>/host/check-stage.mjs" --host <host-id> --stage scene-builder`, where `<host-id>` is the id named in your host file under `docs/contracts/hosts/` (`claude-code` on Claude Code) and `<R>` is the plugin root. Dispatch only when it exits 0 with `"status":"ok"`. Otherwise do not dispatch, never run the scene-builder work inline in the main agent, and stop with BLOCKED per CAP-BLOCKED-STOP, quoting the reason. If you cannot tell which host you are on, use `unknown`, which is BLOCKED. <!-- rule:CAP-HOST-ENFORCEMENT -->
+
 Provide:
 - The selected frame block and all referenced STORY.md ids.
 - Relevant complete canon entries and style requirements.

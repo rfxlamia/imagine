@@ -79,6 +79,7 @@ rules:
   - { id: CAP-HARD-NO-FALLBACK, source: "section 2.5", text: "HARD validators have no fallback; only exit is a user waiver recorded in REVIEW.md", cover: instructions, replan: "waiver CLI cut; waivers become a REVIEW.md section with the user's quote" }
   - { id: CAP-ADV-NOT-RUN, source: "section 2.5", text: "Unimplemented advisory checks reported not_run, never pass", cover: both }
   - { id: CAP-NO-FABRICATION, source: "section 2.5", text: "Never fabricate command output or treat a missing capability as available" }
+  - { id: CAP-HOST-ENFORCEMENT, source: "GH #18", text: "Scene-builder dispatch requires host write enforcement with VERIFIED-RUN evidence (host/check-stage.mjs ok); otherwise BLOCKED, never inline", cover: both }
   # Gates
   - { id: GATE-G0, source: "section 4", text: "G0: format, platform, audio_mode, language, duration, silence choice" }
   - { id: GATE-G1, source: "section 4", text: "G1: locked script units per unit" }
