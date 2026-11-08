@@ -72,13 +72,20 @@ export function main(argv = process.argv.slice(2), env = process.env) {
   }
 
   const ok = result.status === "ok";
-  console.log(JSON.stringify({
+  const payload = {
     ok,
     status: result.status,
     host: result.host,
     stage: result.stage,
-    reason: result.reason,
-  }));
+  };
+  if (result.isolation !== undefined) {
+    payload.isolation = result.isolation;
+  }
+  if (result.coverage !== undefined) {
+    payload.coverage = result.coverage;
+  }
+  payload.reason = result.reason;
+  console.log(JSON.stringify(payload));
   process.exitCode = ok ? 0 : 3;
 }
 

@@ -14,7 +14,7 @@ Every host adapter and environment must preserve these core invariants without e
 2. **Cryptographic source hashes**: Every dependency relationship between script, canon, style, assets, composition, and renders is tracked through SHA-256 hashes (`HARD-PATCH-REVERIFY`, `HARD-STATUS-DERIVED`, `PROC-DISPATCH-GUARD`). The `imagine-kit status` command computes item staleness directly from recorded input hashes without subjective evaluation.
 3. **Audit and journal rules**: Every project state transition appends an immutable entry to `journal.md` (`PROC-JOURNAL`). Main-agent semantic audits must reread `bible.yaml` and `style.md` directly from disk before evaluation (`PROC-AUDIT-REREAD`).
 4. **Planning-key writer exclusivity**: The planning subagents have no filesystem write access. `STORY.md` planning keys are written exclusively through atomic, verified execution of `imagine-kit patch apply` (`PROC-LOCK-HASHED-WRITES`, `HARD-PATCH-KEYS`, `HARD-STORY-WRITERS`).
-5. **Enforced scene-builder isolation**: The `scene-builder` subagent is strictly confined to writing inside its assigned shadow project directory at `.imagine/<project>/stage/edit/s<NN>/` (`HARD-SHADOW-ONLY`, `CAP-HOST-ENFORCEMENT`). Writes to any path outside that directory are denied.
+5. **Enforced scene-builder isolation**: The `scene-builder` subagent write isolation is enforced by a PreToolUse hook where available; on a host without a verified write hook, the kit guard detects, after stage-shot, changes to canon, plan inputs and media; it does not prevent writes, and it does not cover other shots' promoted compositions, the root motion file, or the project state (including gate approvals) (`HARD-SHADOW-ONLY`, `CAP-HOST-ENFORCEMENT`). Writes outside the shadow directory are rejected or detected.
 
 ### 1.2 Instruction file uniformity
 
@@ -277,7 +277,7 @@ For each agent, `docs/contracts/agents.manifest.json` records:
 - `source_sha256`: hexadecimal SHA-256 hash of the source markdown file;
 - `description`: verbatim frontmatter description;
 - `claude`: `{ tools: [...], model: "..." }`;
-- `portable`: `{ actions: [...], model_tier: "...", writes: "none"|"shadow-only", output: "patch"|"findings"|"proposal", requires_enforced_isolation: boolean, inline_fallback: "allowed-patch-only"|"blocked" }`.
+- `portable`: `{ actions: [...], model_tier: "...", writes: "none"|"shadow-only", output: "patch"|"findings"|"proposal", requires_enforced_isolation: boolean, isolation_modes?: ["hook", "kit-guard"], inline_fallback: "allowed-patch-only"|"blocked" }`.
 
 ### 6.2 Inline fallback policy
 
@@ -326,16 +326,23 @@ The host capability registry is implemented in `host/capabilities.mjs` and exerc
   - `HOST_IDS = Object.freeze(["claude-code", "grok", "antigravity", "cursor", "pi"])`
   - `HOSTS`: frozen capability dictionary per host id
   - `PROTECTED_STAGES = Object.freeze(["scene-builder"])`
-  - `checkStage({ host, stage, env = process.env })`
-- Each entry in `HOSTS` specifies `subagents`, `pretooluse_hook`, `hook_failure`, `scene_builder_enforcement`, `evidence`, and `corroborate` (`{ name, value }` or `null`).
-- Dispatching `scene-builder` requires `scene_builder_enforcement: "VERIFIED-RUN"` and `hook_failure: "block"`.
+  - `KIT_GUARD_TEST_FILE = "packages/imagine-kit/test/guard-integration.test.mjs"`
+  - `checkStage({ host, stage, env = process.env, hosts = HOSTS, rootDir })`
+- Each entry in `HOSTS` specifies `subagents`, `pretooluse_hook`, `hook_failure`, `scene_builder_enforcement`, `evidence`, `corroborate` (`{ name, value }` or `null`), and `kit_guard_run` (`string` evidence path or `null`).
+- Dispatching `scene-builder` evaluates the host's own claim:
+  1. **Hook enforcement path**: Chosen when the host claims `scene_builder_enforcement: "VERIFIED-RUN"`. Requires `hook_failure: "block"` and environment corroboration. Failure stays `BLOCKED` with hook evidence reasons and never falls through to the kit-guard branch. Passes with `isolation: "hook"`.
+  2. **Kit-guard path**: For hosts making no hook claim. Requires `subagents: "VERIFIED-RUN"`, `kit_guard_run` referencing an existing repo-relative evidence file on disk, and the kit guard test file (`packages/imagine-kit/test/guard-integration.test.mjs`) present on disk. Passes with `isolation: "kit-guard"` and `coverage: "detective; detects changes to canon, plan inputs and media after stage-shot; does not prevent writes"`.
 - CLI utility:
   ```bash
   node host/check-stage.mjs --host <id> --stage scene-builder
   ```
   The CLI outputs exactly one single-line JSON object:
   ```json
-  {"ok": true, "status": "ok", "host": "claude-code", "stage": "scene-builder", "reason": null}
+  {"ok": true, "status": "ok", "host": "claude-code", "stage": "scene-builder", "isolation": "hook", "reason": null}
+  ```
+  And for kit-guard:
+  ```json
+  {"ok": true, "status": "ok", "host": "<id>", "stage": "scene-builder", "isolation": "kit-guard", "coverage": "detective; detects changes to canon, plan inputs and media after stage-shot; does not prevent writes", "reason": null}
   ```
   Exit codes:
   - `0`: status is `"ok"` (`ok: true`);
@@ -344,9 +351,9 @@ The host capability registry is implemented in `host/capabilities.mjs` and exerc
 
 ### 7.3 Stage check results for `scene-builder`
 
-- Only `claude-code` returns `ok` for the `scene-builder` stage, and only when `CLAUDECODE=1` is present in the environment (`VERIFIED-RUN`, based on `tests/slice/evidence/ac17-hook.final.txt`).
+- Only `claude-code` returns `ok` for the `scene-builder` stage, and only when `CLAUDECODE=1` is present in the environment (`VERIFIED-RUN`, based on `tests/slice/evidence/ac17-hook.final.txt`), carrying `isolation: "hook"`.
 - When `CLAUDECODE=1` is absent, `claude-code` returns `BLOCKED` with reason `"host claim not corroborated by environment"`.
-- Every other host identifier (`grok`, `antigravity`, `cursor`, `pi`), empty string, and any unknown identifier returns `BLOCKED` (`CAP-HOST-ENFORCEMENT`).
+- Every other host identifier (`grok`, `antigravity`, `cursor`, `pi`), empty string, and any unknown identifier returns `BLOCKED` (`CAP-HOST-ENFORCEMENT`). Hosts with no hook claim report missing `kit_guard_run` evidence and unverified subagents.
 
 ### 7.4 Corroboration boundaries and known limits
 
@@ -360,7 +367,7 @@ Corroboration checks provide defense against accidental misconfiguration, but do
 
 1. **Unrecognized identity fields**: If a subagent identity appears in an unverified alias field without an exact type match, the core hook logic denies the call (`scene-builder identity in an unrecognised host field; no verified adapter`).
 2. **Main-agent hash guard**: The parent agent's before-and-after cryptographic hashing of protected files (`PROC-DISPATCH-GUARD`) remains mandatory across all hosts.
-3. **Unhooked host protection**: On a host lacking verified hook enforcement, safety is enforced by the stage check (`host/check-stage.mjs`), which blocks execution of `scene-builder` (`CAP-HOST-ENFORCEMENT`), and by the main agent's hash guard.
+3. **Unhooked host protection and gap**: On a host without a verified write hook, the kit guard detects, after stage-shot, changes to canon, plan inputs and media; it does not prevent writes, and it does not cover other shots' promoted compositions, the root motion file, or the project state (including gate approvals). Safety requires both the stage check (`host/check-stage.mjs`) and the kit guard (`HARD-SHADOW-ONLY`, `CAP-HOST-ENFORCEMENT`).
 
 ## 8. Runtime environment and dependencies
 
