@@ -18,7 +18,7 @@ test("HARD-FPS-SIZE: new writes a valid project with the G0 proposal and the sec
   assert.deepEqual([p.g0.status, p.g0.width, p.g0.height, p.g0.fps], ["pending", 1080, 1920, 30]);
   assert.deepEqual(p.g0.duration_s, { min: 12, max: 15 });
   assert.equal(readFileSync(join(cwd, ".imagine", "ACTIVE"), "utf8").trim(), "2026-11-01-keeper");
-  for (const d of ["script", "stage/storyboard", "stage/previz", "stage/fx", "assets/refs", "assets/img", "assets/vo", "tmp/scratch-vo", "post", ".history"]) {
+  for (const d of ["script", "stage/storyboard", "stage/previz", "stage/fx", "assets/refs", "assets/img", "assets/img/figure", "assets/img/world", "assets/vo", "tmp/scratch-vo", "post", ".history"]) {
     assert.equal(existsSync(join(dir, d)), true, d);
   }
   assert.equal(readFileSync(join(dir, "assets", "manifest.yaml"), "utf8"), "assets: []\n");

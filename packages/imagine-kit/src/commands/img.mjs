@@ -11,7 +11,7 @@ import { rasterQ, round2, tierOf } from "../raster.mjs";
 import { createContext, resolveRef } from "../sources.mjs";
 import { compilePrompt, compileSheetPrompt, codexVersion, generate, generationInfo, lastRevisedPrompt } from "../img/adapter.mjs";
 import { commitAsset, commitAssets, recordBlocked, safePath } from "../img/commit.mjs";
-import { loadPlan, resolveBackground } from "../img/plan.mjs";
+import { imgDir, loadPlan, resolveBackground } from "../img/plan.mjs";
 import { classifyAlpha, computeAlphaMetrics } from "../img/alpha.mjs";
 import { fallbackLoss, nativeFlags } from "../img/integrity.mjs";
 import { cropCell, isBlankImage, readRgba, writeReviewComposite } from "../img/cutout.mjs";
@@ -37,7 +37,6 @@ function adoptable(dir, workRels, finalPath, stamp) {
   }
   return null;
 }
-const DIR_OF = { ref: "refs", img: "img" };
 const report = (a) => ({ id: a.id, v: a.v, w: a.w ?? null, h: a.h ?? null, q: a.q ?? null, tier: a.tier ?? null, sha256: a.sha256, revised_prompt: a.revised_prompt ?? null });
 
 // HARD-REFS-APPROVED: every referenced ref is the current version, approved in the manifest and in the project, and its file hash still matches.
@@ -61,7 +60,7 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   const kind = p.kind;
   const intent = resolveBackground(p);
   const transparent = intent === "transparent";
-  const rel = `assets/${DIR_OF[kind]}/${p.id}.v${v}.png`;   // verbatim
+  const rel = `assets/${imgDir(kind, intent)}/${p.id}.v${v}.png`;
   const finalPath = safePath(dir, rel);
   if (!finalPath) throw new KitError("HARD", `${rel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${p.id}.v${v}` });
 
@@ -439,7 +438,7 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
   for (let k = 1; k <= n; k++) {
     const member = members[k - 1];
     const v = versions[k - 1];
-    const rel = `assets/img/${member.id}.v${v}.png`;
+    const rel = `assets/${imgDir(member.kind, intent)}/${member.id}.v${v}.png`;
     const cut = cellCuts.cuts[k - 1];
     const q = member.required_px ? rasterQ(cut.w, cut.h, member.required_px) : null;
     const reviewRel = `assets/composites/${member.id}.v${v}.png`;
