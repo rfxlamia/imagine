@@ -1,10 +1,11 @@
 import { SHEET_EDGE_MAX, SHEET_EDGE_PX, SHEET_MIN_FILL } from "./sheet.mjs";
 
-// A real native PNG is bimodal and its solid pixels sit at 250-254, so "opaque" is >= 250, not == 255.
+// A real native PNG is bimodal and its solid pixels sit at 250-254, so "opaque" allows at most 0.1% of pixels below alpha 250, not == 255.
 export const ALPHA_SOLID = 250;
 export const ALPHA_CLEAR = 5;
 export const ALPHA_FILL = 128; // same cut as checkCellAlpha, so fill and edge keep their meaning
 export const NATIVE_MIN_TRANSPARENT = 0.2; // provisional; Spec B sets the final value
+export const OPAQUE_OUTLIER_MAX = 0.001;
 
 export function computeAlphaMetrics(rgba, w, h) {
   const total = w * h;
@@ -59,7 +60,8 @@ export function detectCheckerboard(rgba, w, h) {
 
 // Fixed order, first match wins: opaque, then suspect, then native.
 export function classifyAlpha(m, rgba = null) {
-  if (m.min >= ALPHA_SOLID) {
+  const opaque = typeof m.opaque === "number" ? 1 - m.opaque <= OPAQUE_OUTLIER_MAX : m.min >= ALPHA_SOLID;
+  if (opaque) {
     return rgba && detectCheckerboard(rgba, m.w, m.h) ? { cls: "suspect", reason: "checkerboard" } : { cls: "opaque", reason: null };
   }
   if (m.fill < SHEET_MIN_FILL) return { cls: "suspect", reason: "empty" };

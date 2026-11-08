@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { classifyAlpha, computeAlphaMetrics, detectCheckerboard } from "../src/img/alpha.mjs";
+import { classifyAlpha, computeAlphaMetrics, detectCheckerboard, OPAQUE_OUTLIER_MAX } from "../src/img/alpha.mjs";
 
 const W = 100;
 const H = 100;
@@ -67,6 +67,43 @@ test("large cells finish quickly (no per-pixel allocation, no quadratic scan)", 
   assert.equal(classifyAlpha(m, big).cls, "native");
   assert.equal(detectCheckerboard(big, w, h), false);
   assert.ok(Date.now() - t0 < 5000, `took ${Date.now() - t0}ms`);
+});
+
+test("100x100 fully alpha 255 except one pixel at alpha 249 is opaque", () => {
+  const b = img((x, y) => (x === 0 && y === 0 ? [10, 20, 30, 249] : [10, 20, 30, 255]));
+  assert.deepEqual(cls(b), { cls: "opaque", reason: null });
+});
+
+test("genuinely transparent image with figure touching border is suspect/edge, not opaque", () => {
+  const b = img((x, y) => (x < 70 ? [10, 20, 30, 255] : [0, 0, 0, 0]));
+  const m = computeAlphaMetrics(b, W, H);
+  assert.equal(m.transparent, 0.3);
+  assert.deepEqual(classifyAlpha(m, b), { cls: "suspect", reason: "edge" });
+});
+
+test("a 2% non-solid image is not opaque", () => {
+  const b = img((x, y) => (y < 2 ? [0, 0, 0, 0] : [10, 20, 30, 255]));
+  const result = cls(b);
+  assert.notEqual(result.cls, "opaque");
+});
+
+test("opaque-by-tolerance painted checkerboard returns suspect/checkerboard", () => {
+  const chk = img((x, y) => {
+    const rgb = ((x >> 3) + (y >> 3)) & 1 ? [204, 204, 204] : [255, 255, 255];
+    const a = x === 0 && y === 0 ? 249 : 255;
+    return [...rgb, a];
+  });
+  assert.equal(detectCheckerboard(chk, W, H), true);
+  assert.deepEqual(cls(chk), { cls: "suspect", reason: "checkerboard" });
+});
+
+test("hand-built metrics without numeric opaque falls back to min >= ALPHA_SOLID", () => {
+  assert.deepEqual(classifyAlpha({ min: 250 }), { cls: "opaque", reason: null });
+  assert.deepEqual(classifyAlpha({ min: 249, fill: 0.5, edge: 0.01, transparent: 0.3 }), { cls: "native", reason: null });
+});
+
+test("OPAQUE_OUTLIER_MAX is exported as 0.001", () => {
+  assert.equal(OPAQUE_OUTLIER_MAX, 0.001);
 });
 
 test("short buffer throws", () => {
