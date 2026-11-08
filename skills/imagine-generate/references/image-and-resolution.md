@@ -104,7 +104,7 @@ Pose sheets are the default mechanism for characters with two or more poses. Ass
 1. **Layout**: A group of 2–4 members sharing identical `refs` and `size` is laid out in a grid (`sheetLayout(n)`: n=1 → 1×1, n=2 → 2×1, n=3 or 4 → 2×2, with cell 4 empty when n=3). Requested image size is `cols × W` by `rows × H`.
 2. **Cutting**: Cells are cut from the measured generator output using ffmpeg crop (`cw = floor(W / cols)`, `ch = floor(H / rows)`).
 3. **Alpha classification and cutout**: For transparent-intent sheets, prompts ask Codex for transparent background generation (forbidding checkerboard, shadow, ground), but the setting is agent-mediated and cannot be forced; `transparent_flag` is provenance only and never gates. The kit verifies by pixels alone (`alpha.mjs`) in fixed order:
-   - `opaque` (min alpha >= 250, unless a painted checkerboard is detected): cut per cell by `npx --yes hyperframes@0.8.223 remove-background` (`HYPERFRAMES_NO_TELEMETRY=1`) as an audited fallback, committed with `hyperframes_fallback` flag; the sheet is not regenerated.
+   - `opaque` (at most 0.1% of pixels below alpha 250, unless a painted checkerboard is detected): cut per cell by `npx --yes hyperframes@0.8.223 remove-background` (`HYPERFRAMES_NO_TELEMETRY=1`) as an audited fallback, committed with `hyperframes_fallback` flag; the sheet is not regenerated.
    - `suspect` with reason from closed list `empty`, `edge`, `checkerboard`, `alpha_shape`: fails the attempt and counts toward `PROC-IMG-RETRY`.
    - `native`: cell keeps its native alpha (ffmpeg crop with rgba pinned); HyperFrames is never run on it.
    Legacy sheets (absent `background`) continue running HyperFrames remove-background on every cell with no new manifest fields.
