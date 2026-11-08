@@ -80,8 +80,10 @@ export async function commitAssets(ctx, dir, { items, extraFiles = [], summary, 
   return withLock(dir, async () => {
     const fresh = createContext(dir);
     const manifest = fresh.manifest;
+    const existingVersions = new Set(manifest.assets.map((a) => `${a.id}.v${a.v}`));
 
     for (const extra of extraFiles) {
+      if (extra.for && existingVersions.has(extra.for)) continue;
       const dest = safePath(dir, extra.rel);
       if (!dest) throw new KitError("HARD", `${extra.rel} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: extra.rel });
       if (existsSync(dest) && sha256File(dest) === sha256File(extra.source)) {

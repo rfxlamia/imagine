@@ -186,7 +186,7 @@ async function makeOne(ctx, dir, sctx, p, v, note, advice) {
   if (transparent) {
     if (decided.method === "hyperframes-fallback") advice.push({ rule: "PROC-CUTOUT-FALLBACK", item: `${p.id}.v${v}`, source: "hyperframes remove-background", message: `native alpha was not produced; HyperFrames cut this image, review ${reviewRel} at G5b` });
     for (const f of decided.flags.filter((x) => x !== "hyperframes_fallback")) advice.push({ rule: "HARD-SHEET-CELL", item: `${p.id}.v${v}`, source: "alpha diagnostics", message: `integrity flag ${f}: review ${reviewRel} at G5b` });
-    const done = await commitAssets(ctx, dir, { items: [{ entry, source: sourcePng === adopted ? null : sourcePng }], extraFiles: [{ source: decided.composite, rel: reviewRel }],
+    const done = await commitAssets(ctx, dir, { items: [{ entry, source: sourcePng === adopted ? null : sourcePng }], extraFiles: [{ source: decided.composite, rel: reviewRel, for: `${p.id}.v${v}` }],
       summary, clearBlocked: `img:${p.id}.v${v}` });
     return done.entries[0];
   }
@@ -468,7 +468,7 @@ async function makeSheet(ctx, dir, sctx, members, group, { note, advice }) {
     if (!revised) advice.push({ rule: "PROC-REVISED-PROMPT", item: `${member.id}.v${v}`, source: "codex session log", message: "the revised prompt was not found in the Codex session log; only the compiled prompt is recorded" });
     if (entry.tier === "replan") advice.push({ rule: "HARD-RASTER-TIER", item: `${member.id}.v${v}`, source: "assets/plan.yaml", message: `q ${entry.q} is below 0.75 (replan tier); regenerate larger or re-plan the shot, export-hf will refuse it` });
     if (transparent) {
-      extraFiles.push({ source: cut.composite, rel: reviewRel });
+      extraFiles.push({ source: cut.composite, rel: reviewRel, for: `${member.id}.v${v}` });
       if (cut.method === "hyperframes-fallback") advice.push({ rule: "PROC-CUTOUT-FALLBACK", item: `${member.id}.v${v}`, source: "hyperframes remove-background", message: `native alpha was not produced; HyperFrames cut this pose, review ${reviewRel} at G5b` });
       for (const f of cut.flags.filter((x) => x !== "hyperframes_fallback")) advice.push({ rule: "HARD-SHEET-CELL", item: `${member.id}.v${v}`, source: "alpha diagnostics", message: `integrity flag ${f}: review ${reviewRel} at G5b` });
     }
