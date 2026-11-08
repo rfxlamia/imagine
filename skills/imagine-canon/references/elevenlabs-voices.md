@@ -107,7 +107,7 @@ The available voice settings keys are:
 
 For detailed tuning and prompt design guidance, refer to the
 pinned upstream reference at:
-`${CLAUDE_SKILL_DIR}/../../packages/elevenlabs-skills/text-to-speech/SKILL.md`
+`${CLAUDE_SKILL_DIR}/../../packages/elevenlabs-skills/text-to-speech/SKILL.md`. On other hosts the same file is at `R/packages/elevenlabs-skills/text-to-speech/SKILL.md`, with R as in the canon skill.
 
 Remember the Imagine overrides: do not run the onboarding CLI,
 generate WAV takes only via `imagine-kit tts` (`pcm_24000` to 24 kHz

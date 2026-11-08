@@ -30,6 +30,9 @@ Read the following repository contracts in full before operating:
 - `docs/contracts/source-formats.md` — canonical file schemas,
   source hashes, dependencies and gate scope.
 - `docs/contracts/claude-code-platform.md` — plugin and agent facts.
+- `docs/contracts/harness-portability.md`: cross-host contract.
+- `docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
+  `claude-code` on Claude Code.
 
 The controller skill `skills/imagine/SKILL.md` remains authoritative
 for project selection, G0, common mandatory files, routing, guards,
@@ -38,6 +41,8 @@ impact reports, waivers and journal ownership.
 Invoke the kit using:
 
 `node "${CLAUDE_SKILL_DIR}/../../packages/imagine-kit/bin/imagine-kit.mjs" <command> ...`
+
+On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is not substituted: use `node "<R>/packages/imagine-kit/bin/imagine-kit.mjs" <command> ...`, where `<R>` is the absolute directory two levels above this SKILL.md, confirmed by `node "<R>/host/plugin-root.mjs" --skill-dir "<R>/skills/imagine-canon"` printing `"ok":true` (protocol `imagine-root/1`, `docs/contracts/harness-portability.md` section 4). Never resolve the kit from the working directory, `PATH`, or a global install.
 
 Hereafter, `imagine-kit` means exactly that invocation, not a
 globally installed executable. Use only documented flags.
@@ -131,7 +136,7 @@ each stage, again after resume, and again after context compaction.
 
 Define:
 
-- `R` = plugin root, `${CLAUDE_SKILL_DIR}/../..`.
+- `R` = plugin root, `${CLAUDE_SKILL_DIR}/../..`. On other hosts, R is resolved as described in docs/contracts/harness-portability.md section 4.
 - `P` = project root resolved through `.imagine/ACTIVE`.
 - `U` = `P/script/narration.md` for narrated mode.
 - `U` = `P/script/copy.md` for music-led or text-led mode.
@@ -148,6 +153,9 @@ Common files read in full for every canon stage:
 - `R/docs/contracts/cli-contract.md`
 - `R/docs/contracts/source-formats.md`
 - `R/docs/contracts/claude-code-platform.md`
+- `R/docs/contracts/harness-portability.md`: cross-host contract.
+- `R/docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
+  `claude-code` on Claude Code.
 - `P/project.yaml`
 - `P/journal.md`
 

@@ -34,6 +34,8 @@ Invoke the bundled kit from this skill as:
 
 `node "${CLAUDE_SKILL_DIR}/../../packages/imagine-kit/bin/imagine-kit.mjs" <command> ...`
 
+On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is not substituted: use `node "<R>/packages/imagine-kit/bin/imagine-kit.mjs" <command> ...`, where `<R>` is the absolute directory two levels above this SKILL.md, confirmed by `node "<R>/host/plugin-root.mjs" --skill-dir "<R>/skills/imagine-deliver"` printing `"ok":true` (protocol `imagine-root/1`, `docs/contracts/harness-portability.md` section 4). Never resolve the kit from the working directory, `PATH`, or a global install.
+
 Call this invocation `imagine-kit` throughout this skill. Run against the actual active project, using the documented `--project <dir>` option when needed.
 
 Phase 1 supports exactly twelve commands:
@@ -90,7 +92,7 @@ Before each stage-10 operation, after resuming, and after context compaction, re
 Use these roots:
 
 - `P` = active film project, resolved from `.imagine/ACTIVE`.
-- `R` = installed Imagine plugin root, `${CLAUDE_SKILL_DIR}/../..`.
+- `R` = installed Imagine plugin root, `${CLAUDE_SKILL_DIR}/../..`. On other hosts, R is resolved as described in docs/contracts/harness-portability.md section 4.
 - `U` = `P/script/narration.md` when G0 is `narrated`.
 - `U` = `P/script/copy.md` when G0 is `music-led` or `text-led`.
 
