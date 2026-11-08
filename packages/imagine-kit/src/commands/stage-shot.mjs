@@ -1,5 +1,5 @@
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
-import { withLock, writeAtomic } from "../fsx.mjs";
+import { readText, withLock, writeAtomic } from "../fsx.mjs";
 import { err } from "../envelope.mjs";
 import { deriveAll } from "../derive.mjs";
 import { appendJournal } from "../journal.mjs";
@@ -9,6 +9,7 @@ import { UsageError } from "../errors.mjs";
 import { editPreconditions, parsedKeys, shotAssets, shotOrThrow } from "../edit/shots.mjs";
 import { exportName } from "../edit/assets-check.mjs";
 import { safePath } from "../img/commit.mjs";
+import { baselinePath, canonicalDigest, diffSnapshot, snapshotProtected } from "../edit/guard.mjs";
 
 const num = (n) => String(Math.round(n * 1000) / 1000);
 
@@ -43,15 +44,15 @@ function hostHtml(g0, id, seconds) {
 
 export default {
   locks: false,
-  options: {},
+  options: { rebaseline: { type: "boolean" } },
   async run({ values, positionals }, ctx) {
     if (positionals.length !== 1) throw new UsageError("usage: stage-shot <shot id>");
     const { dir, rel } = resolveProject(ctx.cwd, values.project);
-    return stage(ctx, dir, rel, positionals[0]);
+    return stage(ctx, dir, rel, positionals[0], values);
   },
 };
 
-async function stage(ctx, dir, rel, id) {
+async function stage(ctx, dir, rel, id, values = {}) {
   const sctx = createContext(dir);
   const shot = shotOrThrow(sctx, id);
   const derived = deriveAll(sctx);
@@ -112,7 +113,37 @@ async function stage(ctx, dir, rel, id) {
     // SHOT.md and the preview host are regenerated; the scene-builder's own composition and motion file are never touched.
     writeAtomic(lockBriefPath, shotBrief(sctx, shot, assets.found));
     writeAtomic(lockIndexPath, hostHtml(sctx.project.g0, id, k.duration ?? k.duration_est ?? 1));
-    const journal_id = appendJournal(dir, { command: "stage-shot", summary: `${id} -> stage/edit/${id}`, now: ctx.now() });
-    return { project: rel, journal_id, data: { shot: id, path: shadowRel } };
+
+    const guardFile = baselinePath(dir, id);
+    let drifted = [];
+    if (existsSync(guardFile)) {
+      let prevBaseline = null;
+      try {
+        prevBaseline = JSON.parse(readText(guardFile));
+      } catch {
+        prevBaseline = null;
+      }
+      if (prevBaseline) {
+        const currentSnap = await snapshotProtected(dir, id);
+        const diff = diffSnapshot(prevBaseline, currentSnap);
+        drifted = [...diff.modified, ...diff.created, ...diff.deleted].sort();
+        if (drifted.length > 0 && !values.rebaseline) {
+          const shown = drifted.slice(0, 20);
+          const pathList = shown.join(", ") + (drifted.length > 20 ? ` (and ${drifted.length - 20} more)` : "");
+          return out([err("HARD-SHADOW-ONLY", "HARD", id, `protected state drifted since last stage: ${pathList}`, pathList)]);
+        }
+      }
+    }
+
+    const baseline = await snapshotProtected(dir, id);
+    writeAtomic(guardFile, JSON.stringify(baseline, null, 2) + "\n");
+    const guard_digest = canonicalDigest(baseline);
+
+    const rebaselinedNote = (values.rebaseline && drifted.length > 0) ? ` (rebaselined: ${drifted.join(", ")})` : "";
+    const journal_id = appendJournal(dir, { command: "stage-shot", summary: `${id} -> stage/edit/${id}${rebaselinedNote}`, now: ctx.now() });
+    const advice = (values.rebaseline && drifted.length > 0)
+      ? [{ rule: "HARD-SHADOW-ONLY", item: id, source: `stage/guard/${id}.json`, message: `rebaselined ${drifted.length} drifted path(s): ${drifted.join(", ")}` }]
+      : [];
+    return { project: rel, journal_id, advice, data: { shot: id, path: shadowRel, guard_digest } };
   });
 }

@@ -13,7 +13,9 @@ test("stage-shot builds the shadow project and returns {shot, path}", async () =
   const p = await editProject();
   const r = await p.run({}, "stage-shot", "s01");
   assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
-  assert.deepEqual(r.env.data, { shot: "s01", path: "stage/edit/s01" });
+  assert.equal(r.env.data.shot, "s01");
+  assert.equal(r.env.data.path, "stage/edit/s01");
+  assert.match(r.env.data.guard_digest, /^[0-9a-f]{64}$/);
   const brief = readFileSync(join(p.dir, "stage/edit/s01/SHOT.md"), "utf8");
   assert.match(brief, /1080x1920 at 30 fps/);
   assert.match(brief, /L01 at \+0s: Every night/);
@@ -101,11 +103,13 @@ test("promote-shot uses the host data-start in edit/index.html over the previz s
   const first = motionOf(p.dir).assertions;
   assert.equal(first.find((a) => a.shot === "s01" && a.kind === "appearsBy").bySec, 11.5);
   p.buildScene("s01", { version: 1, assertions: [{ kind: "staysInFrame", selector: "#b" }] });
+  await p.run({}, "stage-shot", "s01");
   await p.run({}, "promote-shot", "s01");
   const second = motionOf(p.dir).assertions;
   assert.deepEqual(second.filter((a) => a.shot === "s01").map((a) => a.selector), ["#b"]);
   assert.equal(second.filter((a) => a.shot === "s02").length, 3, "the other shot's assertions are preserved");
   put(p.dir, "edit/index.motion.json", JSON.stringify({ version: 1, assertions: [{ kind: "staysInFrame", selector: "#main-agent" }, ...second] }));
+  await p.run({}, "stage-shot", "s01");
   await p.run({}, "promote-shot", "s01");
   assert.ok(motionOf(p.dir).assertions.some((a) => a.selector === "#main-agent" && a.shot === undefined), "untagged assertions belong to the main agent");
 });
@@ -248,6 +252,7 @@ test("lint timeout comes only from a positive finite IMAGINE_LINT_TIMEOUT_MS; ev
     ["negative", { IMAGINE_LINT_TIMEOUT_MS: "-5" }],
     ["Infinity", { IMAGINE_LINT_TIMEOUT_MS: "Infinity" }],
   ]) {
+    await p.run({}, "stage-shot", "s01");
     const r = await p.run({ ...env, FAKE_NPX_SLEEP_MS: "500" }, "promote-shot", "s01");
     assert.equal(r.exit, 0, `${label}: ${JSON.stringify(r.env.errors)}`);
     assert.ok(existsSync(join(p.dir, "edit/compositions/s01.html")), label);

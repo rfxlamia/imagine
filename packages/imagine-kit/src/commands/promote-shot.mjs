@@ -10,6 +10,7 @@ import { createContext, resolveRef } from "../sources.mjs";
 import { checkAssertions, lintProject, staticSceneChecks } from "../edit/composition.mjs";
 import { editPreconditions, parsedKeys, shotAssets, shotOffset, shotOrThrow } from "../edit/shots.mjs";
 import { placeFile, safePath } from "../img/commit.mjs";
+import { baselinePath, canonicalDigest, diffSnapshot, snapshotProtected } from "../edit/guard.mjs";
 
 const round = (n) => Math.round(n * 1000) / 1000;
 
@@ -32,9 +33,15 @@ function editInputs(fresh, shot, assets, id) {
 
 export default {
   locks: false,   // lint can take seconds: only the commit holds the project lock
-  options: {},
+  options: {
+    "guard-digest": { type: "string" },
+  },
   async run({ values, positionals }, ctx) {
     if (positionals.length !== 1) throw new UsageError("usage: promote-shot <shot id>");
+    const guardDigest = values["guard-digest"];
+    if (guardDigest !== undefined && !/^[0-9a-fA-F]{64}$/.test(guardDigest)) {
+      throw new UsageError("--guard-digest must be a 64-character hex string");
+    }
     const id = positionals[0];
     const { dir, rel } = resolveProject(ctx.cwd, values.project);
     const destCompRel = `edit/compositions/${id}.html`;
@@ -133,6 +140,35 @@ export default {
       const added = shotAssertions.map((a) => ({ ...a, ...(a.kind === "appearsBy" ? { bySec: round(a.bySec + offset.seconds) } : {}), shot: id }));
       const merged = [...kept, ...added];
 
+      const guardFile = baselinePath(dir, id);
+      if (!existsSync(guardFile)) {
+        return out([err("HARD-SHADOW-ONLY", "HARD", id, "no guard baseline found for shot; run stage-shot first")]);
+      }
+      let baseline = null;
+      try {
+        baseline = JSON.parse(readText(guardFile));
+      } catch (e) {
+        return out([err("HARD-SHADOW-ONLY", "HARD", id, `guard baseline stage/guard/${id}.json is invalid JSON; run stage-shot first`, e.message)]);
+      }
+
+      if (guardDigest !== undefined) {
+        const actualDigest = canonicalDigest(baseline);
+        if (actualDigest.toLowerCase() !== guardDigest.toLowerCase()) {
+          return out([err("HARD-SHADOW-ONLY", "HARD", id, "baseline digest does not match the digest returned by stage-shot (baseline may have been rewritten)")]);
+        }
+      }
+
+      const currentSnap = await snapshotProtected(dir, id);
+      const diff = diffSnapshot(baseline, currentSnap);
+      const violations = [...diff.modified, ...diff.created, ...diff.deleted].sort();
+      if (violations.length > 0) {
+        const n = violations.length;
+        const shown = violations.slice(0, 20);
+        const pathList = shown.join(", ") + (violations.length > 20 ? ` (and ${violations.length - 20} more)` : "");
+        const msg = `${n} protected path(s) changed since stage-shot (changed by anything, not necessarily the scene-builder). Restore them first. Re-stage with --rebaseline only for a change the user made or approved and has been told about. Changed paths: ${pathList}`;
+        return out([err("HARD-SHADOW-ONLY", "HARD", id, msg, pathList)]);
+      }
+
       placeFile(lockComp, lockDestComp);
       // HyperFrames rejects a motion file with no assertions, so an empty merge removes the file instead of writing one.
       if (merged.length) writeAtomic(lockRootMotion, `${JSON.stringify({ ...root, version: 1, assertions: merged }, null, 2)}\n`);
@@ -141,6 +177,7 @@ export default {
       const project = fresh.project;
       project.items[`edit:${id}`] = { kind: "edit", status: "proposed", inputs: editInputs(createContext(dir), freshShot, freshAssets.found, id) };
       saveProject(dir, project);
+      try { unlinkSync(guardFile); } catch { /* baseline deleted on success */ }
       const journal_id = appendJournal(dir, { command: "promote-shot", summary: `${id} -> edit/compositions/${id}.html at +${offset.seconds}s (${offset.from}); ${added.length} assertion(s)`, now: ctx.now() });
       const advice = lint.warnings.length ? [{ rule: "HARD-SCENE-LINT", item: id, source: `stage/edit/${id}`, message: `lint warnings (not blocking): ${[...new Set(lint.warnings)].join(", ")}` }] : [];
       return { project: rel, journal_id, advice, data: { shot: id, path: destCompRel } };
