@@ -1,5 +1,41 @@
 # Image Generation and Resolution Reference
 
+## HARD rules in this file
+
+- HARD-REAL-RASTER: uniform or placeholder PNG is never valid; output must be a real, non-uniform PNG raster with measured dimensions and sha256
+- HARD-SHEET-CELL: a sheet cell that fails fill or edge checks fails the whole sheet attempt under retry or blocks immediately
+- HARD-RASTER-TIER: soft tier (0.75 <= q < 1) requires explicit G4 and per-asset G5b acceptance; q < 0.75 is HARD-blocked
+
+## Image adapter and raster resolution (moved from SKILL.md 7.1-7.2)
+
+### 7.1 Image adapter
+
+Use `imagine-kit img` for generation and its recorded result. Its capabilities are prompt-based generation with size hints and reference images; do not assume edit or mask support.
+
+Store the image tool's actual revised prompt alongside the original compiled prompt, rather than treating the tool revision as the approved source prompt. <!-- rule:PROC-REVISED-PROMPT -->
+
+Every batch prompt explicitly describes the intended framing and composition, even when reference images are supplied. <!-- rule:PROC-FRAMING-IN-PROMPT -->
+
+When a raster post-check fails, allow at most two retries after the failed initial attempt (three total attempts); after the third failure, mark blocked and report instead of retrying again. <!-- rule:PROC-IMG-RETRY -->
+
+A valid output must be a real, non-uniform PNG raster with measured dimensions and sha256; prohibit asking the generator to script, fabricate, or otherwise write a placeholder PNG instead of generating an image. <!-- rule:HARD-REAL-RASTER -->
+
+For transparent-intent assets planned with `background: transparent`, the kit uses native alpha when decoded pixels demonstrate it. Prompts steer Codex by requesting transparent background generation, but the setting is agent-mediated and cannot be forced; `transparent_flag` is recorded for provenance only and never gates. The kit verifies by pixels alone. Native cells keep their alpha and HyperFrames is never run on them. Opaque cells trigger per-cell background removal via `HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 remove-background` as an audited fallback, committing with the `hyperframes_fallback` flag. Derived review composites (`assets/composites/<id>.v<N>.png`) present each cutout over saturated magenta beside the raw crop. Flagged assets require a scoped G5b approval (`gate G5b approve --scope <id>.v<N>`). <!-- rule:PROC-CUTOUT-FALLBACK -->
+
+When generating pose sheets, `img --batch <id>` naming any sheet member expands to every member of that group lacking a current version and draws them in a single grid image. The kit crops each cell with ffmpeg: native alpha is kept when present, otherwise the cell is cut by `npx --yes hyperframes@0.8.223 remove-background` (telemetry off) inside the kit and flagged with `hyperframes_fallback`. The resulting cutout assets are committed under `assets/img/figure/<id>.v<N>.png`, and downstream stages use them directly. Running `img --batch <id> --redo <id> --note <why>` regenerates only that pose as a 1×1 sheet while preserving approved sibling poses. Review and G5b approval proceed per individual pose, presenting the provenance sheet image and review composite for context. <!-- rule:PROC-POSE-SHEET -->
+
+Authoring rule: `background: transparent` is for figures only (characters, props, creatures as a cutout). The prompt of a transparent asset must describe only the figure: no background, backdrop, ground, floor, scenery, shadows or color-field wording, and nothing like "isolated on a plain grey background". The kit already adds the transparency instruction. Scenes, ground and backgrounds are planned as non-transparent (`opaque`) assets and saved under `assets/img/world`.
+
+Two distinct failure paths apply to transparent-intent pose-sheet extraction. Under the retry path, only a `suspect` classification (`empty`, `edge`, `checkerboard`, `alpha_shape`) fails the attempt and spends one of the 3 attempts (`PROC-IMG-RETRY`); after 3 attempts the batch is BLOCKED naming the cell and reason per attempt. Under the immediate block path (no retry, nothing committed), HyperFrames remove-background crash or timeout blocks immediately under `PROC-CUTOUT-FALLBACK`, while fallback output whose size differs from the cell or fallback output that is empty (fill < 1%) or touches the cell edge (> 2% opaque pixels in 2-px border) blocks immediately under `HARD-SHEET-CELL`. Review findings commit with `integrity_flags` (`hyperframes_fallback`, `foreground_loss`, `edge_near`, `fragmented`, `ghosting`); `gate G5b approve` without `--scope` is refused while flagged items exist, requiring `gate G5b approve --scope <id>.v<N>` to acknowledge. <!-- rule:HARD-SHEET-CELL -->
+
+### 7.2 Raster resolution
+
+No verified upscaler exists in the production stack; lanczos interpolation, DPR upsampling, and resizing never increase the measured raster quality factor `q`. <!-- rule:PROC-NO-UPSCALER -->
+
+Use `native` for `q >= 1`, `soft` for `0.75 <= q < 1` only with explicit G4 plan acceptance and per-asset G5b acceptance, and HARD-block `q < 0.75` rather than inventing a replan tier. <!-- rule:HARD-RASTER-TIER -->
+
+After G5b, recalculate each shot's budget using actual image dimensions; a failed budget reopens that shot's previz and affected downstream work. <!-- rule:DAG-MEASURED-BUDGET -->
+
 ## 1. Image responsibilities
 
 Generate two distinct classes of image:
