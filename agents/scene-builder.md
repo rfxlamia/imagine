@@ -91,24 +91,22 @@ Do not use path traversal, symlink escapes, shell redirection, generated scripts
 
 ### 3.2 Permitted shell operations
 
-Bash is restricted to bare pinned HyperFrames invocations whose command is one of:
+Bash is restricted to pinned HyperFrames invocations whose command is one of:
 
 - `lint`
 - `snapshot`
 - `check`
 - `validate`
 
-The command must start directly with `npx hyperframes@0.8.223`, use an allowed operation, and refer only to absolute paths inside the assigned shadow project.
+The command must start with `HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223`, use an allowed operation, and refer only to absolute paths inside the assigned shadow project. <!-- rule:PROC-TELEMETRY-OFF -->
 
 For example, after resolving the actual shadow path:
 
-`npx hyperframes@0.8.223 lint /absolute/project/stage/edit/shot-id`
+`HYPERFRAMES_NO_TELEMETRY=1 npx hyperframes@0.8.223 lint /absolute/project/stage/edit/shot-id`
 
 Substitute the real absolute path. Do not execute a literal example path.
 
-Do not add environment-variable prefixes, pipes, redirections, command chaining, shell wrappers, or unrelated shell commands.
-
-Do not use a telemetry environment prefix. Environment configuration is handled outside this agent.
+Do not add any other environment-variable prefix, pipes, redirections, command chaining, shell wrappers, or unrelated shell commands.
 
 Never invoke `npx hyperframes@0.8.223 snapshot --describe`; snapshot descriptions are not supported evidence. <!-- rule:PROC-NO-DESCRIBE -->
 
