@@ -24,8 +24,8 @@ Before operating, read these repository contracts in full:
   exit codes, and error semantics.
 - `docs/contracts/source-formats.md` — project files, source references,
   ownership, patches, gates, and state formats.
-- `docs/contracts/claude-code-platform.md` — plugin runtime and dispatch
-  constraints.
+- `docs/contracts/claude-code-platform.md` (read only when the active host-id is `claude-code`) —
+  plugin runtime and dispatch constraints.
 - `docs/contracts/harness-portability.md`: cross-host contract.
 - `docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
   `claude-code` on Claude Code.
@@ -136,7 +136,7 @@ Every stage reads these common plugin files in full:
 - `R/docs/contracts/rules.yaml`
 - `R/docs/contracts/cli-contract.md`
 - `R/docs/contracts/source-formats.md`
-- `R/docs/contracts/claude-code-platform.md`
+- `R/docs/contracts/claude-code-platform.md` (read only when the active host-id is `claude-code`)
 - `R/docs/contracts/harness-portability.md`: cross-host contract.
 - `R/docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
   `claude-code` on Claude Code.

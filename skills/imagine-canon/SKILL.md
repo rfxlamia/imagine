@@ -29,7 +29,7 @@ Read the following repository contracts in full before operating:
 - `docs/contracts/cli-contract.md` — kit commands and envelopes.
 - `docs/contracts/source-formats.md` — canonical file schemas,
   source hashes, dependencies and gate scope.
-- `docs/contracts/claude-code-platform.md` — plugin and agent facts.
+- `docs/contracts/claude-code-platform.md` (read only when the active host-id is `claude-code`) — plugin and agent facts.
 - `docs/contracts/harness-portability.md`: cross-host contract.
 - `docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
   `claude-code` on Claude Code.
@@ -152,7 +152,7 @@ Common files read in full for every canon stage:
 - `R/docs/contracts/rules.yaml`
 - `R/docs/contracts/cli-contract.md`
 - `R/docs/contracts/source-formats.md`
-- `R/docs/contracts/claude-code-platform.md`
+- `R/docs/contracts/claude-code-platform.md` (read only when the active host-id is `claude-code`)
 - `R/docs/contracts/harness-portability.md`: cross-host contract.
 - `R/docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
   `claude-code` on Claude Code.
