@@ -1,5 +1,12 @@
 // PreToolUse hook logic: confines the scene-builder subagent to its shadow project
 // (.imagine/<project>/stage/edit/<shot>/). Other agents pass through untouched.
+// Fail-safe host enforcement: if a scene-builder identity appears in an unrecognised
+// alias field (agentType, agent_name, agentName, subagent_type, subagentType, subagent_name, subagentName,
+// agent, subagent, agent_id, agentId, subagent_id, subagentId, role, agent_role, agentRole)
+// or agent_type without exact match, or as nested values in arrays/objects (depth < 3),
+// with normalization (NFKC, zero-width characters stripped, Unicode dashes replaced with '-',
+// trimmed, lowercased, '_' replaced with '-', '.md' stripped, '@version' stripped,
+// instance suffix stripped), without a verified adapter, the call is denied instead of passed through.
 // The path anchor is CLAUDE_PROJECT_DIR (the session start root), falling back to the hook input cwd.
 // Scene-builder is restricted to an allowlist of tools:
 // - Read-only tools (Read, Glob, Grep) are allowed.
@@ -20,6 +27,46 @@ import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
 export const SCENE_BUILDER_TYPES = ["imagine:scene-builder", "scene-builder"];
+const ALIAS_FIELDS = [
+  "agentType",
+  "agent_name",
+  "agentName",
+  "subagent_type",
+  "subagentType",
+  "subagent_name",
+  "subagentName",
+  "agent",
+  "subagent",
+  "agent_id",
+  "agentId",
+  "subagent_id",
+  "subagentId",
+  "role",
+  "agent_role",
+  "agentRole",
+];
+const SCENE_BUILDER_RE = /(^|[:/])scene-builder$/;
+
+export function isSceneBuilderIdentity(value, depth = 0) {
+  if (typeof value === "string") {
+    let s = value.normalize("NFKC");
+    s = s.replace(/[\u00ad\u200b\u200c\u200d\ufeff]/gu, "");
+    s = s.replace(/\p{Pd}/gu, "-");
+    s = s.trim().toLowerCase();
+    s = s.replace(/_/g, "-");
+    s = s.replace(/\.md$/, "");
+    s = s.replace(/@[^@/:]*$/, "");
+    s = s.replace(/[#-]\d+$/, "");
+    return SCENE_BUILDER_TYPES.includes(s) || SCENE_BUILDER_RE.test(s);
+  }
+  if (Array.isArray(value) && depth < 3) {
+    return value.some((item) => isSceneBuilderIdentity(item, depth + 1));
+  }
+  if (value !== null && typeof value === "object" && depth < 3) {
+    return Object.values(value).some((v) => isSceneBuilderIdentity(v, depth + 1));
+  }
+  return false;
+}
 const READ_ONLY_TOOLS = new Set(["Read", "Glob", "Grep"]);
 const WRITE_TOOLS = new Set(["Write", "Edit", "MultiEdit"]);
 const ALLOWED = ".imagine/<project>/stage/edit/s<NN>/";
@@ -213,7 +260,19 @@ function decideBash(root, command) {
 }
 
 export function decide(input, env = process.env) {
-  if (!SCENE_BUILDER_TYPES.includes(input?.agent_type)) return { decision: "pass", reason: "" };
+  if (!SCENE_BUILDER_TYPES.includes(input?.agent_type)) {
+    if (input && typeof input === "object") {
+      if (isSceneBuilderIdentity(input.agent_type)) {
+        return deny("scene-builder identity in an unrecognised host field; no verified adapter");
+      }
+      for (const field of ALIAS_FIELDS) {
+        if (isSceneBuilderIdentity(input[field])) {
+          return deny("scene-builder identity in an unrecognised host field; no verified adapter");
+        }
+      }
+    }
+    return { decision: "pass", reason: "" };
+  }
   try {
     if (typeof input.cwd !== "string" || input.cwd === "") return deny("scene-builder call without cwd");
     const envRoot = env?.CLAUDE_PROJECT_DIR;
