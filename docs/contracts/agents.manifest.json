@@ -105,6 +105,10 @@
         "writes": "shadow-only",
         "output": "proposal",
         "requires_enforced_isolation": true,
+        "isolation_modes": [
+          "hook",
+          "kit-guard"
+        ],
         "inline_fallback": "blocked"
       }
     },

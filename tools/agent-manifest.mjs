@@ -50,12 +50,13 @@ export const POLICY = Object.freeze({
   "scene-builder": Object.freeze({
     writes: "shadow-only",
     requires_enforced_isolation: true,
+    isolation_modes: Object.freeze(["hook", "kit-guard"]),
     inline_fallback: "blocked",
     output: "proposal",
   }),
 });
 
-function parseFrontmatter(text, filePath) {
+export function parseFrontmatter(text, filePath) {
   const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   if (!match) {
     throw new Error(`Frontmatter is missing or unparsable in ${filePath}`);
@@ -165,6 +166,7 @@ export function buildManifest(repoRoot) {
         writes: policy.writes,
         output: policy.output,
         requires_enforced_isolation: policy.requires_enforced_isolation,
+        ...(policy.isolation_modes ? { isolation_modes: [...policy.isolation_modes] } : {}),
         inline_fallback: policy.inline_fallback,
       },
     });
