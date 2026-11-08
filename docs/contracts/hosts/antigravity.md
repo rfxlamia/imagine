@@ -2,7 +2,7 @@
 
 Host ID: `antigravity`
 
-This document records the adapter status for the Antigravity platform. Adapter implementation is tracked in follow-on issue #19.
+This document records the adapter status for the Antigravity platform. Adapter implementation is tracked in follow-on issue #19. See [docs/harnesses/antigravity.md](../../harnesses/antigravity.md) for the harness guide.
 
 ## 1. Action mapping
 
@@ -25,5 +25,6 @@ Every portable action defined in `docs/contracts/harness-portability.md` is curr
 
 ## 2. Adapter status
 
+- **Manifest directory**: `.antigravity-plugin/` is the first tracked per-host manifest directory.
 - **Scene-builder stage check**: Returns `BLOCKED` via `host/check-stage.mjs` (`host/capabilities.mjs`) because `scene_builder_enforcement` and `hook_failure` are `UNKNOWN`.
-- **Adapter checklist status**: Not started (tracked in issue #19).
+- **Adapter checklist status**: packaging landed (unverified); live verification pending.

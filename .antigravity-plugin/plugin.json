@@ -1,0 +1,11 @@
+{
+  "name": "imagine",
+  "displayName": "Imagine",
+  "version": "0.2.1",
+  "description": "Turn a rough script into a 40-60 s motion-graphics MP4 with gated canon, planning, generation, edit and delivery.",
+  "author": {
+    "name": "rfxlamia"
+  },
+  "homepage": "https://github.com/rfxlamia/imagine",
+  "repository": "https://github.com/rfxlamia/imagine"
+}
