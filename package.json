@@ -6,7 +6,8 @@
     "test": "node --test 'hooks/*.test.mjs' 'tools/*.test.mjs' 'tests/behavioral/*.test.mjs' 'tests/slice/*.test.mjs' 'tests/portability/*.test.mjs'",
     "check:names": "node tools/check-forbidden-names.mjs",
     "check:rules": "node tools/check-traceability.mjs --registry-only",
-    "check:agents": "node tools/agent-manifest.mjs --check"
+    "check:agents": "node tools/agent-manifest.mjs --check",
+    "check:agy-agents": "node tools/agent-antigravity.mjs --check"
   },
   "dependencies": {
     "ajv": "8.20.0",

@@ -70,6 +70,7 @@ test("POLICY table contains all agents and matches spec", () => {
   assert.deepEqual(POLICY["scene-builder"], {
     writes: "shadow-only",
     requires_enforced_isolation: true,
+    isolation_modes: ["hook", "kit-guard"],
     inline_fallback: "blocked",
     output: "proposal",
   });
@@ -94,6 +95,7 @@ test("scene-builder has writes shadow-only, requires_enforced_isolation true, an
   assert.ok(sb, "scene-builder agent must exist");
   assert.equal(sb.portable.writes, "shadow-only");
   assert.equal(sb.portable.requires_enforced_isolation, true);
+  assert.deepEqual(sb.portable.isolation_modes, ["hook", "kit-guard"]);
   assert.equal(sb.portable.inline_fallback, "blocked");
   assert.equal(sb.portable.output, "proposal");
   assert.deepEqual(sb.portable.actions, ["read", "search", "write", "run-process"]);
