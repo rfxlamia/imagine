@@ -13,6 +13,7 @@ test("CAP-HOST-ENFORCEMENT: claude-code scene-builder with CLAUDECODE=1 returns 
   assert.equal(res.status, "ok");
   assert.equal(res.host, "claude-code");
   assert.equal(res.stage, "scene-builder");
+  assert.equal(res.isolation, "hook");
   assert.equal(res.reason, null);
 });
 
@@ -38,8 +39,8 @@ test("grok, antigravity, cursor, pi, '', 'unknown', and 'claude' give BLOCKED, e
     assert.equal(res.status, "BLOCKED", `expected host ${host} to be BLOCKED`);
     assert.equal(res.host, host);
     assert.equal(res.stage, "scene-builder");
-    assert.match(res.reason, /missing verified enforcement evidence/i);
-    assert.match(res.reason, /scene_builder_enforcement/);
+    assert.match(res.reason, /kit_guard_run evidence missing/);
+    assert.match(res.reason, /subagents not VERIFIED-RUN/);
   }
 
   for (const host of ["", "unknown", "claude"]) {
@@ -86,6 +87,7 @@ test("CLI: spawned with env CLAUDECODE=1 exits 0 for claude-code; spawned withou
     status: "ok",
     host: "claude-code",
     stage: "scene-builder",
+    isolation: "hook",
     reason: null,
   });
 
@@ -118,7 +120,7 @@ test("CLI: exits 3 for cursor and stdout is JSON", () => {
   assert.equal(parsed.status, "BLOCKED");
   assert.equal(parsed.host, "cursor");
   assert.equal(parsed.stage, "scene-builder");
-  assert.match(parsed.reason, /missing verified enforcement evidence/i);
+  assert.match(parsed.reason, /kit_guard_run evidence missing/i);
 });
 
 test("CLI: exits 2 when --host is missing and stdout is JSON", () => {
@@ -184,4 +186,125 @@ test("Fix C: CLI exits 2 and outputs JSON on duplicate --stage", () => {
   assert.equal(parsed.ok, false);
   assert.equal(parsed.status, "error");
   assert.equal(parsed.reason, "duplicate flag: --stage");
+});
+
+test("claude-code with hook_failure != 'block' returns BLOCKED", () => {
+  const customHosts = {
+    ...HOSTS,
+    "claude-code": Object.freeze({
+      ...HOSTS["claude-code"],
+      hook_failure: "warn",
+    }),
+  };
+  const res = checkStage({
+    host: "claude-code",
+    stage: "scene-builder",
+    env: { CLAUDECODE: "1" },
+    hosts: customHosts,
+  });
+  assert.equal(res.status, "BLOCKED");
+  assert.match(res.reason, /hook_failure/);
+});
+
+test("synthetic host with hook claim and kit_guard_run set, but failing hook condition, stays BLOCKED and never reaches kit-guard branch", () => {
+  const customHosts = {
+    "hybrid-host": Object.freeze({
+      subagents: "VERIFIED-RUN",
+      pretooluse_hook: "VERIFIED-RUN",
+      hook_failure: "warn",
+      scene_builder_enforcement: "VERIFIED-RUN",
+      evidence: "tests/slice/evidence/ac17-hook.final.txt",
+      corroborate: Object.freeze({ name: "HYBRID_ENV", value: "1" }),
+      kit_guard_run: "tests/slice/evidence/ac17-hook.final.txt",
+    }),
+  };
+  const res = checkStage({
+    host: "hybrid-host",
+    stage: "scene-builder",
+    env: { HYBRID_ENV: "1" },
+    hosts: customHosts,
+  });
+  assert.equal(res.status, "BLOCKED");
+  assert.match(res.reason, /hook_failure/);
+  assert.doesNotMatch(res.reason, /kit_guard_run/);
+  assert.doesNotMatch(res.reason, /subagents/);
+});
+
+test("synthetic host with no hook claim, subagents VERIFIED-RUN, real evidence path and real guard test file returns ok with isolation: 'kit-guard' and coverage", () => {
+  const customHosts = {
+    "kit-guard-host": Object.freeze({
+      subagents: "VERIFIED-RUN",
+      pretooluse_hook: "UNKNOWN",
+      hook_failure: "UNKNOWN",
+      scene_builder_enforcement: "UNKNOWN",
+      evidence: null,
+      corroborate: null,
+      kit_guard_run: "tests/slice/evidence/ac17-hook.final.txt",
+    }),
+  };
+  const res = checkStage({
+    host: "kit-guard-host",
+    stage: "scene-builder",
+    hosts: customHosts,
+  });
+  assert.equal(res.status, "ok");
+  assert.equal(res.host, "kit-guard-host");
+  assert.equal(res.stage, "scene-builder");
+  assert.equal(res.isolation, "kit-guard");
+  assert.equal(
+    res.coverage,
+    "detective; detects changes to canon, plan inputs and media after stage-shot; does not prevent writes"
+  );
+  assert.equal(res.reason, null);
+});
+
+test("synthetic host with non-existent kit_guard_run path returns BLOCKED naming the missing path", () => {
+  const customHosts = {
+    "missing-evidence-host": Object.freeze({
+      subagents: "VERIFIED-RUN",
+      pretooluse_hook: "UNKNOWN",
+      hook_failure: "UNKNOWN",
+      scene_builder_enforcement: "UNKNOWN",
+      evidence: null,
+      corroborate: null,
+      kit_guard_run: "tests/nonexistent/evidence.txt",
+    }),
+  };
+  const res = checkStage({
+    host: "missing-evidence-host",
+    stage: "scene-builder",
+    hosts: customHosts,
+  });
+  assert.equal(res.status, "BLOCKED");
+  assert.match(res.reason, /kit_guard_run evidence missing/);
+  assert.match(res.reason, /tests\/nonexistent\/evidence\.txt/);
+});
+
+test("synthetic host with subagents 'UNKNOWN' returns BLOCKED naming subagents", () => {
+  const customHosts = {
+    "unverified-subagents-host": Object.freeze({
+      subagents: "UNKNOWN",
+      pretooluse_hook: "UNKNOWN",
+      hook_failure: "UNKNOWN",
+      scene_builder_enforcement: "UNKNOWN",
+      evidence: null,
+      corroborate: null,
+      kit_guard_run: "tests/slice/evidence/ac17-hook.final.txt",
+    }),
+  };
+  const res = checkStage({
+    host: "unverified-subagents-host",
+    stage: "scene-builder",
+    hosts: customHosts,
+  });
+  assert.equal(res.status, "BLOCKED");
+  assert.match(res.reason, /subagents not VERIFIED-RUN/);
+});
+
+test("real antigravity host returns BLOCKED naming kit_guard_run and subagents requirements", () => {
+  const res = checkStage({ host: "antigravity", stage: "scene-builder" });
+  assert.equal(res.status, "BLOCKED");
+  assert.equal(res.host, "antigravity");
+  assert.equal(res.stage, "scene-builder");
+  assert.equal(res.reason, "kit_guard_run evidence missing; subagents not VERIFIED-RUN");
 });

@@ -25,5 +25,5 @@ Every portable action defined in `docs/contracts/harness-portability.md` is curr
 
 ## 2. Adapter status
 
-- **Scene-builder stage check**: Returns `BLOCKED` via `host/check-stage.mjs` (`host/capabilities.mjs`) because `scene_builder_enforcement` and `hook_failure` are `UNKNOWN`.
+- **Scene-builder stage check**: Returns `BLOCKED` via `host/check-stage.mjs` (`host/capabilities.mjs`) because `kit_guard_run` evidence is missing and `subagents` is `UNKNOWN`.
 - **Adapter checklist status**: Not started (tracked in issue #20).

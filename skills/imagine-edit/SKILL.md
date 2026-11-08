@@ -210,9 +210,11 @@ Never accept a useful-looking output if it was produced alongside an unauthorize
 
 ### 3.3 Scene-builder dispatch
 
-The scene-builder is allowed to write only inside `stage/edit/<id>/`; the PreToolUse hook must enforce this boundary, and a blocked write is not permission to choose another destination. <!-- rule:HARD-SHADOW-ONLY -->
+The scene-builder is allowed to write only inside `stage/edit/<id>/`; the PreToolUse hook enforces this boundary where available. On a host without a verified write hook, the kit guard detects, after stage-shot, changes to canon, plan inputs and media; it does not prevent writes, and it does not cover other shots' promoted compositions, the root motion file, or the project state (including gate approvals). A blocked write is not permission to choose another destination. <!-- rule:HARD-SHADOW-ONLY -->
 
-Before the first scene-builder dispatch of a session, and again after resume or compaction, run `node "<R>/host/check-stage.mjs" --host <host-id> --stage scene-builder`, where `<host-id>` is the id named in your host file under `docs/contracts/hosts/` (`claude-code` on Claude Code) and `<R>` is the plugin root. Dispatch only when it exits 0 with `"status":"ok"`. Otherwise do not dispatch, never run the scene-builder work inline in the main agent, and stop with BLOCKED per CAP-BLOCKED-STOP, quoting the reason. If you cannot tell which host you are on, use `unknown`, which is BLOCKED. <!-- rule:CAP-HOST-ENFORCEMENT -->
+`stage-shot` returns `guard_digest`; the main agent keeps it in context and passes it to `promote-shot --guard-digest` EVERY time; never write the digest to a file; if promote refuses with HARD-SHADOW-ONLY, restore the changed files first and use `stage-shot --rebaseline` only for a change the user made or approved and has been told about.
+
+Before the first scene-builder dispatch of a session, and again after resume or compaction, run `node "<R>/host/check-stage.mjs" --host <host-id> --stage scene-builder`, where `<host-id>` is the id named in your host file under `docs/contracts/hosts/` (`claude-code` on Claude Code) and `<R>` is the plugin root. Dispatch only when it exits 0 with `"status":"ok"`. Otherwise do not dispatch, never run scene-builder inline, and stop with BLOCKED per CAP-BLOCKED-STOP, quoting the reason. If you cannot tell which host you are on, use `unknown`, which is BLOCKED. <!-- rule:CAP-HOST-ENFORCEMENT -->
 
 Provide:
 - The selected frame block and all referenced STORY.md ids.

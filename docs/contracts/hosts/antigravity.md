@@ -25,6 +25,6 @@ Every portable action defined in `docs/contracts/harness-portability.md` is curr
 
 ## 2. Adapter status
 
-- **Manifest directory**: `.antigravity-plugin/` is the first tracked per-host manifest directory.
-- **Scene-builder stage check**: Returns `BLOCKED` via `host/check-stage.mjs` (`host/capabilities.mjs`) because `scene_builder_enforcement` and `hook_failure` are `UNKNOWN`.
-- **Adapter checklist status**: packaging landed (unverified); live verification pending.
+- **Manifest directory**: `.antigravity-plugin/` is the first tracked per-host manifest directory; all five agents are emitted in `agy-agents/` and registered via root `agents.json`.
+- **Scene-builder stage check**: Returns `BLOCKED` via `host/check-stage.mjs` (`host/capabilities.mjs`) because `kit_guard_run` evidence is missing and `subagents` is `UNKNOWN`. Gating is enforced by `check-stage` rather than by omitting `scene-builder`.
+- **Adapter checklist status**: packaging landed (unverified); kit-guard live evidence run and subagent verification pending.

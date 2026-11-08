@@ -107,7 +107,17 @@ If any unauthorized mutation occurred:
 
 If restoration cannot be verified, remain blocked and request recovery. Do not claim the project is restored merely because a copy operation returned successfully.
 
-The PreToolUse hook should block scene-builder writes outside the shadow directory before they happen. The hash guard independently detects boundary failures and unanticipated side effects.
+Where available, the PreToolUse hook blocks scene-builder writes outside the shadow directory before they happen. On a host without a verified write hook, the kit guard detects, after stage-shot, changes to canon, plan inputs and media; it does not prevent writes, and it does not cover other shots' promoted compositions, the root motion file, or the project state (including gate approvals). The hash guard independently detects boundary failures and unanticipated side effects.
+
+### 3.4 Kit guard and staged shot constraints
+
+On a host without a verified write hook, the kit guard detects, after stage-shot, changes to canon, plan inputs and media; it does not prevent writes, and it does not cover other shots' promoted compositions, the root motion file, or the project state (including gate approvals).
+
+While a shot is staged, do not run commands that modify canon, plan inputs, or media: `img`, `tts`, `patch apply`, `gate`, and `export-hf` (when its inputs changed). Running any of these commands mutates baseline-tracked files and causes `promote-shot` to refuse promotion with HARD-SHADOW-ONLY.
+
+In contrast, `status`, `qc`, and `render --draft` do not trip the guard, per the kit tests.
+
+If `promote-shot` refuses with HARD-SHADOW-ONLY, restore the changed files first. Use `stage-shot --rebaseline` only for a change the user made or approved and has been told about. Never write the `guard_digest` to a file.
 
 ## 4. Scene-builder contract
 

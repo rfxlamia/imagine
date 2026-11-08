@@ -11,7 +11,7 @@ rules:
   - { id: PROC-LOCK-HASHED-WRITES, source: "section 3.2", text: "Hashed sources are written only by the main agent or by patch apply; planning subagents have no Write tool; status detects any hash change", cover: instructions, replan: "lock and doc write cut (one user, one main agent)" }
   - { id: PROC-ATOMIC-COMMIT, source: "section 3.2", text: "Commits are temp file + rename; a crash before rename leaves the target untouched", cover: tests }
   - { id: PROC-JOURNAL, source: "section 5", text: "Every state change appends a journal entry", cover: both }
-  - { id: PROC-DISPATCH-GUARD, source: "section 3.2", text: "Before every dispatch record sha256 of protected files and re-hash after it; on mismatch restore the recorded copy and reject the output", cover: instructions, replan: "guard cut; main agent hashes protected files by instruction" }
+  - { id: PROC-DISPATCH-GUARD, source: "section 3.2", text: "Before every dispatch record sha256 of protected files and re-hash after it; on mismatch restore the recorded copy and reject the output", cover: instructions, replan: "guard cut; main agent hashes protected files by instruction; kit guard is narrower (no restore)" }
   - { id: PROC-PATCH-VERBATIM, source: "section 3.2", text: "Store the subagent patch verbatim in stage/<stage>/r<n>.patch.yaml" }
   - { id: PROC-PATCH-ROUNDS, source: "section 3.2", text: "Rejected patch goes back to the same subagent, round n+1, max 3, then blocked" }
   - { id: PROC-AUDIT-REREAD, source: "section 3.2", text: "Main-agent semantic audit re-reads bible.yaml and style.md from disk before every audit" }
@@ -27,25 +27,25 @@ rules:
   - { id: PROC-NOT-HEARD, source: "section 8.3", text: "Claude reports measured audio facts and states it did not hear the audio" }
   - { id: PROC-NO-DESCRIBE, source: "section 1.2", text: "Never use hyperframes snapshot --describe" }
   - { id: PROC-TELEMETRY-OFF, source: "section 1.2", text: "HYPERFRAMES_NO_TELEMETRY=1 for every hyperframes call", cover: both }
-  - { id: PROC-SCRATCH-NOT-ASSET, source: "section 7.3", text: "Scratch VO and auditions live in tmp/ and are never approved assets", cover: both }
-  - { id: PROC-ONE-LINE-PER-WAV, source: "section 7.3", text: "TTS synthesises one script line per WAV", cover: both }
+  - { id: PROC-SCRATCH-NOT-ASSET, source: "references/audio-and-modes.md", text: "Scratch VO and auditions live in tmp/ and are never approved assets", cover: both }
+  - { id: PROC-ONE-LINE-PER-WAV, source: "references/audio-and-modes.md", text: "TTS synthesises one script line per WAV", cover: both }
   - { id: PROC-CLONING-OPT-IN, source: "D11", text: "English voices built-in by default; cloning only after explicit user opt-in via voice-cloning.md" }
   - { id: PROC-NO-GATED-LOGIN, source: "D11", text: "Imagine never accepts gated model terms or logs in to HF for the user" }
   - { id: PROC-VOICE-CONSENT, source: "D11", text: "Cloned voice needs the voice owner's written consent recorded in the bible" }
   - { id: PROC-ID-EXPERIMENTAL, source: "D9", text: "Indonesian TTS is EXPERIMENTAL; voice prompts judged per clip at casting" }
   - { id: PROC-HOSTED-TTS-LICENCE, source: "GH #9", text: "Hosted TTS takes record provider, voice, model, plan tier and licence terms in the manifest and assets/CREDITS.md automatically; free or unverified plans are flagged", cover: both }
-  - { id: PROC-REMOTE-LISTEN, source: "section 7.3", text: "No audio page in Phase 1: list WAV paths; on another device send the WAVs with SendUserFile", replan: "audio-page deferred" }
-  - { id: PROC-REVISED-PROMPT, source: "section 7.1", text: "Record the image tool's revised prompt beside the compiled prompt", cover: both }
-  - { id: PROC-FRAMING-IN-PROMPT, source: "section 7.1", text: "Every batch prompt states framing explicitly", cover: both }
-  - { id: PROC-IMG-RETRY, source: "section 7.1", text: "Image post-check failure retries at most 2 times, then blocked", cover: both }
+  - { id: PROC-REMOTE-LISTEN, source: "references/audio-and-modes.md", text: "No audio page in Phase 1: list WAV paths; on another device send the WAVs with SendUserFile", replan: "audio-page deferred" }
+  - { id: PROC-REVISED-PROMPT, source: "references/image-and-resolution.md", text: "Record the image tool's revised prompt beside the compiled prompt", cover: both }
+  - { id: PROC-FRAMING-IN-PROMPT, source: "references/image-and-resolution.md", text: "Every batch prompt states framing explicitly", cover: both }
+  - { id: PROC-IMG-RETRY, source: "references/image-and-resolution.md", text: "Image post-check failure retries at most 2 times, then blocked", cover: both }
   - { id: PROC-RESUME-IDEMPOTENT, source: "section 6.1", text: "Adapters are idempotent per (id, v); partials in tmp/; resume never duplicates approved assets", cover: both }
   - { id: PROC-VERSIONS-IMMUTABLE, source: "section 6.1", text: "Assets are .vN and never overwritten; approved takes immutable", cover: both }
-  - { id: PROC-PRONUNCIATION-LEVERS, source: "section 7.3", text: "Pronunciation levers are lexicon, punctuation, voice, seed, temperature; no SSML/phoneme/speed/pitch/emotion" }
+  - { id: PROC-PRONUNCIATION-LEVERS, source: "references/audio-and-modes.md", text: "Pronunciation levers are lexicon, punctuation, voice, seed, temperature; no SSML/phoneme/speed/pitch/emotion" }
   - { id: PROC-FORMAT-ONE-PER-PROJECT, source: "section 5.5", text: "One project, one format; other format = separate project" }
   - { id: PROC-AUDIO-MODE-LOCKED, source: "section 4.1", text: "audio_mode changes only by user at project level; re-opens G1 and the plan" }
   - { id: PROC-MODE-NA-RECORDED, source: "section 4.1", text: "Casting/TTS in non-narrated modes are recorded N/A, not skipped" }
   - { id: PROC-MUSIC-SOURCE, source: "section 7.4", text: "Music user-supplied with licence or none; MusicGen only opt-in non-commercial" }
-  - { id: PROC-NO-UPSCALER, source: "section 7.2", text: "No upscaler assumed; lanczos never counts toward q" }
+  - { id: PROC-NO-UPSCALER, source: "references/image-and-resolution.md", text: "No upscaler assumed; lanczos never counts toward q" }
   - { id: PROC-CAMERA-WRAPPER, source: "section 3.4", text: "Ken Burns tweens a wrapper transform, never the timed media" }
   - { id: PROC-CONTINUITY-PRIORITY, source: "section 3.7", text: "Continuity findings are P0/P1/P2 with location, problem, exact change; P0 cites bible id or style anchor" }
   - { id: PROC-CANNOT-OPEN, source: "section 3.7", text: "A reviewer that cannot open an image says so; never assumes it passed" }
@@ -61,12 +61,12 @@ rules:
   - { id: PROC-G5A-PARALLEL, source: "section 4", text: "Final VO and G5a may run while batch images generate; neither waits for the other" }
   - { id: PROC-G6-LISTEN, source: "section 8.3", text: "G6 includes listening to the draft rough mix (ducking, SFX timing)" }
   - { id: PROC-REVIEW-MD, source: "section 8.3", text: "Findings, advice kept with reasons, waivers and soft tiers go into review/REVIEW.md using HyperFrames review.md P0/P1/P2" }
-  - { id: PROC-ATEMPO-WARN, source: "section 7.3", text: "ffmpeg atempo ±10 % only on user request, with an audible-quality warning" }
-  - { id: PROC-TTS-FALLBACK, source: "section 7.3", text: "TTS fallbacks: Kokoro via hyperframes tts (no Indonesian) or user-recorded WAV per line, only as listed" }
+  - { id: PROC-ATEMPO-WARN, source: "references/audio-and-modes.md", text: "ffmpeg atempo ±10 % only on user request, with an audible-quality warning" }
+  - { id: PROC-TTS-FALLBACK, source: "references/audio-and-modes.md", text: "TTS fallbacks: Kokoro via hyperframes tts (no Indonesian) or user-recorded WAV per line, only as listed" }
   - { id: PROC-SFX-SOURCE, source: "section 7.4", text: "SFX via HyperFrames media-use: Openverse CC0/CC-BY with credits, then bundled offline library" }
-  - { id: PROC-REPLAN-USER-CHOICE, source: "section 7.2", text: "On replan the user chooses: less scale/travel, less crop, layered rasters, vector ground, or lower delivery size" }
+  - { id: PROC-REPLAN-USER-CHOICE, source: "references/image-and-resolution.md", text: "On replan the user chooses: less scale/travel, less crop, layered rasters, vector ground, or lower delivery size" }
   - { id: PROC-OFFLINE-MIRROR, source: "section 7.5", text: "Offline render needs a GSAP/CDN mirror (HYPERFRAMES_GSAP_BASE_URL)" }
-  - { id: PROC-CUTOUT-FALLBACK, source: "section 7.1", text: "Transparent-intent assets use native alpha when the decoded pixels show it; HyperFrames remove-background is a per-cell, audited fallback for effectively opaque cells; fallback and flagged cells need a scoped G5b approve" }
+  - { id: PROC-CUTOUT-FALLBACK, source: "references/image-and-resolution.md", text: "Transparent-intent assets use native alpha when the decoded pixels show it; HyperFrames remove-background is a per-cell, audited fallback for effectively opaque cells; fallback and flagged cells need a scoped G5b approve" }
   - { id: PROC-POSE-SHEET, source: "GH #11", text: "Characters with two or more poses are planned as pose-sheet groups (2-4 members, same refs and size); img draws one grid image, cuts each cell keeping native alpha or falling back to background removal per cell; a single image only for a pose a sheet cell cannot resolve", cover: both }
   - { id: PROC-OPT-IN-MANDATORY, source: "section 2.6, D11", text: "On-demand references become mandatory in the stage's file list once the user opts in (voice-cloning.md for casting)", cover: instructions, replan: "brief and stage start|finish cut; skill lists the files to read" }
   - { id: PROC-EN-BASELINE, source: "D1", text: "English is the baseline language" }
@@ -79,7 +79,7 @@ rules:
   - { id: CAP-HARD-NO-FALLBACK, source: "section 2.5", text: "HARD validators have no fallback; only exit is a user waiver recorded in REVIEW.md", cover: instructions, replan: "waiver CLI cut; waivers become a REVIEW.md section with the user's quote" }
   - { id: CAP-ADV-NOT-RUN, source: "section 2.5", text: "Unimplemented advisory checks reported not_run, never pass", cover: both }
   - { id: CAP-NO-FABRICATION, source: "section 2.5", text: "Never fabricate command output or treat a missing capability as available" }
-  - { id: CAP-HOST-ENFORCEMENT, source: "GH #18", text: "Scene-builder dispatch requires host write enforcement with VERIFIED-RUN evidence (host/check-stage.mjs ok); otherwise BLOCKED, never inline", cover: both }
+  - { id: CAP-HOST-ENFORCEMENT, source: "GH #18", text: "Scene-builder dispatch requires verified host hook (for hosts claiming enforcement) or subagents VERIFIED-RUN with kit_guard_run evidence and guard test file (host/check-stage.mjs ok); otherwise BLOCKED, never inline", cover: both }
   # Gates
   - { id: GATE-G0, source: "section 4", text: "G0: format, platform, audio_mode, language, duration, silence choice" }
   - { id: GATE-G1, source: "section 4", text: "G1: locked script units per unit" }
@@ -123,8 +123,8 @@ rules:
   - { id: HARD-VO-PRESENT, source: "section 8.1", text: "narrated: VO present for every L##", cover: both }
   - { id: HARD-AUDIO-STREAM, source: "section 8.1", text: "Output has an audio stream (digital silence if silence chosen)", cover: both }
   - { id: HARD-NO-PLACEHOLDER, source: "section 8.1", text: "No TODO/TBD/lorem/status: outline/{{/missing src", cover: both }
-  - { id: HARD-RASTER-TIER, source: "section 7.2", text: "No replan tier; soft only if accepted at G4 and G5b", cover: both }
-  - { id: HARD-NO-NATIVE-CLAIM, source: "section 7.2", text: "Say native only if every raster q ≥ 1.0", cover: both }
+  - { id: HARD-RASTER-TIER, source: "references/image-and-resolution.md", text: "No replan tier; soft only if accepted at G4 and G5b", cover: both }
+  - { id: HARD-NO-NATIVE-CLAIM, source: "references/image-and-resolution.md", text: "Say native only if every raster q ≥ 1.0", cover: both }
   - { id: HARD-SAFE-BAND, source: "section 5.5", text: "9:16 readable text inside platform band, not under the action rail, ≥ 28 px; manual check at G6 recorded in REVIEW.md", cover: instructions, replan: "safe-band deferred" }
   - { id: HARD-STAYS-IN-FRAME, source: "section 8.1", text: "Intended elements stay in frame unless allow-overflow + reason", cover: instructions, replan: "check and safe-band cut; skill instructions only (WP1 decision D3)" }
   - { id: HARD-AUDIO-LICENCE, source: "section 7.4", text: "Third-party audio has licence + source + credit", cover: both }
@@ -132,8 +132,8 @@ rules:
   - { id: HARD-GATES-RECORDED, source: "section 8.1", text: "Gates recorded with user quote before downstream work", cover: both }
   - { id: HARD-BRIEF-CURRENT, source: "section 2.6", text: "A stage starts only after its mandatory files were read in this context; the patch echoes their hashes (not tool-verified)", cover: instructions, replan: "brief and stage start|finish cut; skill lists the files to read" }
   - { id: HARD-WAIVERS-VALID, source: "section 8.1", text: "Waivers valid: scoped item hashes match, user quote present (REVIEW.md entry)", cover: instructions, replan: "waiver CLI cut; waivers become a REVIEW.md section with the user's quote" }
-  - { id: HARD-GUARD, source: "section 3.2", text: "Protected files unchanged across a dispatch", cover: instructions, replan: "guard cut; main agent hashes protected files by instruction" }
-  - { id: HARD-SHADOW-ONLY, source: "section 3.6", text: "scene-builder writes only inside stage/edit/<id>/ (PreToolUse hook)", cover: both, replan: "guard cut; hook stays tool-enforced" }
+  - { id: HARD-GUARD, source: "section 3.2", text: "Protected files unchanged across a dispatch", cover: instructions, replan: "guard cut; main agent hashes protected files by instruction; kit guard is narrower (no restore)" }
+  - { id: HARD-SHADOW-ONLY, source: "section 3.6", text: "hook where available; otherwise detective kit guard (stage-shot baseline, promote-shot refusal)", cover: both, replan: "hook where available; otherwise detective kit guard (stage-shot baseline, promote-shot refusal)" }
   - { id: HARD-NO-CSS-FILTER-RASTER, source: "section 3.5", text: "No CSS filter on rasters; use media-treatment", cover: both }
   - { id: HARD-FX-TOOL-ENUM, source: "section 3.5", text: "fx tool ∈ shader|vfx-chain|media-treatment|registry:<name>|css-blend|css-mask; names exist", cover: both }
   - { id: HARD-FX-WEBGL-FALLBACK, source: "section 3.5", text: "WebGL fx declare a fallback; unavailable effects marked unsupported", cover: both }
@@ -146,9 +146,9 @@ rules:
   - { id: HARD-NO-BEST-EFFORT, source: "section 7.5", text: "Renders use --no-best-effort", cover: both }
   - { id: HARD-ROOT-MOTION, source: "section 7.5", text: "Assertions live in root index.motion.json with film-absolute seconds", cover: both }
   - { id: HARD-SCENE-CLASS, source: "section 7.5", text: "Scene hosts use data-composition-src and class=scene", cover: both }
-  - { id: HARD-HAS-VOICE-CLONING, source: "section 7.3", text: "File voice requires has_voice_cloning = true", cover: both }
-  - { id: HARD-REAL-RASTER, source: "section 7.1", text: "Image is a real raster: PNG, not uniform, measured dims; prompt forbids scripting a PNG", cover: both }
-  - { id: HARD-TTS-EOS, source: "section 7.3", text: "KPOCKET_TTS_ERROR_WITHOUT_EOS=1", cover: both }
+  - { id: HARD-HAS-VOICE-CLONING, source: "references/audio-and-modes.md", text: "File voice requires has_voice_cloning = true", cover: both }
+  - { id: HARD-REAL-RASTER, source: "references/image-and-resolution.md", text: "Image is a real raster: PNG, not uniform, measured dims; prompt forbids scripting a PNG", cover: both }
+  - { id: HARD-TTS-EOS, source: "references/audio-and-modes.md", text: "KPOCKET_TTS_ERROR_WITHOUT_EOS=1", cover: both }
   - { id: HARD-SECRET-NEVER-WRITTEN, source: "GH #9", text: "Provider API keys come only from the environment or a mode-600 file outside the project and never reach stdout, stderr, the journal, envelopes or project files", cover: both }
   - { id: HARD-SHEET-CELL, source: "GH #11", text: "A sheet cell that fails fill or edge checks under native alpha or fallback background removal fails the whole sheet attempt, which counts toward PROC-IMG-RETRY", cover: both }
   - { id: HARD-STYLE-OUTPUT-READONLY, source: "section 5.2", text: "style.md#output is generated from G0 and read-only", cover: both }
@@ -194,7 +194,7 @@ rules:
   - { id: DAG-EDIT-RENDER, source: "section 6.2", text: "any edit change → render stale → G6/G7 re-open", cover: tests }
   - { id: DAG-WAIVER-SCOPE, source: "section 6.2", text: "waiver scope hash change → waiver invalid", cover: instructions, replan: "waiver CLI cut; waivers become a REVIEW.md section with the user's quote" }
   - { id: DAG-BRIEF-CHANGE, source: "section 6.2", text: "manifest/ref file change → open dispatches' brief_hash outdated", cover: tests, status: deferred, replan: "brief cut; BRIEF_OUTDATED reserved" }
-  - { id: DAG-MEASURED-BUDGET, source: "section 7.2", text: "After G5b the budget is re-validated with measured dims; failure re-opens that shot's previz", cover: instructions, replan: "res-budget deferred; main agent compares qc q with the previz budget" }
+  - { id: DAG-MEASURED-BUDGET, source: "references/image-and-resolution.md", text: "After G5b the budget is re-validated with measured dims; failure re-opens that shot's previz", cover: instructions, replan: "res-budget deferred; main agent compares qc q with the previz budget" }
   - { id: DAG-STALE-VS-REVIEW, source: "section 6.2", text: "stale = hash mismatch, redo + re-approve that item; needs_review = semantic, user confirms or edits", cover: both }
   # Acceptance criteria (section 11 1c)
   - { id: AC-01, source: "section 11", text: "Script → post/*.mp4 both formats; qc passes", cover: tests }

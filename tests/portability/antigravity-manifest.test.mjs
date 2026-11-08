@@ -30,7 +30,8 @@ describe("manifest tests", () => {
 });
 
 describe("capability characterization tests", () => {
-  // NOTE: These assertions characterize unverified enforcement status for Antigravity.
+  // NOTE: The enforcement-hook assertion stays while the BLOCKED reason now names the kit-guard requirements.
+  // These assertions characterize unverified enforcement status for Antigravity.
   // These assertions are intentionally flipped by the future live-verification PR.
   test("HOSTS.antigravity has unverified scene_builder_enforcement and checkStage returns BLOCKED", () => {
     assert.notEqual(HOSTS.antigravity.scene_builder_enforcement, "VERIFIED-RUN");
@@ -39,6 +40,6 @@ describe("capability characterization tests", () => {
     assert.equal(stageCheck.status, "BLOCKED");
     assert.equal(typeof stageCheck.reason, "string");
     assert.ok(stageCheck.reason.length > 0, "reason must be a non-empty string");
-    assert.match(stageCheck.reason, /enforcement/i);
+    assert.match(stageCheck.reason, /kit_guard_run evidence missing; subagents not VERIFIED-RUN/);
   });
 });
