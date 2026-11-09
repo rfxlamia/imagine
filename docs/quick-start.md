@@ -9,7 +9,7 @@ node -v
 ```
 
 Node.js must be 22 or later. You also need Claude Code. The notes in this repo were taken on 2.1.314 and 2.1.318.
-Only Claude Code is supported today; other hosts are BLOCKED for scene-builder. Users of other hosts should consult [docs/contracts/harness-portability.md](contracts/harness-portability.md).
+Claude Code and Antigravity run scene-builder today: Claude Code with a preventive write hook, Antigravity with the detective kit guard. Other hosts are BLOCKED for scene-builder. Users of other hosts should consult [docs/contracts/harness-portability.md](contracts/harness-portability.md).
 
 These can wait until the step that calls them:
 

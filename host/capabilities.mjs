@@ -30,13 +30,13 @@ export const HOSTS = Object.freeze({
     kit_guard_run: null,
   }),
   "antigravity": Object.freeze({
-    subagents: "UNKNOWN",
+    subagents: "VERIFIED-RUN",
     pretooluse_hook: "UNKNOWN",
     hook_failure: "UNKNOWN",
     scene_builder_enforcement: "UNKNOWN",
-    evidence: null,
+    evidence: "docs/harnesses/evidence/antigravity-8b-run.md",
     corroborate: null,
-    kit_guard_run: null,
+    kit_guard_run: "docs/harnesses/evidence/antigravity-8b-run.md",
   }),
   "cursor": Object.freeze({
     subagents: "UNKNOWN",

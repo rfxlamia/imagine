@@ -31,10 +31,10 @@ test("claude-code with env: {} or { CLAUDECODE: '0' } gives BLOCKED with corrobo
   assert.equal(resZero.reason, "host claim not corroborated by environment");
 });
 
-test("grok, antigravity, cursor, pi, '', 'unknown', and 'claude' give BLOCKED, even with CLAUDECODE=1 set", () => {
+test("grok, cursor, pi, '', 'unknown', and 'claude' give BLOCKED, even with CLAUDECODE=1 set", () => {
   const env = { CLAUDECODE: "1" };
 
-  for (const host of ["grok", "antigravity", "cursor", "pi"]) {
+  for (const host of ["grok", "cursor", "pi"]) {
     const res = checkStage({ host, stage: "scene-builder", env });
     assert.equal(res.status, "BLOCKED", `expected host ${host} to be BLOCKED`);
     assert.equal(res.host, host);
@@ -301,10 +301,26 @@ test("synthetic host with subagents 'UNKNOWN' returns BLOCKED naming subagents",
   assert.match(res.reason, /subagents not VERIFIED-RUN/);
 });
 
-test("real antigravity host returns BLOCKED naming kit_guard_run and subagents requirements", () => {
-  const res = checkStage({ host: "antigravity", stage: "scene-builder" });
-  assert.equal(res.status, "BLOCKED");
+test("real antigravity host returns ok via the kit-guard path", () => {
+  const res = checkStage({ host: "antigravity", stage: "scene-builder", env: {} });
+  assert.equal(res.status, "ok");
   assert.equal(res.host, "antigravity");
   assert.equal(res.stage, "scene-builder");
-  assert.equal(res.reason, "kit_guard_run evidence missing; subagents not VERIFIED-RUN");
+  assert.equal(res.isolation, "kit-guard");
+  assert.equal(res.reason, null);
+});
+
+test("CLI: exits 0 for antigravity with status ok", () => {
+  const childEnv = { ...process.env };
+  delete childEnv.CLAUDECODE;
+  const run = spawnSync(process.execPath, [cliPath, "--host", "antigravity", "--stage", "scene-builder"], {
+    env: childEnv,
+    encoding: "utf8",
+  });
+  assert.equal(run.status, 0);
+  const parsed = JSON.parse(run.stdout.trim());
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.status, "ok");
+  assert.equal(parsed.host, "antigravity");
+  assert.equal(parsed.stage, "scene-builder");
 });
