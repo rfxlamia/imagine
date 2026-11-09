@@ -22,7 +22,7 @@ The reference manifest schema defines fields:
 - `license`
 
 Because the manifest format contains no explicit skills-path field, skill discovery is assumed implicit.
-Install from a local directory and discovery of the 6 skills are verified on agy 1.5.3 (macOS) by the maintainer; the manifest schema, the `repository` string format, and uninstall are still unverified. No install or uninstall commands are invented beyond the ones the maintainer used (`agy plugin install <dir>`, `agy plugin list`, `agy plugin uninstall <name>`; the last one is documented by `agy plugin` help, not observed by us). For harness porting context and reference documentation, see:
+Install from a local directory, install from the repository URL (`agy plugin install https://github.com/rfxlamia/imagine`), and discovery of the 6 skills are verified on agy 1.5.3 (macOS) by the maintainer. `agy plugin install` does not install npm dependencies: run `npm install` in `~/.gemini/config/plugins/imagine` after every install, or the kit fails with `Cannot find package 'yaml'`. The end-user path is [antigravity-install.md](antigravity-install.md). The manifest schema, the `repository` string format, and uninstall are still unverified. No install or uninstall commands are invented beyond the ones the maintainer used (`agy plugin install <dir>`, `agy plugin list`, `agy plugin uninstall <name>`; the last one is documented by `agy plugin` help, not observed by us). For harness porting context and reference documentation, see:
 https://github.com/obra/superpowers/blob/main/docs/porting-to-a-new-harness.md
 
 ## Version Synchronization Rule
@@ -48,9 +48,7 @@ There is no claim that the preflight CLI itself runs under Antigravity.
 
 ## Telemetry
 
-In Claude Code, `HYPERFRAMES_NO_TELEMETRY=1` is exported automatically via a `SessionStart` hook.
-On Antigravity, the `SessionStart` hook is Claude-only and is NOT set automatically.
-Users must export `HYPERFRAMES_NO_TELEMETRY=1` in their shell before running any `npx hyperframes` command.
+No shell export is needed on Antigravity. The kit passes `HYPERFRAMES_NO_TELEMETRY=1` in the environment of every HyperFrames process it spawns (`HF_ENV` in `packages/imagine-kit/src/tools.mjs`), and the skills prefix every direct HyperFrames command with `HYPERFRAMES_NO_TELEMETRY=1`. The Claude Code `SessionStart` hook is an extra layer that Antigravity does not need.
 
 ## Antigravity Agent Generation
 
@@ -94,19 +92,18 @@ The actual security and integrity boundary in Imagine relies entirely on:
 
 - `agy plugin validate` (and `--strict`) reports 5 validation errors from root `agents/` because it attempts to parse the Claude-format files. This is a known harmless limitation; `agy plugin install` succeeds.
 - Generated `agy-agents/` are recognized (`components.agents` = 5 in `agy plugin validate . --json`).
-- Because `agy plugin install` copies the repository tree into its cache, code or agent changes require uninstalling and reinstalling the plugin (`agy plugin uninstall imagine` followed by `agy plugin install .`).
+- Because `agy plugin install` copies the repository tree into its cache, code or agent changes require uninstalling and reinstalling the plugin (`agy plugin uninstall imagine` followed by `agy plugin install .`), then `npm install` in `~/.gemini/config/plugins/imagine`.
 
 ### Unverified Aspects
 
 The following behaviors remain unverified on Antigravity:
 - Frontmatter fields `subagent: true`, `mainAgent: false`, and `model: inherit` were not probed live (`model: inherit` deliberately drops the `sonnet` model tier from the Claude source).
-- Agent dispatch: subagent invocation via `invoke_subagent` for these agents has not been verified live.
 - Prompt text alignment: generated agent markdown bodies still instruct the agent using Claude tool names (e.g. `Read`, `Glob`, `Grep`), so how models interpret these on Antigravity is unknown.
 - Cross-host isolation: whether other hosts ignore root `agents.json`.
 
 ## Stage 8b (scene-builder) and the Kit Guard Model
 
-Stage 8b on Antigravity is gated by `host/check-stage.mjs` (which currently returns `BLOCKED` until a live evidence run is recorded by the maintainer). Although all five agents are emitted into `agy-agents/`, the gate is `check-stage` plus the skill rule "never dispatch scene-builder unless check-stage returns ok, never inline".
+Stage 8b on Antigravity is gated by `host/check-stage.mjs`, which returns `ok` with `isolation: "kit-guard"` since the maintainer's live run was recorded in `docs/harnesses/evidence/antigravity-8b-run.md`. The skill rule still applies: dispatch scene-builder only when check-stage returns ok, and never run it inline.
 
 ### 1. What the Kit Guard Is
 
@@ -151,27 +148,24 @@ Extensive testing on Antigravity showed that a host-native preventive mechanism 
 
 ### 6. Current Status
 
-Stage 8b remains **BLOCKED** on Antigravity.
+Stage 8b runs on Antigravity through the kit-guard path. Isolation is detective only (see section 3).
 
-Current `check-stage` output as of commit 0563af4 (`node host/check-stage.mjs --host antigravity --stage scene-builder`):
+`node host/check-stage.mjs --host antigravity --stage scene-builder`:
 ```json
-{"ok":false,"status":"BLOCKED","host":"antigravity","stage":"scene-builder","reason":"kit_guard_run evidence missing; subagents not VERIFIED-RUN"}
+{"ok":true,"status":"ok","host":"antigravity","stage":"scene-builder","isolation":"kit-guard","coverage":"detective; detects changes to canon, plan inputs and media after stage-shot; does not prevent writes","reason":null}
 ```
 
 ## Manual Evidence-Run Procedure
 
-To unlock Stage 8b on Antigravity, the maintainer must execute a live evidence run on a single shot and record the raw output.
-This manual run deliberately bypasses the `check-stage` gate for ONE shot to produce the evidence; the normal skill flow must still stop at BLOCKED.
+This procedure was used to unlock Stage 8b on Antigravity. The run is recorded in `docs/harnesses/evidence/antigravity-8b-run.md`. Keep it for re-verifying after a major agy or kit change.
 
 1. Reinstall the plugin from the local checkout:
    ```bash
    agy plugin uninstall imagine
    agy plugin install <path-to-checkout>
+   (cd ~/.gemini/config/plugins/imagine && npm install)
    ```
-2. Export the telemetry disable variable in the environment:
-   ```bash
-   export HYPERFRAMES_NO_TELEMETRY=1
-   ```
+2. No telemetry export is needed (see Telemetry).
 3. Prepare a non-git project that has progressed to the point where `stage-shot` can be executed.
 4. Stage a shot and record the returned `guard_digest`:
    ```bash
@@ -195,7 +189,7 @@ This manual run deliberately bypasses the `check-stage` gate for ONE shot to pro
 
 ## Flip Procedure (Maintainer Follow-On)
 
-Once the evidence file is recorded, the maintainer flips the capability flags as follows (documented only, not done in this PR):
+Done after the live run recorded in `docs/harnesses/evidence/antigravity-8b-run.md`. The flip consisted of:
 1. In `host/capabilities.mjs`, update the `HOSTS["antigravity"]` object:
    - Set `subagents: "VERIFIED-RUN"`.
    - Set `kit_guard_run: "docs/harnesses/evidence/antigravity-8b-run.md"`.
@@ -207,13 +201,13 @@ Once the evidence file is recorded, the maintainer flips the capability flags as
 | Capability / Surface | Status | Notes |
 |---|---|---|
 | Manifest packaging (`.antigravity-plugin/plugin.json`) | Landed (unverified) | Modeled after superpowers reference manifest |
-| Live plugin installation | Verified for the 6 skills; agents-after-install Unverified | Observed on agy 1.5.3 (macOS) at commit 0563af4: `agy plugin install <local checkout>` reported "skills: 6 installed" and nothing for agents; `agy plugin list --json` listed the 6 skills and no agents; install copies repository tree to `~/.gemini/config/plugins/imagine`. The `agy-agents/` + `agents.json` agents are recognized by `agy plugin validate . --json` (`components.agents` = 5) but an install that includes them has NOT been observed yet |
+| Live plugin installation | Verified for the 6 skills; agents-after-install Unverified | Observed on agy 1.5.3 (macOS) at commit 0563af4: `agy plugin install <local checkout>` reported "skills: 6 installed" and nothing for agents; `agy plugin list --json` listed the 6 skills and no agents; install copies repository tree to `~/.gemini/config/plugins/imagine` without `node_modules`, so `npm install` must run there afterwards (maintainer-observed: `imagine-kit status` fails with `Cannot find package 'yaml'` otherwise). The `agy-agents/` + `agents.json` agents are recognized by `agy plugin validate . --json` (`components.agents` = 5) but an install that includes them has NOT been observed yet |
 | Skill discovery | Verified on agy 1.5.3 (macOS) | 6 skills installed (imagine, imagine-canon, imagine-deliver, imagine-edit, imagine-generate, imagine-plan) and listed via `agy plugin list --json` |
 | Tool execution | Unverified | Untested against live Antigravity harness |
-| Subagent dispatch | Unverified | Agents recognized by `agy plugin validate . --json` (`components.agents` = 5), but not listed by `agy plugin list --json` after install; dispatch stays Unverified |
+| Subagent dispatch | Verified on agy 1.5.3 (macOS) | `invoke_subagent` dispatched storyboard-artist, previz-designer, fx-designer, continuity-reviewer and scene-builder in a live run (`docs/harnesses/evidence/antigravity-8b-run.md`) |
 | Kit guard (host-neutral) | Verified | Verified by host-neutral kit test suite (`packages/imagine-kit/test/guard-integration.test.mjs`) |
-| Kit guard on Antigravity (live) | Unverified | Pending maintainer live evidence run (`docs/harnesses/evidence/antigravity-8b-run.md`) |
-| PreToolUse / write-scope enforcement | Unverified | No host-native preventive mechanism exists; Stage 8b BLOCKED |
-| Stage 8b (scene-builder) | BLOCKED | Gated by `check-stage` (requires verified kit-guard evidence run) |
-| SessionStart telemetry export | Unverified | Claude-only hook; requires manual shell export |
+| Kit guard on Antigravity (live) | Verified | `stage-shot` baseline and full pipeline to G7 on agy (`docs/harnesses/evidence/antigravity-8b-run.md`); tamper checks 6(b)/6(c) covered by the kit suite, not run live |
+| PreToolUse / write-scope enforcement | Unavailable | No host-native preventive mechanism exists; Stage 8b relies on the detective kit guard |
+| Stage 8b (scene-builder) | ok (kit-guard) | `check-stage` returns ok with `isolation: "kit-guard"`; detective, does not prevent writes |
+| Telemetry off | Not needed as a hook | Kit passes `HF_ENV` to every HyperFrames process; skills prefix direct commands. No shell export |
 | Repository license | Gap | No LICENSE file exists in the repository |
