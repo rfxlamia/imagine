@@ -30,16 +30,16 @@ describe("manifest tests", () => {
 });
 
 describe("capability characterization tests", () => {
-  // NOTE: The enforcement-hook assertion stays while the BLOCKED reason now names the kit-guard requirements.
-  // These assertions characterize unverified enforcement status for Antigravity.
-  // These assertions are intentionally flipped by the future live-verification PR.
-  test("HOSTS.antigravity has unverified scene_builder_enforcement and checkStage returns BLOCKED", () => {
+  // Antigravity has no host-native write hook, so it must never claim hook enforcement.
+  // Stage 8b passes through the detective kit-guard path, backed by the recorded live run
+  // in docs/harnesses/evidence/antigravity-8b-run.md.
+  test("HOSTS.antigravity has no hook claim and checkStage returns ok via kit-guard", () => {
     assert.notEqual(HOSTS.antigravity.scene_builder_enforcement, "VERIFIED-RUN");
+    assert.equal(HOSTS.antigravity.subagents, "VERIFIED-RUN");
 
-    const stageCheck = checkStage({ host: "antigravity", stage: "scene-builder" });
-    assert.equal(stageCheck.status, "BLOCKED");
-    assert.equal(typeof stageCheck.reason, "string");
-    assert.ok(stageCheck.reason.length > 0, "reason must be a non-empty string");
-    assert.match(stageCheck.reason, /kit_guard_run evidence missing; subagents not VERIFIED-RUN/);
+    const stageCheck = checkStage({ host: "antigravity", stage: "scene-builder", env: {} });
+    assert.equal(stageCheck.status, "ok");
+    assert.equal(stageCheck.isolation, "kit-guard");
+    assert.equal(stageCheck.reason, null);
   });
 });
