@@ -288,9 +288,9 @@ Do not assume:
 - Visual safe-band validation is automatic.
 - CSS raster-filter workarounds are permissible.
 
-Phase 1 provides exactly these 12 kit commands:
+Phase 1 provides twelve core kit commands plus the post-delivery `purge` command:
 
-`new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`.
+`new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`, `purge`. `purge` is main-agent only after delivery and requires the user's explicit verbatim quote.
 
 There is no separate guard command; the main agent hashes protected sources before dispatch and checks them afterward. Other workflow checks and approvals are handled through instructions and recorded evidence, not invented commands.
 

@@ -130,8 +130,9 @@ The active project is the directory named in `.imagine/ACTIVE`.
 | `export-hf` | Check approved assets, write `edit/STORYBOARD.md`, and sync files into `edit/` |
 | `render` | Render a draft or final MP4 at 30 fps, with no best-effort frames. Final uses delivery quality |
 | `qc` | Probe size, frame rate, loudness, raster, and credits |
+| `purge` | Reclaim storage after delivery: delete PNG/MP4/JPG outside `post/` (dry-run unless `--apply --quote`) |
 
-Phase 1 ships these 12 commands. The [CLI contract](docs/contracts/cli-contract.md) still lists the others and marks them deferred. Do not call a deferred command. Nothing in this version depends on one.
+Phase 1 ships these 13 commands. `purge` is a post-delivery command for the main agent and runs only with the user's explicit verbatim quote. The [CLI contract](docs/contracts/cli-contract.md) still lists the other commands and marks deferred ones accordingly. Do not call a deferred command. Nothing in this version depends on one.
 
 ## Repository
 

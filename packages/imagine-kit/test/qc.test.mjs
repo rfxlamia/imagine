@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { run } from "../src/cli.mjs";
-import { cli, getProject, makeProject, setManifest, asset } from "./helpers/fixture.mjs";
+import { cli, getProject, makeProject, setManifest, setProject, asset } from "./helpers/fixture.mjs";
 import { renderProject } from "./helpers/edit.mjs";
 import { hasFfmpeg, makeMp4, makePng } from "./helpers/media.mjs";
 
@@ -231,6 +231,24 @@ t("qc fails closed on missing current image file (HARD-ASSETS-APPROVED, unmeasur
   const saved = JSON.parse(readFileSync(join(p.dir, "review/qc.json"), "utf8"));
   assert.equal(saved.raster.native, false);
   assert.ok(saved.errors.some((e) => e.rule === "HARD-ASSETS-APPROVED"));
+});
+
+t("HARD-PURGED: qc reports purged image media in not_run and still measures raster q", async () => {
+  const p = await makeProject();
+  const mp4 = makeMp4(join(p.cwd, "ok.mp4"));
+  setManifest(p.dir, (m) => {
+    m.assets.push(asset("purged_img", "img", 1, { path: "assets/img/purged.v1.png", w: 1000, h: 1000,
+      required_px: { w: 500, h: 500 }, status: "approved" }));
+  });
+  setProject(p.dir, (project) => { project.purges = [{ at: "2026-11-10T00:00:00.000Z", quote: "purge", files: 1, bytes: 1 }]; });
+
+  const r = await cli(p.cwd, "qc", mp4);
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.ok(r.env.not_run.some((item) => item.rule === "HARD-PURGED" && item.item === "assets/img/purged.v1.png" && item.cause === "media purged"));
+  const raster = r.env.data.raster.assets.find((a) => a.id === "purged_img");
+  assert.equal(raster.q, 2);
+  assert.equal(raster.tier, "native");
+  assert.equal(raster.w, 1000, "raster report uses recorded dimensions after deletion");
 });
 
 t("qc fails closed on corrupt non-PNG current asset (HARD-REAL-RASTER, unmeasured, not native)", async () => {

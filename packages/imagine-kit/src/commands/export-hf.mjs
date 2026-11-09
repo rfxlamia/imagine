@@ -6,7 +6,7 @@ import { gateSatisfied } from "../gates.mjs";
 import { sha256File } from "../hash.mjs";
 import { appendJournal } from "../journal.mjs";
 import { writeAtomic } from "../fsx.mjs";
-import { resolveProject } from "../project.mjs";
+import { loadProject, resolveProject } from "../project.mjs";
 import { createContext } from "../sources.mjs";
 import { renderStory } from "../story/render.mjs";
 import { inputsFrom, validateStory } from "../story/validate.mjs";
@@ -25,6 +25,7 @@ export default {
   options: {},
   async run(_args, ctx) {
     const { dir, rel } = resolveProject(ctx.cwd, _args.values.project);
+    if (loadProject(dir).purges?.length) throw new KitError("HARD", "media was purged from this project; HyperFrames export is disabled", { rule: "HARD-PURGED" });
     const sctx = createContext(dir);
     const derived = deriveAll(sctx);
     const empty = { shots: [], assets: [] };

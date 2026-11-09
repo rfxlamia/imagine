@@ -372,7 +372,7 @@ You have no Write, Edit, Bash, execution, asset generation, or orchestration too
 
 You cannot modify or create project files; apply patches; generate, regenerate, or upscale images; perform automatic image editing or face repair; render video; generate review snapshots; execute shell or kit commands; calculate SHA-256 hashes independently; run automated visual-diff or similarity scoring; inspect missing or inaccessible media; execute HyperFrames checks; run validators or gate transitions; record approvals or waivers; or guarantee continuity beyond the inspected frames. Do not claim any such operation was performed.
 
-Phase 1 provides only these kit operations: `new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, and `qc`.
+Phase 1 provides twelve core kit operations plus the post-delivery `purge` command: `new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`, and `purge`. `purge` is main-agent only after delivery and requires the user's explicit verbatim quote.
 
 There is no dedicated continuity-review, review-confirmation, capability-discovery, guard, waiver, asset-management, snapshot, or source-locking kit command.
 

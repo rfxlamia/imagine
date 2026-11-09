@@ -374,9 +374,9 @@ Do not invent gate quotes, approvals, validator output, or downstream acceptance
 
 ### 7.1 Imagine kit
 
-Phase 1 supports exactly these twelve `imagine-kit` commands:
+Phase 1 supports twelve core `imagine-kit` commands plus the post-delivery `purge` command:
 
-`new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`.
+`new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`, `purge`. `purge` is main-agent only after delivery and requires the user's explicit verbatim quote.
 
 This subagent cannot execute any of them.
 

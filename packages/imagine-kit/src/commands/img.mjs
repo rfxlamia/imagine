@@ -6,7 +6,7 @@ import { deriveAll } from "../derive.mjs";
 import { currentAsset } from "../docs.mjs";
 import { sha256, sha256File } from "../hash.mjs";
 import { isUniformImage, pngInfo } from "../media.mjs";
-import { resolveProject } from "../project.mjs";
+import { loadProject, resolveProject } from "../project.mjs";
 import { rasterQ, round2, tierOf } from "../raster.mjs";
 import { createContext, resolveRef } from "../sources.mjs";
 import { compilePrompt, compileSheetPrompt, codexVersion, generate, generationInfo, lastRevisedPrompt } from "../img/adapter.mjs";
@@ -488,6 +488,7 @@ export default {
     if ((values.ref === undefined) === (values.batch === undefined)) throw new UsageError("usage: img --ref <ref_id> | img --batch <asset_id,...> [--redo <asset_id> --note <text>]");
     if ((values.redo === undefined) !== (values.note === undefined)) throw new UsageError("--redo and --note go together");
     const { dir, rel } = resolveProject(ctx.cwd, values.project);
+    if (loadProject(dir).purges?.length) throw new KitError("HARD", "media was purged from this project; image generation is disabled", { rule: "HARD-PURGED" });
     const wanted = values.ref !== undefined ? [values.ref] : values.batch.split(",").map((s) => s.trim()).filter(Boolean);
     if (wanted.length === 0) throw new UsageError("--batch needs at least one asset id");
     if (values.redo !== undefined && !wanted.includes(values.redo)) throw new UsageError("--redo must name one of the requested ids");

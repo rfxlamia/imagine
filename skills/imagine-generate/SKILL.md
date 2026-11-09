@@ -32,7 +32,7 @@ On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is no
 
 Call this invocation `imagine-kit` below.
 
-Phase 1 kit commands are exactly `new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, and `qc`.
+Phase 1 has twelve core kit commands plus the post-delivery `purge` command: `new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`, and `purge`. `purge` is main-agent only after delivery and requires the user's explicit verbatim quote.
 
 The kit has no separate brief, stage lifecycle, guard, lock, document-writing, waiver, review-confirmation, capability-probing, read-time, beat, loudness, preflight-check, safe-band, resolution-budget, audio-page, asset-management, extended validation, patch-validation, diff-key, or fork commands. Perform required checks directly or through the supported interfaces.
 

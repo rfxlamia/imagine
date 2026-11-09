@@ -38,9 +38,9 @@ On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is no
 
 Call this invocation `imagine-kit` throughout this skill. Run against the actual active project, using the documented `--project <dir>` option when needed.
 
-Phase 1 supports exactly twelve commands:
+Phase 1 supports twelve core commands plus the `purge` command:
 
-`new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`.
+`new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`, `purge`.
 
 No other kit operations exist in Phase 1. In particular, there is no brief, stage start/finish, guard, lock, doc write, waiver, review confirm, capabilities, readtime, beats, loudness, check, safe-band, res-budget, res-report, audio-page, assets command family, expanded validate targets, patch validate, diff-keys, or fork command.
 
@@ -346,6 +346,10 @@ Inspect the returned gate envelope and refresh status to verify approval.
 If the user rejects the final MP4, record the decision only with their actual response, leave G7 unapproved, and route corrections through their owning stage.
 
 Use [recovery-and-approval.md](references/recovery-and-approval.md) for the full gate, delivery-note, and recovery procedures.
+
+## Storage purge (optional)
+
+Purge is commonly offered after delivery, but the user may ask for it at any time. The router skill `imagine` owns the on-request procedure, including its preview, consequences, and explicit approval. A final MP4 must exist in the project-root `post/`; `ADV-PURGE-G7-PENDING` advises when G7 is not approved, but does not block. After purge, `qc` continues to work; missing purged raster media is reported in `not_run[]`, and raster q uses recorded dimensions. <!-- rule:HARD-PURGE-FINAL-EXISTS --> <!-- rule:PROC-PURGE-QUOTE -->
 
 ## 9. Completion
 

@@ -64,6 +64,8 @@
           }
         }
       }
-    }
+    },
+    "purges": { "type": "array", "items": { "type": "object", "required": ["at", "quote", "files", "bytes"], "additionalProperties": false,
+      "properties": { "at": { "type": "string" }, "quote": { "type": "string", "pattern": "\\S" }, "files": { "type": "integer", "minimum": 0 }, "bytes": { "type": "integer", "minimum": 0 } } } }
   }
 }

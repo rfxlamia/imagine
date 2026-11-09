@@ -21,7 +21,7 @@ The repository root is the Claude Code plugin. `.claude-plugin/plugin.json` name
 | `tools/` | `check-forbidden-names.mjs`, `check-traceability.mjs` |
 | `img/logo.png` | README mark. Other images stay ignored |
 
-Invoke the kit as `node packages/imagine-kit/bin/imagine-kit.mjs`. Phase 1 commands are `new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, and `qc`. A row marked deferred in `docs/contracts/cli-contract.md` is not implemented. Do not invent a flag or a successful result.
+Invoke the kit as `node packages/imagine-kit/bin/imagine-kit.mjs`. Phase 1 commands are `new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`, and `purge`. A row marked deferred in `docs/contracts/cli-contract.md` is not implemented. Do not invent a flag or a successful result.
 
 Planning agents return a patch. They do not write `STORY.md`. `patch apply` is the only writer of planning keys. `style.md#output` is generated from G0 and is read-only. A gate `--quote` is the user's verbatim answer to that gate.
 

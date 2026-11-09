@@ -21,7 +21,7 @@ On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is no
 
 Call it `imagine-kit` below. Run from the film project's root unless the command contract explicitly requires another working directory.
 
-Phase 1 exposes exactly these twelve commands:
+Phase 1 exposes twelve core commands plus the post-delivery `purge` command:
 
 - `new`
 - `status`
@@ -35,8 +35,9 @@ Phase 1 exposes exactly these twelve commands:
 - `export-hf`
 - `render`
 - `qc`
+- `purge` — main-agent only after delivery, and only with the user's explicit verbatim quote.
 
-No additional kit command is implied. In particular, there is no brief, stage start/finish, guard, lock, doc write, waiver, review confirm, capabilities, readtime, beats, loudness, check, safe-band, res-budget, audio-page, assets subcommand family, extended validate family, patch validate, diff-keys, or fork command.
+No additional kit commands are implied beyond those listed above. In particular, there is no brief, stage start/finish, guard, lock, doc write, waiver, review confirm, capabilities, readtime, beats, loudness, check, safe-band, res-budget, audio-page, assets subcommand family, extended validate family, patch validate, diff-keys, or fork command.
 
 Use the kit's actual argument contract and help where necessary. Never invent a flag, successful output, or command capability.
 
