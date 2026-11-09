@@ -37,7 +37,7 @@ function specChecks(g0, probe, loud, errors) {
 }
 
 // HARD-RASTER-TIER and HARD-NO-NATIVE-CLAIM: q is recomputed from the recorded size and required_px, never read back from the entry.
-function rasterReport(dir, sctx, derived, errors, advice) {
+function rasterReport(dir, sctx, derived, errors, advice, not_run, purged) {
   const status = new Map(derived.items.map((i) => [i.id, i.status]));
   const rows = [];
   for (const a of currentAssets(sctx.manifest).filter((x) => x.kind === "img")) {
@@ -46,7 +46,12 @@ function rasterReport(dir, sctx, derived, errors, advice) {
     if (!file) {
       errors.push(err("HARD-ASSETS-APPROVED", "HARD", item, `${a.path} is outside the project`));
     } else if (!existsSync(file)) {
-      errors.push(err("HARD-ASSETS-APPROVED", "HARD", item, `${a.path} does not exist`));
+      const ext = a.path.slice(a.path.lastIndexOf(".")).toLowerCase();
+      if (purged && [".png", ".mp4", ".jpg", ".jpeg"].includes(ext) && !a.path.startsWith("post/")) {
+        not_run.push({ rule: "HARD-PURGED", item: a.path, cause: "media purged" });
+      } else {
+        errors.push(err("HARD-ASSETS-APPROVED", "HARD", item, `${a.path} does not exist`));
+      }
     }
     let real = null;
     if (file && existsSync(file)) {
@@ -62,8 +67,9 @@ function rasterReport(dir, sctx, derived, errors, advice) {
       }
     }
     const verified = real !== null;
-    const w = verified ? real.w : null;
-    const h = verified ? real.h : null;
+    const purgedFile = purged && !verified && file && !existsSync(file) && !a.path.startsWith("post/") && [".png", ".mp4", ".jpg", ".jpeg"].includes(a.path.slice(a.path.lastIndexOf(".")).toLowerCase());
+    const w = verified ? real.w : (purgedFile ? a.w : null);
+    const h = verified ? real.h : (purgedFile ? a.h : null);
 
     const hasReq = a.required_px && typeof a.required_px === "object" &&
       Number.isFinite(a.required_px.w) && a.required_px.w > 0 &&
@@ -74,7 +80,7 @@ function rasterReport(dir, sctx, derived, errors, advice) {
 
     let q = null;
     let tier = null;
-    if (hasReq && verified && w && h) {
+    if (hasReq && (verified || purgedFile) && w && h) {
       const rawQ = rasterQ(w, h, a.required_px);
       if (Number.isFinite(rawQ) && rawQ > 0) {
         q = rawQ;
@@ -129,6 +135,7 @@ export default {
     const derived = deriveAll(sctx);
     const errors = [];
     const advice = [];
+    const not_run = [];
 
     let probe = null;
     try {
@@ -154,7 +161,7 @@ export default {
       if (silent) advice.push({ rule: "HARD-LOUDNESS", item: null, source: "project.yaml", message: "loudness is skipped because G0 chose intentional silence" });
     }
 
-    const raster = rasterReport(dir, sctx, derived, errors, advice);
+    const raster = rasterReport(dir, sctx, derived, errors, advice, not_run, (sctx.project.purges ?? []).length > 0);
     const credits = { ok: true, items: creditsReport(sctx) };
 
     const path = relative(dir, file);
@@ -171,8 +178,8 @@ export default {
     };
 
     mkdirSync(reportDir, { recursive: true });
-    writeAtomic(reportFile, `${JSON.stringify({ file: isAbsolute(path) || path.startsWith("..") ? file : path, generated_at: ctx.now().toISOString(), ...data, errors: errors.map((e) => ({ rule: e.rule, item: e.item, message: e.message })) }, null, 2)}\n`);
+    writeAtomic(reportFile, `${JSON.stringify({ file: isAbsolute(path) || path.startsWith("..") ? file : path, generated_at: ctx.now().toISOString(), ...data, errors: errors.map((e) => ({ rule: e.rule, item: e.item, message: e.message })), not_run }, null, 2)}\n`);
     const journal_id = appendJournal(dir, { command: "qc", summary: `${path} ${errors.length} error(s)`, now: ctx.now() });
-    return { project: rel, journal_id, advice, errors, data };
+    return { project: rel, journal_id, advice, errors, not_run, data };
   },
 };

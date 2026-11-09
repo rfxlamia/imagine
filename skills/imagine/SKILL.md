@@ -42,7 +42,7 @@ On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is no
 Hereafter, `imagine-kit` means this invocation, not an assumed globally
 installed executable. Use only documented arguments.
 
-Phase 1 provides exactly these commands:
+Phase 1 provides twelve core commands plus the `purge` command:
 
 | Command | Responsibility |
 |---|---|
@@ -58,8 +58,9 @@ Phase 1 provides exactly these commands:
 | `imagine-kit export-hf` | Export to HyperFrames |
 | `imagine-kit render` | Render project output |
 | `imagine-kit qc` | Validate delivery evidence |
+| `imagine-kit purge` | Reclaim storage on user request (any stage; needs a final MP4 in `post/`) |
 
-There are no additional kit commands in Phase 1. Specifically, there is
+There are no additional kit commands beyond those listed above in Phase 1. Specifically, there is
 no brief, stage start/finish, guard, lock, document-write,
 waiver-management, review-confirmation, capabilities, readtime, beats,
 loudness, check, safe-band, resolution-budget, audio-page,
@@ -114,6 +115,12 @@ The main agent stores each patch verbatim and invokes the authorized
 patch-application operation.
 
 Review subagents provide findings, not gate approvals or waivers.
+
+### Storage purge on request
+
+When the user asks to purge, free disk space, or clean up a project's media, handle it directly here at any time and stage. Do not route to a stage skill or require any gate, stage, freshness, or G7 state. Target the active project or another project the user names with `--project <dir>`, including older projects under `.imagine/`.
+
+Run `imagine-kit purge [--project <dir>]` as a dry-run. The project must have a final MP4 in its project-root `post/`. <!-- rule:HARD-PURGE-FINAL-EXISTS --> If the command exits 1 with `HARD-PURGE-FINAL-EXISTS`, tell the user there is no final MP4 in `post/` and stop. Otherwise, show `data.kept`, `data.total_files`, `data.total_bytes` in human-readable form, and the top `data.by_dir` rows, including any `ADV-PURGE-G7-PENDING` advice. Explain plainly that applying purge permanently deletes every PNG, MP4, and JPG outside `post/`; afterward `img`, `render`, and `export-hf` refuse for that project, while `status`, `gate`, `qc`, audio, text, and `post/` remain. Ask explicitly for approval and, only on a clear yes, run `imagine-kit purge --apply --quote "<verbatim user answer>"`. <!-- rule:PROC-PURGE-QUOTE --> Report the apply envelope result. For several projects, run one dry-run and get one explicit answer per project; never reuse a quote across projects.
 
 ## 3. Mandatory files
 

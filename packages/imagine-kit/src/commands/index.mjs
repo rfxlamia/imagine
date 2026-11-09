@@ -10,6 +10,7 @@ import promoteShot from "./promote-shot.mjs";
 import exportHf from "./export-hf.mjs";
 import render from "./render.mjs";
 import qc from "./qc.mjs";
+import purge from "./purge.mjs";
 
 export const COMMANDS = { new: newCmd, status, gate, "validate story": validateStoryCmd, "patch apply": patchApply,
-  img, tts, "stage-shot": stageShot, "promote-shot": promoteShot, "export-hf": exportHf, render, qc };
+  img, tts, "stage-shot": stageShot, "promote-shot": promoteShot, "export-hf": exportHf, render, qc, purge };

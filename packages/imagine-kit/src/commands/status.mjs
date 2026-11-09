@@ -36,6 +36,6 @@ export default {
       .map(([item, r]) => ({ item, gate: r.gate ?? null, decision: r.decision.decision, quote: r.decision.quote, at: r.decision.at }));
     return { project: rel, errors,
       data: { stage, gates, items: values.item ? items.filter((i) => i.id === values.item) : items, blocked: project.blocked, sources, unresolved,
-        decisions, review_hints: reviewHints(items) } };
+        decisions, review_hints: reviewHints(items), purges: project.purges ?? [] } };
   },
 };

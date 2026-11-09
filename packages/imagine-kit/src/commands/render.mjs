@@ -6,7 +6,7 @@ import { deriveAll } from "../derive.mjs";
 import { sha256File } from "../hash.mjs";
 import { withLock } from "../fsx.mjs";
 import { appendJournal } from "../journal.mjs";
-import { resolveProject, saveProject } from "../project.mjs";
+import { loadProject, resolveProject, saveProject } from "../project.mjs";
 import { createContext, enumerateSources } from "../sources.mjs";
 import { HF_ENV, HYPERFRAMES, ensureTool, runTool } from "../tools.mjs";
 import { checkAssets } from "../edit/assets-check.mjs";
@@ -49,6 +49,7 @@ export default {
   async run({ values }, ctx) {
     if (Boolean(values.draft) === Boolean(values.final)) throw new UsageError("usage: render --draft | render --final");
     const { dir, rel } = resolveProject(ctx.cwd, values.project);
+    if (loadProject(dir).purges?.length) throw new KitError("HARD", "media was purged from this project; rendering is disabled", { rule: "HARD-PURGED" });
     const sctx = createContext(dir);
     const slug = sctx.project.slug;
     const final = Boolean(values.final);

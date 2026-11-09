@@ -93,4 +93,4 @@ You should see the new project, G0 approved, and no later gate approved.
 
 The next human decision is G1: lock each script unit. Do not generate stills yet. Batch images are refused until the canonical references they use are approved (`REFS_NOT_APPROVED`, exit 6).
 
-The gate table, audio-mode clocks, and the 12 commands are in the [README](../README.md). Command synopses and exit codes are in the [CLI contract](contracts/cli-contract.md).
+The gate table, audio-mode clocks, and the 13 commands are in the [README](../README.md). Command synopses and exit codes are in the [CLI contract](contracts/cli-contract.md).

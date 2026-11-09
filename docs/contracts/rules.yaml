@@ -39,6 +39,7 @@ rules:
   - { id: PROC-FRAMING-IN-PROMPT, source: "references/image-and-resolution.md", text: "Every batch prompt states framing explicitly", cover: both }
   - { id: PROC-IMG-RETRY, source: "references/image-and-resolution.md", text: "Image post-check failure retries at most 2 times, then blocked", cover: both }
   - { id: PROC-RESUME-IDEMPOTENT, source: "section 6.1", text: "Adapters are idempotent per (id, v); partials in tmp/; resume never duplicates approved assets", cover: both }
+  - { id: PROC-PURGE-QUOTE, source: "cli-contract purge", text: "Applying purge requires explicit --apply and a non-blank verbatim user quote", cover: both }
   - { id: PROC-VERSIONS-IMMUTABLE, source: "section 6.1", text: "Assets are .vN and never overwritten; approved takes immutable", cover: both }
   - { id: PROC-PRONUNCIATION-LEVERS, source: "references/audio-and-modes.md", text: "Pronunciation levers are lexicon, punctuation, voice, seed, temperature; no SSML/phoneme/speed/pitch/emotion" }
   - { id: PROC-FORMAT-ONE-PER-PROJECT, source: "section 5.5", text: "One project, one format; other format = separate project" }
@@ -152,10 +153,13 @@ rules:
   - { id: HARD-SECRET-NEVER-WRITTEN, source: "GH #9", text: "Provider API keys come only from the environment or a mode-600 file outside the project and never reach stdout, stderr, the journal, envelopes or project files", cover: both }
   - { id: HARD-SHEET-CELL, source: "GH #11", text: "A sheet cell that fails fill or edge checks under native alpha or fallback background removal fails the whole sheet attempt, which counts toward PROC-IMG-RETRY", cover: both }
   - { id: HARD-STYLE-OUTPUT-READONLY, source: "section 5.2", text: "style.md#output is generated from G0 and read-only", cover: both }
+  - { id: HARD-PURGE-FINAL-EXISTS, source: "cli-contract purge", text: "Purge requires a regular MP4 directly inside project-root post/", cover: both }
+  - { id: HARD-PURGED, source: "cli-contract purge", text: "After a purge record, img, render, and export-hf refuse; qc remains available and reports missing purged media in not_run while computing raster q from recorded dimensions; missing non-purgeable files (not .png/.mp4/.jpg/.jpeg, or under root post/) stay HARD", cover: tests }
   - { id: HARD-STORY-WRITERS, source: "section 5.3", text: "STORY.md written only by patch apply (planning keys) and imagine-kit (edit keys); HyperFrames editStoryboard never used", cover: both }
   - { id: HARD-STATUS-DERIVED, source: "section 6.1", text: "stale is derived by status from recorded hashes, never hand-edited; needs_review is recorded by the main agent from an impact report", cover: both, replan: "status computes hash-based stale only; needs_review is agent-judged from an impact report" }
   # Advisory
   - { id: ADV-READ-WINDOW, source: "section 8.2", text: "Holds 0.5 s + 0.3 s/word for non-copy text" }
+  - { id: ADV-PURGE-G7-PENDING, source: "cli-contract purge", text: "Purge advises when the final has not been accepted at G7, without blocking", cover: tests }
   - { id: ADV-EASE-ROLE, source: "section 8.2", text: "Ease by role" }
   - { id: ADV-HERO-MOVE, source: "section 8.2", text: "One hero move per shot" }
   - { id: ADV-EXIT-ENTRANCE, source: "section 8.2", text: "Exits shorter than entrances" }

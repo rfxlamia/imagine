@@ -313,7 +313,7 @@ Do not include a field merely to make the patch look complete. Omit optional fie
 
 ## 7. Capability and execution limits
 
-The Phase 1 kit exposes exactly these 12 commands to the main agent:
+The Phase 1 kit exposes twelve core commands plus the post-delivery `purge` command to the main agent:
 
 - `new`
 - `status`
@@ -327,6 +327,7 @@ The Phase 1 kit exposes exactly these 12 commands to the main agent:
 - `export-hf`
 - `render`
 - `qc`
+- `purge` — only after delivery and with the user's explicit verbatim quote.
 
 There is no kit command for `brief`, `guard`, `lock`, `doc write`, `waiver`, `review confirm`, `capabilities`, `readtime`, `beats`, `loudness`, `check`, `safe-band`, `res-budget`, `audio-page`, `assets`, `patch validate`, `diff-keys`, `fork`, `stage start`, or `stage finish`. Do not suggest any of them as a kit invocation.
 

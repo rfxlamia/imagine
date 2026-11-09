@@ -47,7 +47,7 @@ On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is no
 Hereafter, `imagine-kit` means exactly that invocation, not a
 globally installed executable. Use only documented flags.
 
-Phase 1 provides exactly twelve commands:
+Phase 1 provides twelve core commands plus the post-delivery `purge` command:
 
 | Command | Purpose |
 |---|---|
@@ -63,6 +63,7 @@ Phase 1 provides exactly twelve commands:
 | `export-hf` | Export to HyperFrames |
 | `render` | Produce video |
 | `qc` | Verify rendered video |
+| `purge` | Reclaim storage after delivery; main-agent only with the user's explicit verbatim quote |
 
 There is no additional Phase 1 kit operation for brief delivery,
 stage start/finish, guard, lock, document writing, waiver management,

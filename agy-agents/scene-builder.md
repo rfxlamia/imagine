@@ -126,7 +126,7 @@ Only use flags and argument forms verified against the supplied runtime contract
 
 The main agent, not this subagent, invokes the available kit operations:
 
-`new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, and `qc`.
+`new`, `status`, `gate`, `validate story`, `patch apply`, `img`, `tts`, `stage-shot`, `promote-shot`, `export-hf`, `render`, `qc`, and `purge`. `purge` is post-delivery and main-agent only with the user's explicit verbatim quote.
 
 Do not call the kit through Bash; its executable is outside this agent's permitted command set.
 

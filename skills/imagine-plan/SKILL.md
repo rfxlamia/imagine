@@ -51,6 +51,7 @@ The Phase 1 kit command inventory is exactly:
 - `export-hf`
 - `render`
 - `qc`
+- `purge` — post-delivery only; main-agent only with the user's explicit verbatim quote.
 
 No other kit command is available. In particular, there is no brief, guard, stage start/finish, patch validate, diff-keys, lock, document writer, waiver manager, readtime, beats, resolution-budget calculator, or capability-discovery command. Perform the assigned responsibilities in the main agent's instructions; never synthesize an undocumented kit invocation.
 

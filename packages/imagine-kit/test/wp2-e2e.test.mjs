@@ -25,6 +25,12 @@ t("e2e: export-hf, draft render, qc, G6, final render and qc on the immutable fi
   const qc = await cli(p.cwd, "qc", final.env.data.path);
   assert.equal(qc.exit, 0, JSON.stringify(qc.env.errors));
   assert.equal(JSON.parse(readFileSync(join(p.dir, "review/qc.json"), "utf8")).file, "post/keeper.v1.mp4");
+  const purge = await cli(p.cwd, "purge", "--apply", "--quote", "remove intermediates");
+  assert.equal(purge.exit, 0, JSON.stringify(purge.env.errors));
+  const qcAfterPurge = await cli(p.cwd, "qc", final.env.data.path);
+  assert.equal(qcAfterPurge.exit, 0, JSON.stringify(qcAfterPurge.env.errors));
+  assert.ok(qcAfterPurge.env.not_run.every((item) => item.rule === "HARD-PURGED" && item.cause === "media purged"));
+  assert.equal((await cli(p.cwd, "gate", "G7", "approve", "--quote", "accept delivered film")).exit, 0);
   const status = (await cli(p.cwd, "status")).env.data.items;
   assert.equal(status.find((i) => i.id === "render:keeper.v1").status, "proposed");
 });
