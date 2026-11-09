@@ -26,6 +26,16 @@ Inside Claude Code, add the marketplace and install the plugin:
 
 Update later with `/plugin marketplace update rfxlamia`.
 
+### Antigravity
+
+Paste this prompt into `agy`:
+
+```
+Read https://github.com/rfxlamia/imagine/blob/main/docs/harnesses/antigravity-install.md, then install the plugin and explain what it does.
+```
+
+The agent installs the plugin, runs the `npm install` that agy skips, verifies the install, and explains the plugin. On Antigravity, scene-builder runs behind the detective kit guard, which detects changes but does not prevent writes. Details are in [docs/harnesses/antigravity.md](docs/harnesses/antigravity.md).
+
 Invoke `/imagine` from your own working directory. Projects land in `./.imagine/` there. The shorter first-run path is the [quick start](docs/quick-start.md). The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
 
 ### Develop from a clone
