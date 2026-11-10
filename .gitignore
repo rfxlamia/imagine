@@ -34,6 +34,8 @@
 *.png
 # Brand mark referenced by README.md. Other images stay ignored.
 !img/logo.png
+# Contact sheets committed as slice evidence for sequential-shorts.
+!tests/slice/evidence/sequential-shorts/*.png
 *.jpg
 *.jpeg
 *.webp
