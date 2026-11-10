@@ -1,0 +1,10 @@
+{
+  "name": "sequential-shorts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "bin": { "sequential-shorts": "bin/sequential-shorts.mjs" },
+  "scripts": { "test": "node --test 'test/*.test.mjs'" },
+  "dependencies": { "ajv": "8.20.0" }
+}
