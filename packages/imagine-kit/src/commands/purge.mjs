@@ -1,4 +1,4 @@
-import { lstatSync, readdirSync, unlinkSync } from "node:fs";
+import { lstatSync, readdirSync, unlinkSync, utimesSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { err } from "../envelope.mjs";
 import { UsageError } from "../errors.mjs";
@@ -14,7 +14,7 @@ const EXTENSIONS = new Set([".png", ".mp4", ".jpg", ".jpeg"]);
 const stat = (path) => lstatSync(path, { throwIfNoEntry: false });
 const relPath = (dir, path) => relative(dir, path).split(sep).join("/");
 
-function collect(dir) {
+export function collect(dir) {
   const kept = [];
   const targets = [];
   const skipped_symlinks = [];
@@ -31,7 +31,7 @@ function collect(dir) {
     for (const name of readdirSync(directory)) {
       const path = join(directory, name);
       const rel = relPath(dir, path);
-      if (rel === "post" || rel.startsWith("post/")) continue;
+      if (rel.split("/")[0].toLowerCase() === "post") continue;
       const info = stat(path);
       if (!info) continue;
       if (info.isSymbolicLink()) {
@@ -105,6 +105,7 @@ export default {
         const current = safe && stat(safe);
         if (current?.isFile() && !current.isSymbolicLink()) {
           ctx.hooks?.beforePurgeUnlink?.(safe);
+          try { utimesSync(join(dir, ".lock"), new Date(), new Date()); } catch { /* continue if the lock is already gone */ }
           unlinkSync(safe);
         }
       }
