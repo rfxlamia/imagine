@@ -61,6 +61,21 @@ $ node --test packages/imagine-kit/test/guard-integration.test.mjs
 # fail 0
 ```
 
+## Agents after install
+
+Observed on agy with the plugin installed from this repository (version 0.2.2, matching `.claude-plugin/plugin.json`), by running `agy plugin list --json`. The `imagine` entry lists 6 skills and 5 agents:
+
+```
+{
+  "name": "imagine",
+  "enabled": true,
+  "version": "0.2.2",
+  "source": "antigravity",
+  "skills": ["imagine", "imagine-canon", "imagine-deliver", "imagine-edit", "imagine-generate", "imagine-plan"],
+  "agents": ["continuity-reviewer", "fx-designer", "previz-designer", "scene-builder", "storyboard-artist"]
+}
+```
+
 ## Coverage
 
 The kit guard is detective. It detects changes to canon, plan inputs and media after `stage-shot` and refuses `promote-shot` with `HARD-SHADOW-ONLY`. It does not prevent writes. See `docs/harnesses/antigravity.md`, section "What It Does NOT Do".
