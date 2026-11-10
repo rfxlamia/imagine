@@ -56,7 +56,9 @@ export function placeFile(src, dest) {
 // A version that appeared meanwhile (another process, or a crash we are resuming) is kept and nothing is overwritten.
 export async function commitAsset(ctx, dir, { entry, source, summary, clearBlocked }) {
   return withLock(dir, async () => {
+    ctx.hooks?.beforeCommit?.(dir);
     const fresh = createContext(dir);
+    if (fresh.project.purges?.length) throw new KitError("HARD", "media was purged from this project; image generation is disabled", { rule: "HARD-PURGED" });
     const manifest = fresh.manifest;
     const dest = safePath(dir, entry.path);
     if (!dest) throw new KitError("HARD", `${entry.path} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: `${entry.id}.v${entry.v}` });
@@ -78,7 +80,9 @@ export async function commitAsset(ctx, dir, { entry, source, summary, clearBlock
 
 export async function commitAssets(ctx, dir, { items, extraFiles = [], summary, clearBlocked }) {
   return withLock(dir, async () => {
+    ctx.hooks?.beforeCommit?.(dir);
     const fresh = createContext(dir);
+    if (fresh.project.purges?.length) throw new KitError("HARD", "media was purged from this project; image generation is disabled", { rule: "HARD-PURGED" });
     const manifest = fresh.manifest;
     const existingVersions = new Set(manifest.assets.map((a) => `${a.id}.v${a.v}`));
 

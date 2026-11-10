@@ -112,6 +112,7 @@ export default {
 
       return await withLock(dir, async () => {
         const fresh = createContext(dir);
+        if (fresh.project.purges?.length) throw new KitError("HARD", "media was purged from this project; rendering is disabled", { rule: "HARD-PURGED" });
         const freshDerived = deriveAll(fresh);
 
         if (final) {

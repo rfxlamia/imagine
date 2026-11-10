@@ -5,9 +5,9 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sha256File } from "../src/hash.mjs";
-import { commitAsset, placeFile, recordBlocked, safePath } from "../src/img/commit.mjs";
+import { commitAsset, commitAssets, placeFile, recordBlocked, safePath } from "../src/img/commit.mjs";
 import { loadValidator } from "../src/schemas.mjs";
-import { getManifest, getProject, makeProject, put } from "./helpers/fixture.mjs";
+import { getManifest, getProject, makeProject, put, setProject } from "./helpers/fixture.mjs";
 
 const ctx = { now: () => new Date("2026-11-01T10:00:00Z") };
 const entry = (v) => ({ id: "bg", kind: "img", v, path: `assets/img/bg.v${v}.png`, status: "pending", sha256: "0".repeat(64) });
@@ -29,6 +29,36 @@ test("commitAsset places the file, records its real hash and appends a journal e
   const saved = getManifest(p.dir).assets[0];
   assert.equal(saved.sha256, sha256File(join(p.dir, "assets/img/bg.v1.png")));
   assert.notEqual(saved.sha256, "0".repeat(64));
+});
+
+test("HARD-PURGED: commitAsset refuses media purged before its locked commit", async () => {
+  const p = await makeProject();
+  put(p.dir, "tmp/in.png", "png-bytes");
+  const racingCtx = {
+    ...ctx,
+    hooks: { beforeCommit(dir) { setProject(dir, (project) => { project.purges = [{ at: "2026-11-10T00:00:00.000Z", quote: "purge", files: 1, bytes: 1 }]; }); } },
+  };
+  await assert.rejects(
+    commitAsset(racingCtx, p.dir, { entry: entry(1), source: join(p.dir, "tmp/in.png"), summary: { command: "img", text: "bg.v1" } }),
+    (error) => error.rule === "HARD-PURGED" && error.message === "media was purged from this project; image generation is disabled",
+  );
+  assert.equal(existsSync(join(p.dir, "assets/img/bg.v1.png")), false);
+  assert.equal(getManifest(p.dir).assets.length, 0);
+});
+
+test("HARD-PURGED: commitAssets refuses media purged before placing files", async () => {
+  const p = await makeProject();
+  put(p.dir, "tmp/in.png", "png-bytes");
+  const racingCtx = {
+    ...ctx,
+    hooks: { beforeCommit(dir) { setProject(dir, (project) => { project.purges = [{ at: "2026-11-10T00:00:00.000Z", quote: "purge", files: 1, bytes: 1 }]; }); } },
+  };
+  await assert.rejects(
+    commitAssets(racingCtx, p.dir, { items: [{ entry: entry(1), source: join(p.dir, "tmp/in.png") }], summary: { command: "img", text: "bg.v1" } }),
+    (error) => error.rule === "HARD-PURGED" && error.message === "media was purged from this project; image generation is disabled",
+  );
+  assert.equal(existsSync(join(p.dir, "assets/img/bg.v1.png")), false);
+  assert.equal(getManifest(p.dir).assets.length, 0);
 });
 
 test("PROC-VERSIONS-IMMUTABLE: a version that already exists is kept and never overwritten", async () => {

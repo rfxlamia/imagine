@@ -1,8 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cli, cliWith, makeProject, put, getProject } from "./helpers/fixture.mjs";
+import { collect } from "../src/commands/purge.mjs";
 
 const file = (dir, rel, contents = "x") => put(dir, rel, contents);
 const final = (dir) => file(dir, "post/final.mp4", "final");
@@ -67,6 +68,25 @@ test("HARD-PURGE-FINAL-EXISTS: every file under root post survives while scoped 
   }
 });
 
+test("HARD-PURGED: root Post directory media is kept and never targeted", async () => {
+  const { cwd, dir } = await makeProject();
+  final(dir);
+  file(dir, "Post/x.png", "image");
+  file(dir, "Post/y.mp4", "video");
+  const scan = collect(dir);
+  assert.equal(scan.targets.some((item) => item.rel.split("/")[0].toLowerCase() === "post"), false);
+  assert.equal(scan.kept.includes("post/final.mp4"), true);
+  const dry = await cli(cwd, "purge");
+  assert.equal(dry.exit, 0);
+  assert.equal(dry.env.data.kept.includes("post/final.mp4"), true);
+  assert.equal(dry.env.data.total_files, 0, "root Post media should not be counted as purge targets");
+  const applied = await cli(cwd, "purge", "--apply", "--quote", "purge media");
+  assert.equal(applied.exit, 0);
+  assert.equal(existsSync(join(dir, "Post/x.png")), true);
+  assert.equal(existsSync(join(dir, "Post/y.mp4")), true);
+  assert.equal(existsSync(join(dir, "post/final.mp4")), true);
+});
+
 test("HARD-PURGED: symlinks are skipped and the project is recorded on every apply", async () => {
   const { cwd, dir } = await makeProject();
   final(dir);
@@ -101,6 +121,25 @@ test("HARD-PURGED: purge record is saved before an unlink failure", async () => 
   assert.equal(getProject(dir).purges.length, 1);
   assert.equal(getProject(dir).purges[0].files, 1);
   assert.equal(existsSync(join(dir, "assets/img/a.png")), true);
+});
+
+test("HARD-PURGED: purge refreshes its lock before each unlink", async () => {
+  const { cwd, dir } = await makeProject();
+  final(dir);
+  file(dir, "assets/img/a.png");
+  file(dir, "assets/img/b.png");
+  let calls = 0;
+  const r = await cliWith(cwd, { hooks: { beforePurgeUnlink(lockPath) {
+    calls += 1;
+    if (calls === 1) {
+      const old = new Date(Date.now() - 60_000);
+      utimesSync(join(dir, ".lock"), old, old);
+    } else {
+      assert.ok(Date.now() - statSync(join(dir, ".lock")).mtimeMs < 30_000, "lock heartbeat should keep the lock fresh");
+    }
+  } } }, "purge", "--apply", "--quote", "purge media");
+  assert.equal(r.exit, 0);
+  assert.equal(calls, 2);
 });
 
 test("HARD-PURGED: downstream generation commands refuse after purge while status exposes records", async () => {
