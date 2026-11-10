@@ -1,0 +1,48 @@
+{
+  "schema": "sequential-shorts/review@1",
+  "instructions": "View each contact_sheet (left half: last second of the earlier part; right half: first second of the next) and set visual to PASS or FAIL with a visual_note. listening stays NOT_RUN unless the user listened to audio_clip.",
+  "cuts": [
+    {
+      "cut": "01-02",
+      "after_part": 1,
+      "t_s": 61.433333,
+      "frame": 1843,
+      "boundary": "silence",
+      "contact_sheet": "qa/cut-01-02.png",
+      "audio_clip": "qa/cut-01-02.wav",
+      "excerpt": "orang Tionghoa lewat Pinang. Lalu, makin banyak orang Jawa. Cara rekrutnya? Calo. | Janji gaji tinggi. Sumber -sumber sejarah mencatat banyak penipuan, bahkan penculikan buat",
+      "visual": "PASS",
+      "visual_note": "PASS: cut inside one continuous dock shot; figure motion continues across the seam, no black or faded frame. The film's burned-in caption card ('Cara rekrutnya? Calo. Janji gaji tinggi...') spans the seam, so part 2 opens mid-caption.",
+      "listening": "PASS",
+      "listening_note": "User, verbatim: \"sudah aku dengar. wav nya sih terpotong di bagian lagi ngomong. tapi mp4 nya aman\" (the wav excerpt edges fall mid-speech by design; the cut itself was judged safe in the MP4s)"
+    },
+    {
+      "cut": "02-03",
+      "after_part": 2,
+      "t_s": 121.833333,
+      "frame": 3655,
+      "boundary": "sentence_end+silence",
+      "contact_sheet": "qa/cut-02-03.png",
+      "audio_clip": "qa/cut-02-03.wav",
+      "excerpt": "Begitu terus. Bukan rantai besi. Rantainya angka di buku catatan. | Hari ini kita kenal polanya. Pinjol, potongan gaji buat biaya penempatan.",
+      "visual": "PASS",
+      "visual_note": "PASS: ledger shot on both sides, red bar animation continues; no black or faded frame at the seam. The film's own dissolve to the next scene starts about 0.5 s into part 3, so part 3 opens on 0.5 s of the ledger shot and its caption.",
+      "listening": "PASS",
+      "listening_note": "User, verbatim: \"sudah aku dengar. wav nya sih terpotong di bagian lagi ngomong. tapi mp4 nya aman\" (the wav excerpt edges fall mid-speech by design; the cut itself was judged safe in the MP4s)"
+    },
+    {
+      "cut": "03-04",
+      "after_part": 3,
+      "t_s": 177.9,
+      "frame": 5337,
+      "boundary": "sentence_end+silence+freeze_unread",
+      "contact_sheet": "qa/cut-03-04.png",
+      "audio_clip": "qa/cut-03-04.wav",
+      "excerpt": "jalan. Pelajaran pahit nomor satu. Viral doang belum tentu bikin sistem berubah. | Tahun 1930, Amerika mengesahkan Tehrif EKT yang melarang",
+      "visual": "PASS",
+      "visual_note": "PASS: tobacco-field shot on both sides, no black or faded frame at the seam. The film's own dissolve to the '1930' card starts about 0.5 s into part 4, so part 4 opens on 0.5 s of the field shot and its caption.",
+      "listening": "PASS",
+      "listening_note": "User, verbatim: \"sudah aku dengar. wav nya sih terpotong di bagian lagi ngomong. tapi mp4 nya aman\" (the wav excerpt edges fall mid-speech by design; the cut itself was judged safe in the MP4s)"
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "schema": "sequential-shorts/qc@1",
+  "status": "PASS",
+  "parts": [
+    {
+      "index": 1,
+      "file": "parts/part-01-of-04.mp4",
+      "status": "PASS",
+      "checks": {
+        "decode": {
+          "status": "PASS",
+          "detail": null
+        },
+        "geometry": {
+          "status": "PASS",
+          "detail": "1080x1920"
+        },
+        "duration": {
+          "status": "PASS",
+          "detail": "61.433333 s"
+        },
+        "audio": {
+          "status": "PASS",
+          "detail": "aac 48000 Hz stereo"
+        },
+        "av_sync": {
+          "status": "PASS",
+          "detail": "audio 61.433333 s, video 61.433333 s, diff 0 s (tolerance 0.076 s), largest start_time 0 s"
+        },
+        "black_frozen": {
+          "status": "PASS",
+          "detail": "no black or frozen region that the source does not have"
+        }
+      },
+      "counts": {
+        "frames": 1843,
+        "samples": 2948800,
+        "video_duration_s": 61.433333,
+        "audio_duration_s": 61.433333
+      }
+    },
+    {
+      "index": 2,
+      "file": "parts/part-02-of-04.mp4",
+      "status": "PASS",
+      "checks": {
+        "decode": {
+          "status": "PASS",
+          "detail": null
+        },
+        "geometry": {
+          "status": "PASS",
+          "detail": "1080x1920"
+        },
+        "duration": {
+          "status": "PASS",
+          "detail": "60.4 s"
+        },
+        "audio": {
+          "status": "PASS",
+          "detail": "aac 48000 Hz stereo"
+        },
+        "av_sync": {
+          "status": "PASS",
+          "detail": "audio 60.4 s, video 60.4 s, diff 0 s (tolerance 0.076 s), largest start_time 0 s"
+        },
+        "black_frozen": {
+          "status": "PASS",
+          "detail": "no black or frozen region that the source does not have"
+        }
+      },
+      "counts": {
+        "frames": 1812,
+        "samples": 2899200,
+        "video_duration_s": 60.4,
+        "audio_duration_s": 60.4
+      }
+    },
+    {
+      "index": 3,
+      "file": "parts/part-03-of-04.mp4",
+      "status": "PASS",
+      "checks": {
+        "decode": {
+          "status": "PASS",
+          "detail": null
+        },
+        "geometry": {
+          "status": "PASS",
+          "detail": "1080x1920"
+        },
+        "duration": {
+          "status": "PASS",
+          "detail": "56.066667 s"
+        },
+        "audio": {
+          "status": "PASS",
+          "detail": "aac 48000 Hz stereo"
+        },
+        "av_sync": {
+          "status": "PASS",
+          "detail": "audio 56.066667 s, video 56.066667 s, diff 0 s (tolerance 0.076 s), largest start_time 0 s"
+        },
+        "black_frozen": {
+          "status": "PASS",
+          "detail": "no black or frozen region that the source does not have"
+        }
+      },
+      "counts": {
+        "frames": 1682,
+        "samples": 2691200,
+        "video_duration_s": 56.066667,
+        "audio_duration_s": 56.066667
+      }
+    },
+    {
+      "index": 4,
+      "file": "parts/part-04-of-04.mp4",
+      "status": "PASS",
+      "checks": {
+        "decode": {
+          "status": "PASS",
+          "detail": null
+        },
+        "geometry": {
+          "status": "PASS",
+          "detail": "1080x1920"
+        },
+        "duration": {
+          "status": "PASS",
+          "detail": "72.9 s"
+        },
+        "audio": {
+          "status": "PASS",
+          "detail": "aac 48000 Hz stereo"
+        },
+        "av_sync": {
+          "status": "PASS",
+          "detail": "audio 72.9 s, video 72.9 s, diff 0 s (tolerance 0.076 s), largest start_time 0 s"
+        },
+        "black_frozen": {
+          "status": "PASS",
+          "detail": "no black or frozen region that the source does not have"
+        }
+      },
+      "counts": {
+        "frames": 2187,
+        "samples": 3499200,
+        "video_duration_s": 72.9,
+        "audio_duration_s": 72.9
+      }
+    }
+  ],
+  "coverage": {
+    "status": "PASS",
+    "plan_level": {
+      "status": "PASS",
+      "errors": []
+    },
+    "frames": {
+      "mode": "count",
+      "source": 7524,
+      "parts": 7524,
+      "diff": 0,
+      "tolerance": 4,
+      "status": "PASS"
+    },
+    "samples": {
+      "source": 12038400,
+      "source_rate": 48000,
+      "expected_at_48k": 12038400,
+      "parts": 12038400,
+      "diff": 0,
+      "tolerance": 4096,
+      "status": "PASS"
+    },
+    "rounding": {
+      "frames": 0,
+      "samples": 0,
+      "note": "sub-frame and sub-sample rounding across all cuts, reported explicitly"
+    }
+  },
+  "source": {
+    "sha256_before": "2de67cf8f65a4fe72e6fef50b83b912eae813e0e171cc5f3a69dcfefa9c75bbe",
+    "sha256_after": "2de67cf8f65a4fe72e6fef50b83b912eae813e0e171cc5f3a69dcfefa9c75bbe",
+    "unchanged": true
+  },
+  "imagine_records": {
+    "root": "/Users/rfxlamia/content/.imagine/2026-11-07-kontrak-yang-bikin-kamu-gak-bisa-resign",
+    "before": {
+      "project.yaml": "0554c4893e9721159c5eeb047cc7de9e984e29cc08e8ffa8dba6c20d2ab48712",
+      "journal.md": "4c7d5db0de604ed9d0f140aa32ec48ebd0b5ac09309e80977e26671e75e698d9",
+      "review/G4-PLAN.md": "ca8377e938a838b733be1455ea84ce4b5c88e00c5018c406d10684525b6c6422",
+      "review/REVIEW.md": "fca4841c5a972582b3de56e4825f550422c776af72365a9fd3a1e99a0ff24529",
+      "review/contact/g5b-sheet.png": "d7e2ad9bce18cc09d5c1c54f0ad7d6e9b1b8374094adbd485791f56ae69b8a5f",
+      "review/kontrak-yang-bikin-kamu-gak-bisa-resign.draft.mp4": "25d50fcfc558ee701a767a7fc96f720f88df8a5fb2e3f842421367df9c8df17c",
+      "review/qc.json": "13d974b1b27481854fb57f3a2601b18fc8ba00debf66f19a0c40662991bc6bd2"
+    },
+    "after": {
+      "project.yaml": "0554c4893e9721159c5eeb047cc7de9e984e29cc08e8ffa8dba6c20d2ab48712",
+      "journal.md": "4c7d5db0de604ed9d0f140aa32ec48ebd0b5ac09309e80977e26671e75e698d9",
+      "review/G4-PLAN.md": "ca8377e938a838b733be1455ea84ce4b5c88e00c5018c406d10684525b6c6422",
+      "review/REVIEW.md": "fca4841c5a972582b3de56e4825f550422c776af72365a9fd3a1e99a0ff24529",
+      "review/contact/g5b-sheet.png": "d7e2ad9bce18cc09d5c1c54f0ad7d6e9b1b8374094adbd485791f56ae69b8a5f",
+      "review/kontrak-yang-bikin-kamu-gak-bisa-resign.draft.mp4": "25d50fcfc558ee701a767a7fc96f720f88df8a5fb2e3f842421367df9c8df17c",
+      "review/qc.json": "13d974b1b27481854fb57f3a2601b18fc8ba00debf66f19a0c40662991bc6bd2"
+    },
+    "changed": []
+  }
+}

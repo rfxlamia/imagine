@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "sequential-shorts plan",
+  "type": "object",
+  "required": ["schema", "source", "settings", "vo", "parts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "sequential-shorts/plan@1" },
+    "source": {
+      "type": "object",
+      "required": ["path", "sha256", "duration_s", "fps_mode", "fps", "fps_rational", "time_base", "frame_count", "has_audio", "sample_rate", "sample_count", "audio_offset_s", "display_width", "display_height", "rotation"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+        "fps_mode": { "enum": ["cfr", "vfr"] },
+        "fps": { "type": "number", "exclusiveMinimum": 0 },
+        "fps_rational": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+        "time_base": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+        "frame_count": { "type": "integer", "minimum": 1 },
+        "has_audio": { "type": "boolean" },
+        "sample_rate": { "type": ["integer", "null"] },
+        "sample_count": { "type": ["integer", "null"] },
+        "audio_offset_s": { "type": ["number", "null"] },
+        "display_width": { "type": "integer", "minimum": 1 },
+        "display_height": { "type": "integer", "minimum": 1 },
+        "rotation": { "type": "number" }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "required": ["target_s", "max_s", "language", "asr_model", "marker", "background"],
+      "additionalProperties": false,
+      "properties": {
+        "target_s": { "type": "number", "minimum": 5 },
+        "max_s": { "type": "number", "minimum": 5, "maximum": 180 },
+        "language": { "type": "string", "pattern": "^(auto|[a-z]{2,3})$" },
+        "asr_model": { "type": "string", "minLength": 1 },
+        "asr_revision": { "type": ["string", "null"] },
+        "marker": { "enum": ["auto", "on", "off"] },
+        "background": { "type": "string", "pattern": "^(blur|color:#[0-9a-fA-F]{6})$" }
+      }
+    },
+    "vo": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["ok", "unreliable", "failed"] },
+        "reasons": { "type": "array", "items": { "type": "string" } },
+        "language": { "type": ["string", "null"] }
+      }
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["index", "of", "start_s", "end_s", "start_frame", "end_frame", "start_sample", "end_sample", "duration_s", "vo_range", "title", "description", "boundary_out"],
+        "additionalProperties": false,
+        "properties": {
+          "index": { "type": "integer", "minimum": 1 },
+          "of": { "type": "integer", "minimum": 1 },
+          "start_s": { "type": "number", "minimum": 0 },
+          "end_s": { "type": "number", "exclusiveMinimum": 0 },
+          "start_frame": { "type": "integer", "minimum": 0 },
+          "end_frame": { "type": "integer", "minimum": 1 },
+          "start_sample": { "type": ["integer", "null"], "minimum": 0 },
+          "end_sample": { "type": ["integer", "null"], "minimum": 0 },
+          "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+          "vo_range": {
+            "oneOf": [
+              { "type": "null" },
+              { "type": "object", "required": ["first_word", "last_word", "text"], "properties": { "first_word": { "type": "integer" }, "last_word": { "type": "integer" }, "text": { "type": "string" } } }
+            ]
+          },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "boundary_out": {
+            "type": "object",
+            "required": ["kind", "candidate_id", "evidence", "cost", "forced", "forced_reason", "uncertain"],
+            "properties": {
+              "kind": { "type": "string", "minLength": 1 },
+              "candidate_id": { "type": ["string", "null"] },
+              "evidence": { "type": "array", "items": { "type": "string" } },
+              "cost": { "type": "number" },
+              "forced": { "type": "boolean" },
+              "forced_reason": { "type": ["string", "null"] },
+              "uncertain": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "schema": "sequential-shorts/plan@1",
+  "source": {
+    "path": "/Users/rfxlamia/content/.imagine/2026-11-07-kontrak-yang-bikin-kamu-gak-bisa-resign/post/kontrak-yang-bikin-kamu-gak-bisa-resign.v1.mp4",
+    "sha256": "2de67cf8f65a4fe72e6fef50b83b912eae813e0e171cc5f3a69dcfefa9c75bbe",
+    "duration_s": 250.8,
+    "fps_mode": "cfr",
+    "fps": 30,
+    "fps_rational": "30/1",
+    "time_base": "1/30",
+    "frame_count": 7524,
+    "has_audio": true,
+    "sample_rate": 48000,
+    "sample_count": 12038400,
+    "audio_offset_s": 0,
+    "display_width": 1080,
+    "display_height": 1920,
+    "rotation": 0
+  },
+  "settings": {
+    "target_s": 60,
+    "max_s": 90,
+    "language": "id",
+    "asr_model": "large-v3-turbo",
+    "asr_revision": null,
+    "marker": "auto",
+    "background": "blur"
+  },
+  "vo": {
+    "status": "ok",
+    "reasons": [],
+    "language": "id"
+  },
+  "parts": [
+    {
+      "index": 1,
+      "of": 4,
+      "start_s": 0,
+      "end_s": 61.433333,
+      "start_frame": 0,
+      "end_frame": 1843,
+      "start_sample": 0,
+      "end_sample": 2948800,
+      "duration_s": 61.433333,
+      "vo_range": {
+        "first_word": 0,
+        "last_word": 124,
+        "text": "Pernah baca kontrak kerja yang isinya kayak jebakan? Kalau resign sebelum 2 tahun, bayar penalti. Ijazah ditahan. Gaji pas -pasan, tapi cicilan jalan terus. Mau keluar, nggak bisa. Mau bertahan, capek. Sekarang, bayangin versi yang jauh lebih parah. Kabur dari kerjaan bukan cuma kena penalti, tapi bisa ditangkep, dihukum, lalu dikembalikan ke tempat kerja yang sama. Itu bukan film, itu hukum resmi di Sumatera Timur, selama puluhan tahun. Akhir 1800 -an, Delhi, sekitar Medan sekarang, jadi tambang uang. Tembakaunya terkenal di dunia, dipakai buat lapisan luar cerutu mahal. Perkebunan meledak. Masalahnya, penduduk lokal sedikit, dan orang Melayu maupun Batak nggak terlalu mau kerja di kebun itu. Jadi pengusaha mendatangkan pekerja dari luar. Awalnya, orang Tionghoa lewat Pinang. Lalu, makin banyak orang Jawa. Cara rekrutnya? Calo."
+      },
+      "title": "Kontrak Kerja yang Bikin Kabur Bisa Ditangkap",
+      "description": "Bayangin kontrak kerja yang bikin kamu bisa ditangkap, dihukum, lalu dikembalikan ke tempat kerja yang sama kalau kabur. Itu hukum resmi di Sumatera Timur, saat tembakau Deli jadi tambang uang di akhir 1800-an. Part 1/4",
+      "boundary_out": {
+        "kind": "silence",
+        "candidate_id": "c0235",
+        "evidence": [
+          "silence 61.302-61.587 s"
+        ],
+        "cost": 0.4,
+        "forced": false,
+        "forced_reason": null,
+        "uncertain": false
+      }
+    },
+    {
+      "index": 2,
+      "of": 4,
+      "start_s": 61.433333,
+      "end_s": 121.833333,
+      "start_frame": 1843,
+      "end_frame": 3655,
+      "start_sample": 2948800,
+      "end_sample": 5848000,
+      "duration_s": 60.4,
+      "vo_range": {
+        "first_word": 125,
+        "last_word": 233,
+        "text": "Janji gaji tinggi. Sumber -sumber sejarah mencatat banyak penipuan, bahkan penculikan buat ngisi kapal ke Sumatera. Biar investasi nggak kabur, pengusaha dapat payung hukum dari pemerintah kolonial. Klee Ordenanti. Aturan Kuli tahun 1880. Di dalamnya ada Pu Nahleh Sangtieh, sanksi pidana. Kuli yang melanggar kontrak, termasuk kabur, bisa dihukum. Hukumannya bisa berupa tambahan masa kerja. Bukan cuma kamu dipecat, tapi kamu dipaksa balik dan kerja lebih lama. Di lapangan, planter punya kuasa besar buat menindak sendiri. Kebun jadi dunia kecil dengan hukumnya sendiri. Gaji ditekan rendah. Kebutuhan hidup tetap. Akhirnya Kuli berutang. Utang belum lunas, kontrak diperpanjang. Diperpanjang lagi. Begitu terus. Bukan rantai besi. Rantainya angka di buku catatan."
+      },
+      "title": "Koeli Ordonnantie: Rantainya Angka di Buku Catatan",
+      "description": "Calo menjanjikan gaji tinggi, lalu Koeli Ordonnantie 1880 memberi sanksi pidana bagi kuli yang kabur. Utang belum lunas, kontrak diperpanjang lagi dan lagi. Part 2/4",
+      "boundary_out": {
+        "kind": "sentence_end+silence",
+        "candidate_id": "c0450",
+        "evidence": [
+          "after \"catatan.\" (word 233), gap 0.48 s before \"Hari\"",
+          "audio silence 121.675-122.252 s confirms the gap"
+        ],
+        "cost": 0.3773,
+        "forced": false,
+        "forced_reason": null,
+        "uncertain": false
+      }
+    },
+    {
+      "index": 3,
+      "of": 4,
+      "start_s": 121.833333,
+      "end_s": 177.9,
+      "start_frame": 3655,
+      "end_frame": 5337,
+      "start_sample": 5848000,
+      "end_sample": 8539200,
+      "duration_s": 56.066667,
+      "vo_range": {
+        "first_word": 234,
+        "last_word": 340,
+        "text": "Hari ini kita kenal polanya. Pinjol, potongan gaji buat biaya penempatan. Utang ke agen. Bentuknya beda, mekanismenya mirip. Orang bertahan bukan karena mau, tapi karena gak punya jalan keluar. Tahun 1902, pengacara di Medan bernama J. van den Brandt menerbitkan brosur berjudul Deh midioneng otairi. Jutaan dari Delhi. Isinya kesaksian soal kekerasan dan penyalahgunaan kuasa di kebun. Bisa dibilang, ini thread viral versi 1902. Pers di Hindia Belanda heboh. Parlemen di Belanda ikut tertekan. Pemerintah mengirim jaksa REMREF buat menyelidiki. Laporannya membenarkan banyak kekerasan. Tapi laporan itu lama gak dibuka ke publik. Dan sistemnya tetap jalan. Pelajaran pahit nomor satu. Viral doang belum tentu bikin sistem berubah."
+      },
+      "title": "Jutaan dari Deli: Thread Viral Versi 1902",
+      "description": "Polanya masih ada hari ini: pinjol, potongan gaji, utang ke agen. Tahun 1902 seorang pengacara di Medan membongkar kekerasan di kebun, laporannya membenarkan, tapi sistemnya tetap jalan. Part 3/4",
+      "boundary_out": {
+        "kind": "sentence_end+silence+freeze_unread",
+        "candidate_id": "c0657",
+        "evidence": [
+          "after \"berubah.\" (word 340), gap 0.44 s before \"Tahun\"",
+          "audio silence 177.72-178.256 s confirms the gap",
+          "still frame since 177.267 s, visible less than 1.5 s"
+        ],
+        "cost": 2.3987,
+        "forced": false,
+        "forced_reason": null,
+        "uncertain": false
+      }
+    },
+    {
+      "index": 4,
+      "of": 4,
+      "start_s": 177.9,
+      "end_s": 250.8,
+      "start_frame": 5337,
+      "end_frame": 7524,
+      "start_sample": 8539200,
+      "end_sample": 12038400,
+      "duration_s": 72.9,
+      "vo_range": {
+        "first_word": 341,
+        "last_word": 482,
+        "text": "Tahun 1930, Amerika mengesahkan Tehrif EKT yang melarang impor barang hasil kerja paksa. Tembakau Delhi terancam gak bisa masuk pasar Amerika. Panit. Asosiasi pengusaha tembakau Delhi mengumumkan akan beralih ke tenaga kerja bebas. Pelajaran pahit nomor dua. Yang gak tergerak oleh penderitaan manusia, ternyata tergerak oleh ancaman kehilangan pasar. Kule Ordonante baru dicabut akhir 1941. Beberapa bulan kemudian, Jepang datang. Dan babak baru penderitaan pekerja dimulai. Cerita Delhi jarang dibahas panjang di sekolah. Padahal ini contoh paling jelas gimana hukum bisa dipakai buat mengikat orang ke pekerjaan. Bukan dengan cambuk saja, tapi dengan kontrak, utang, dan pasal. Ada yang bersuara, ada laporan resmi, ada yang ditutup -tutupi. Lalu perubahan datang dari tekanan ekonomi, bukan dari hati nurani. Jadi lain kali kamu baca kontrak kerja yang terasa ngiket, ingat, dulu ada jutaan orang yang kontraknya bisa bikin mereka di penjara cuma karena pergi."
+      },
+      "title": "Yang Mengubah Sistem: Ancaman Kehilangan Pasar",
+      "description": "Tahun 1930 Amerika melarang impor barang hasil kerja paksa, dan pengusaha tembakau Deli beralih ke tenaga kerja bebas. Koeli Ordonnantie baru dicabut akhir 1941. Part 4/4",
+      "boundary_out": {
+        "kind": "end",
+        "candidate_id": null,
+        "evidence": [],
+        "cost": 0,
+        "forced": false,
+        "forced_reason": null,
+        "uncertain": false
+      }
+    }
+  ]
+}
