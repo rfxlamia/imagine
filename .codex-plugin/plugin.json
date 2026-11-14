@@ -1,0 +1,7 @@
+{
+  "name": "imagine",
+  "version": "0.2.2",
+  "description": "Gated motion-graphics planning and production. Codex planning/review workers use read-only transport; scene-builder uses staged output and a detective kit guard.",
+  "skills": "./skills/",
+  "hooks": { "hooks": {} }
+}

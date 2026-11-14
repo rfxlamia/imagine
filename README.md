@@ -36,7 +36,30 @@ Read https://github.com/rfxlamia/imagine/blob/main/docs/harnesses/antigravity-in
 
 The agent installs the plugin, runs the `npm install` that agy skips, verifies the install, and explains the plugin. On Antigravity, scene-builder runs behind the detective kit guard, which detects changes but does not prevent writes. Details are in [docs/harnesses/antigravity.md](docs/harnesses/antigravity.md).
 
-Invoke `/imagine` from your own working directory. Projects land in `./.imagine/` there. The shorter first-run path is the [quick start](docs/quick-start.md). The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
+### Codex
+
+Requires macOS arm64, Codex CLI 0.169.0, and existing OpenAI Codex authentication. Add the marketplace and install the plugin:
+
+```bash
+codex plugin marketplace add rfxlamia/imagine
+codex plugin add imagine@rfxlamia --json
+codex plugin list --json
+```
+
+Use the `installedPath` returned by plugin add to install dependencies and check the adapter:
+
+```bash
+cd "<installedPath>"
+npm install
+node host/preflight.mjs
+node host/check-stage.mjs --host codex --stage scene-builder
+```
+
+The stage check should report `status: ok` and `isolation: kit-guard`. Start a fresh Codex session and ask to use Imagine; its six skills appear under `imagine:*`.
+
+Planning/review roles use a separate read-only worker that loads the canonical agent instructions. Scene-builder uses a staged shadow, a detective kit guard and a parent-held baseline digest; prepare its offline runtime cache as described in [the Codex install guide](docs/harnesses/codex-install.md). A real single-shot build, lint and guarded promotion are verified; a complete film run remains unverified. The Git install path requires these adapter files to have been published to the repository; before merge, use a local checkout or the PR branch as explained in the guide.
+
+In Claude Code, invoke `/imagine` from your own working directory. Projects land in `./.imagine/` there. The shorter first-run path is the [quick start](docs/quick-start.md). The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
 
 ### Develop from a clone
 
