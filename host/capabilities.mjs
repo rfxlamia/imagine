@@ -8,9 +8,19 @@ export const HOST_IDS = Object.freeze([
   "antigravity",
   "cursor",
   "pi",
+  "codex",
 ]);
 
 export const HOSTS = Object.freeze({
+  "codex": Object.freeze({
+    subagents: "VERIFIED-RUN",
+    pretooluse_hook: "UNKNOWN",
+    hook_failure: "UNKNOWN",
+    scene_builder_enforcement: "UNKNOWN",
+    evidence: "docs/harnesses/evidence/codex-8b-run.md",
+    corroborate: null,
+    kit_guard_run: "docs/harnesses/evidence/codex-8b-run.md",
+  }),
   "claude-code": Object.freeze({
     subagents: "VERIFIED-RUN",
     pretooluse_hook: "VERIFIED-RUN",
