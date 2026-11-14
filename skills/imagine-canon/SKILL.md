@@ -13,6 +13,8 @@ description: >-
 
 # Imagine Canon — Script, Bible, Voice and Style
 
+Before any project action or agent dispatch, including direct invocation and resume, resolve R and read `R/docs/contracts/hosts/<host-id>.md` for the active harness in full. Use its registered roles and dispatch mechanism.
+
 Imagine Canon turns the user's creative intent into three approved
 sources: script units, factual and character canon, and artistic style.
 Its outputs become dependencies for planning, generation and editing.

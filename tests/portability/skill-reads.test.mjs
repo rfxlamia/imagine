@@ -75,3 +75,14 @@ test("every skill that mentions harness-portability.md as a read also mentions h
     `expected at least 3 skills to mention harness-portability.md as a read, found ${matchingSkills}`
   );
 });
+
+test("all six direct entrypoints require the active host mapping before dispatch, including resume", () => {
+  const skills = getSkillFiles().filter(s => s.name !== "placeholder");
+  assert.equal(skills.length, 6);
+  for (const skill of skills) {
+    const body = readFileSync(skill.path, "utf8");
+    assert.match(body, /Before any project action or agent dispatch.*direct invocation.*resume/);
+    assert.match(body, /docs\/contracts\/hosts\/<host-id>\.md/);
+    assert.doesNotMatch(body, /host\/codex-worker\.mjs/);
+  }
+});

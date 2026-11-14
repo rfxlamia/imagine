@@ -1,6 +1,6 @@
 # Codex read-only adapter smoke evidence
 
-This records the initial read-only pilot. Scene support was subsequently verified through the [Codex stage 8b kit-guard run](codex-8b-run.md); its conditional capability opening supersedes the scene BLOCKED state recorded below.
+Historical subprocess pilot. The launcher and its process-specific restrictions/tests were retired when distribution moved to native TOML agents. The [subprocess scene experiment](codex-8b-run.md) also predates that change; neither report qualifies native dispatch.
 
 - Recorded: 2026-11-14, macOS arm64, Codex CLI 0.169.0.
 - Source: uncommitted adapter changes based on repository commit `4f47f007654635c9083a7066f9d240ee67f7a955`.

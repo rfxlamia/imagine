@@ -12,7 +12,7 @@ const argvOf = (ctx, name) => {
   return Array.isArray(t) ? t : [t];
 };
 
-export function runTool(ctx, name, args, { cwd, env, input, timeoutMs = 900000, onSignal } = {}) {
+export function runTool(ctx, name, args, { cwd, env, input, timeoutMs = 900000 } = {}) {
   const [cmd, ...pre] = argvOf(ctx, name);
   return new Promise((resolve) => {
     const child = spawn(cmd, [...pre, ...args], { cwd, env: { ...(ctx.env ?? process.env), ...env }, stdio: ["pipe", "pipe", "pipe"], detached: true });
@@ -23,15 +23,7 @@ export function runTool(ctx, name, args, { cwd, env, input, timeoutMs = 900000, 
     const killGroup = () => { try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); } };
     const timer = setTimeout(() => { timedOut = true; killGroup(); }, timeoutMs);
     // A detached group no longer receives the terminal's Ctrl-C, so forward it: kill the group, then die of the same signal.
-    const forward = (sig) => () => {
-      killGroup();
-      try { onSignal?.(sig); }
-      finally {
-        process.removeListener("SIGINT", onInt);
-        process.removeListener("SIGTERM", onTerm);
-        process.kill(process.pid, sig);
-      }
-    };
+    const forward = (sig) => () => { killGroup(); process.removeListener("SIGINT", onInt); process.removeListener("SIGTERM", onTerm); process.kill(process.pid, sig); };
     const onInt = forward("SIGINT");
     const onTerm = forward("SIGTERM");
     process.on("SIGINT", onInt);

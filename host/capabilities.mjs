@@ -17,9 +17,9 @@ export const HOSTS = Object.freeze({
     pretooluse_hook: "UNKNOWN",
     hook_failure: "UNKNOWN",
     scene_builder_enforcement: "UNKNOWN",
-    evidence: "docs/harnesses/evidence/codex-8b-run.md",
+    evidence: "docs/harnesses/evidence/codex-native-run.md",
     corroborate: null,
-    kit_guard_run: "docs/harnesses/evidence/codex-8b-run.md",
+    kit_guard_run: "docs/harnesses/evidence/codex-native-run.md",
   }),
   "claude-code": Object.freeze({
     subagents: "VERIFIED-RUN",
