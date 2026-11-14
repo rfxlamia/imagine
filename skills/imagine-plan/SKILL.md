@@ -5,6 +5,8 @@ description: Plan Imagine productions after G3 style approval and before G4 prod
 
 # Imagine Plan
 
+Before any project action or agent dispatch, including direct invocation and resume, resolve R and read `R/docs/contracts/hosts/<host-id>.md` for the active harness in full. Use its registered roles and dispatch mechanism.
+
 ## 1. Responsibility and authority
 
 This skill owns three planning stages:

@@ -5,6 +5,8 @@ description: Generate and review canonical image references, shot rasters, and f
 
 # Imagine Generate — Stage 7
 
+Before any project action or agent dispatch, including direct invocation and resume, resolve R and read `R/docs/contracts/hosts/<host-id>.md` for the active harness in full. Use its registered roles and dispatch mechanism.
+
 ## 1. Responsibility and boundaries
 
 Generate approved production assets without changing approved creative decisions. Own canonical reference generation, shot-image batches, final VO, asset identity, continuity evidence, resolution measurements, selective regeneration, and G5r/G5a/G5b review coordination.

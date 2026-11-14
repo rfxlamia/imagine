@@ -5,6 +5,8 @@ description: Implement Imagine's stage 8b fx-implement and stage 9 edit. Use whe
 
 # Imagine Edit — Stages 8b and 9
 
+Before any project action or agent dispatch, including direct invocation and resume, resolve R and read `R/docs/contracts/hosts/<host-id>.md` for the active harness in full. Use its registered roles and dispatch mechanism.
+
 This skill owns shot implementation, composition promotion, film assembly, audio mixing, technical validation, review, and G6 picture lock.
 
 It does not approve canon, invent missing upstream decisions, silently change approved sources, or substitute agent judgement for a HARD check.

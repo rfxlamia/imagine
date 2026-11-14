@@ -10,6 +10,8 @@ description: >-
 
 # Imagine — Workspace Controller and Stage Router
 
+Before any project action or agent dispatch, including direct invocation and resume, resolve R and read `R/docs/contracts/hosts/<host-id>.md` for the active harness in full. Use its registered roles and dispatch mechanism.
+
 Imagine coordinates a gated, auditable production workflow. The main agent
 owns project state, user approvals, protected-source writes, and routing.
 Stage skills own specialized production work. No agent may substitute an
@@ -110,7 +112,8 @@ skill is unavailable. Load its instructions and mandatory references
 before routing, or report BLOCKED.
 
 Planning subagents `storyboard-artist`, `previz-designer`, and
-`fx-designer` have no Write tool. They return patches as final messages.
+`fx-designer` are authorized only for reading/searching and returning patches.
+The active host mapping defines enforcement and inherited-permission limits.
 The main agent stores each patch verbatim and invokes the authorized
 patch-application operation.
 
@@ -309,7 +312,7 @@ Append a journal entry for every state transition, with timestamp,
 actor, affected items, evidence, and reason. <!-- rule:PROC-JOURNAL -->
 
 Only the main agent or authorized patch application may write hashed
-project sources; planning subagents have no Write tool and source-hash
+project sources; planning subagents are not authorized to write and source-hash
 changes must remain detectable by status. <!-- rule:PROC-LOCK-HASHED-WRITES -->
 
 Before dispatch, record SHA-256 hashes and restorable backups for

@@ -1,5 +1,7 @@
 # Codex stage 8b evidence: subprocess scene-builder and kit guard
 
+Historical subprocess experiment. The launcher was retired when distribution moved to native TOML agents; this report does not qualify native discovery or scene execution.
+
 Recorded 2026-11-14 on macOS arm64, Node v22.23.4, Codex CLI 0.169.0, OpenAI gpt-6.1-sol with medium reasoning. The canonical scene-builder body was loaded by `host/codex-worker.mjs` from the working checkout. This is a real subprocess/HyperFrames run on a synthetic kit fixture, not a production film or actual user gate approvals.
 
 ## Verified path

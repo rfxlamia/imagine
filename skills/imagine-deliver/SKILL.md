@@ -5,6 +5,8 @@ description: Deliver the final approved Imagine film after G6 picture lock. Use 
 
 # Imagine Deliver — Stage 10
 
+Before any project action or agent dispatch, including direct invocation and resume, resolve R and read `R/docs/contracts/hosts/<host-id>.md` for the active harness in full. Use its registered roles and dispatch mechanism.
+
 ## 1. Responsibility and authority
 
 Stage 10 converts a current, G6-approved edit into an immutable final MP4 under `post/`, verifies that exact artifact, records delivery evidence, and obtains G7 acceptance.

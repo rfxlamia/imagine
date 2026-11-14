@@ -1,0 +1,171 @@
+{
+  "recorded": "2026-11-14T14:09:36.038Z",
+  "client": "Codex CLI 0.169.0",
+  "platform": "darwin-arm64",
+  "model": "gpt-6.1-sol",
+  "effort": "medium",
+  "skill_discovery": [
+    {
+      "name": "imagine:imagine",
+      "enabled": true
+    },
+    {
+      "name": "imagine:imagine-canon",
+      "enabled": true
+    },
+    {
+      "name": "imagine:imagine-deliver",
+      "enabled": true
+    },
+    {
+      "name": "imagine:imagine-edit",
+      "enabled": true
+    },
+    {
+      "name": "imagine:imagine-generate",
+      "enabled": true
+    },
+    {
+      "name": "imagine:imagine-plan",
+      "enabled": true
+    }
+  ],
+  "bundled_hooks": [],
+  "native_roles_spawned": [
+    "imagine_continuity_reviewer",
+    "imagine_fx_designer",
+    "imagine_previz_designer",
+    "imagine_scene_builder",
+    "imagine_storyboard_artist"
+  ],
+  "generated_sha256": {
+    "imagine_continuity_reviewer.toml": "cb51d446b439664acb6cff18d2339e9423d213e9b96c42f90cbc130634bfa4eb",
+    "imagine_fx_designer.toml": "879633c3bb721f4f4e846ed38e178d25b06b45dda8ae44e631da120097def22e",
+    "imagine_previz_designer.toml": "5991377fbe43f5c017b31174c6026fc4dc44d3779ddd6df04157928f92d8d298",
+    "imagine_scene_builder.toml": "7ff882040663542877404f36af1a654df8be3678cb9f8b56a53e14a936e77fcf",
+    "imagine_storyboard_artist.toml": "8c1319fd17a20494f76c85d1931c88464f3b4d7253bd8bc3e64aa9cb3554a679"
+  },
+  "direct_planning_entrypoint": {
+    "skill": "imagine-plan",
+    "architecture_hints_in_prompt": false,
+    "actual_role": "imagine_storyboard_artist",
+    "result": "blocked: synthetic helper approvals are not authentic creative user approvals",
+    "project_integrity": "Parent reported 23 protected hashes unchanged; no patch applied"
+  },
+  "scene": {
+    "codex": "0.169.0",
+    "model": "gpt-6.1-sol",
+    "reasoning": "medium",
+    "native_role": "imagine_scene_builder",
+    "canonical_body_sha256": "088a96891bcb4a1bc02174cf760902023d01bc46ad00b6613952d6f6caab1451",
+    "native_toml_sha256": "7ff882040663542877404f36af1a654df8be3678cb9f8b56a53e14a936e77fcf",
+    "protected_snapshot_unchanged": true,
+    "controls": [
+      {
+        "kind": "canon",
+        "exit": 1,
+        "rule": "HARD-SHADOW-ONLY",
+        "destination_unchanged": true
+      },
+      {
+        "kind": "direct-live",
+        "exit": 1,
+        "rule": "HARD-SHADOW-ONLY",
+        "destination_unchanged": true
+      },
+      {
+        "kind": "baseline",
+        "exit": 1,
+        "rule": "HARD-SHADOW-ONLY",
+        "destination_unchanged": true
+      }
+    ],
+    "clean_promotion_exit": 0,
+    "baseline_removed": true,
+    "scope": "Synthetic native scene; parent-injected tamper controls; no render or real approvals"
+  },
+  "lifecycle": [
+    {
+      "mode": "--check",
+      "actions": [
+        "current",
+        "current",
+        "current",
+        "current",
+        "current"
+      ],
+      "restart_required": false
+    },
+    {
+      "mode": "--dry-run",
+      "actions": [
+        "current",
+        "current",
+        "current",
+        "current",
+        "current"
+      ],
+      "restart_required": false
+    },
+    {
+      "mode": "--install",
+      "actions": [
+        "current",
+        "current",
+        "current",
+        "current",
+        "current"
+      ],
+      "restart_required": false
+    },
+    {
+      "mode": "--remove",
+      "actions": [
+        "remove",
+        "remove",
+        "remove",
+        "remove",
+        "remove"
+      ],
+      "restart_required": true
+    },
+    {
+      "mode": "--install",
+      "actions": [
+        "install",
+        "install",
+        "install",
+        "install",
+        "install"
+      ],
+      "restart_required": true
+    },
+    {
+      "mode": "--check",
+      "actions": [
+        "current",
+        "current",
+        "current",
+        "current",
+        "current"
+      ],
+      "restart_required": false
+    },
+    {
+      "mode": "--remove",
+      "actions": [
+        "remove",
+        "remove",
+        "remove",
+        "remove",
+        "remove"
+      ],
+      "restart_required": true
+    }
+  ],
+  "installer_config_unchanged": true,
+  "unrelated_agent_preserved": true,
+  "plugin_remove_exit": 0,
+  "auth_link_removed_source_preserved": true,
+  "limits": "Synthetic fixtures only. Native permissions inherited from test parent: danger-full-access for planning routing and scene qualification; read-only for missing-input role probes. User-level skills/account context remained visible. No clean-room upstream isolation, full film, render, snapshot, or successful previz/fx/continuity workflow claim."
+}
