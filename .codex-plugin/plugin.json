@@ -1,0 +1,7 @@
+{
+  "name": "imagine",
+  "version": "0.2.2",
+  "description": "Gated motion-graphics planning and production. Includes native Codex agent TOMLs; run node host/codex-agents.mjs --install after plugin installation.",
+  "skills": "./skills/",
+  "hooks": { "hooks": {} }
+}

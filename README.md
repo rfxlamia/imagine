@@ -36,7 +36,33 @@ Read https://github.com/rfxlamia/imagine/blob/main/docs/harnesses/antigravity-in
 
 The agent installs the plugin, runs the `npm install` that agy skips, verifies the install, and explains the plugin. On Antigravity, scene-builder runs behind the detective kit guard, which detects changes but does not prevent writes. Details are in [docs/harnesses/antigravity.md](docs/harnesses/antigravity.md).
 
-Invoke `/imagine` from your own working directory. Projects land in `./.imagine/` there. The shorter first-run path is the [quick start](docs/quick-start.md). The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
+### Codex
+
+Install the skills through Codex's marketplace, then register the five native agents with the bundled setup command. Node.js and a Codex client supporting standalone custom-agent TOMLs are required:
+
+```bash
+codex plugin marketplace add rfxlamia/imagine
+codex plugin add imagine@rfxlamia --json
+codex plugin list --json
+```
+
+Use the `installedPath` returned by plugin add to install dependencies and check the adapter:
+
+```bash
+cd "<installedPath>"
+npm install
+node host/codex-agents.mjs --dry-run
+node host/codex-agents.mjs --install
+node host/codex-agents.mjs --check
+node host/preflight.mjs
+node host/check-stage.mjs --host codex --stage scene-builder
+```
+
+Restart Codex so it loads the registered `imagine_*` agents, then ask to use Imagine; its six skills appear under `imagine:*`. The stage check requires recorded native scene evidence and reports `isolation: kit-guard` when qualified.
+
+Codex manages native subagent dispatch and inherits the parent session's permissions. Planning/review roles are forbidden to write, with parent hash/backup/restore guards detecting unauthorized changes. Scene-builder uses a staged shadow, the detective kit guard and the original parent-held baseline digest. Follow [the Codex install guide](docs/harnesses/codex-install.md) for setup, update/removal and current evidence limits. The Git install path requires these files to be published; before merge, use a local checkout or the PR branch as described in the guide.
+
+In Claude Code, invoke `/imagine` from your own working directory. Projects land in `./.imagine/` there. The shorter first-run path is the [quick start](docs/quick-start.md). The first questions are G0: format, platform, audio mode, language, duration range, and whether silence is intentional. After you approve them, the plugin creates `.imagine/<YYYY-MM-DD>-<slug>/` and points `.imagine/ACTIVE` at it.
 
 ### Develop from a clone
 
