@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
 import { manageCodexAgents } from "../../host/codex-agents.mjs";
 import { writeCodexAgents } from "../../tools/agent-codex.mjs";
 
@@ -68,4 +68,17 @@ test("installer CLI works through a symlink and rejects conflicting modes", t =>
   assert.equal(preview.status, 0); assert.equal(JSON.parse(preview.stdout).mode, "preview");
   assert.equal(run(["--check", "--install"]).status, 2);
   assert.equal(existsSync(join(f.home, "agents")), false);
+});
+
+test("Git checkout with autocrlf enabled keeps canonical and generated agents installable", t => {
+  const f = fixture(t), checkout = join(f.dir, "checkout");
+  cpSync(join(ROOT, ".gitattributes"), join(f.root, ".gitattributes"));
+  const git = (...args) => execFileSync("git", args, { cwd: f.root, stdio: "pipe" });
+  git("init", "-q");
+  git("-c", "core.autocrlf=true", "add", ".gitattributes", "agents", "codex-agents");
+  mkdirSync(checkout);
+  git("-c", "core.autocrlf=true", "checkout-index", "--all", `--prefix=${checkout}/`);
+  assert.equal(readFileSync(join(checkout, "agents/storyboard-artist.md"), "utf8").includes("\r\n"), false);
+  assert.equal(readFileSync(join(checkout, "codex-agents/imagine_storyboard_artist.toml"), "utf8").includes("\r\n"), false);
+  assert.equal(manageCodexAgents({ mode: "install", codexHome: f.home, rootDir: checkout }).ok, true);
 });
