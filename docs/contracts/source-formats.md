@@ -20,7 +20,7 @@ A source reference is `kind:rest`. `status`, `gate` and `patch apply` resolve it
 
 Canonical JSON: keys sorted recursively, no whitespace, `undefined` dropped.
 
-Clock labels (the recorded value carries its label; the resolver recomputes with that label): `vo.v<N>` (key = script line id; the manifest `vo` entry with that `line` and `v = N`, current version only), `music.v<N>` (key = music asset id), `scratch` (key = line id; sha256 of `tmp/scratch-vo/<key>.wav`), `readtime` (key = unit id; canonical hash of `units.<key>` in `script/readtime.yaml`).
+Clock labels (the recorded value carries its label; the resolver recomputes with that label): `vo.v<N>` (key = script line id; the manifest `vo` entry with that `line` and `v = N`, current version only), `music.v<N>` (key = music asset id), `scratch` (key = line id; measured scratch hashes `tmp/scratch-vo/<key>.wav`; estimated scratch hashes the current validated duration entry, effective-text fingerprint, rate, voice, language and audio mode), `readtime` (key = unit id; canonical hash of `units.<key>` in `script/readtime.yaml`).
 
 Current version of an asset id = the highest `v` among entries whose `status` is not `rejected`. The latest version (any status) is what a gate lists.
 
@@ -120,7 +120,7 @@ Recorded on each touched item: base inputs `g0:format g0:duration_s g0:audio_mod
 ## 10. Optional files
 
 - `stage/names.yaml` (main agent, from HyperFrames listings): `transitions`, `shaders`, `registry`, `vfx_chains`, `media_treatment` (lists of names). `cut` and `crossfade` are always valid transitions. Missing file with a name to check → `HARD_NOT_RUN`.
-- `tmp/scratch-vo/durations.yaml` (WP2 `tts --scratch`): `L01: 3.2` seconds per line.
+- `tmp/scratch-vo/durations.yaml` (WP2 `tts --scratch`): legacy/measured lines may be numeric (`L01: 3.2`); estimated hosted lines are objects with `duration_s`, `estimated: true`, `text_hash` (SHA-256 of lexicon-applied text), and `rate_cps`. The reader accepts both forms. Production VO durations override either scratch form.
 - `script/readtime.yaml`: `units: { T04: { words: 9, seconds: 3.2 } }`.
 
 ## 11. WP2 files
@@ -175,7 +175,7 @@ Any other value fails schema validation (`HARD-ASSETS-APPROVED`). Editing `backg
 - `tmp/scratch-vo/<line>.wav` and `tmp/audition/<speaker>-<voice>.wav` are measurements, never assets.
 - Voice config (`bible.yaml`, `characters[].voice` or top-level `narrator.voice`):
   - `engine: pocket-tts`: `model: english|indonesian`, `source: builtin:<name>|file:<path inside the project>`, `seed_base` (integer), `temperature` (number, optional). Take `n` of a line uses seed `seed_base + n`.
-  - `engine: elevenlabs`: `voice_id` (required, `^[A-Za-z0-9]{8,64}$`), `voice_name` (optional, credits only), `model_id` (optional, default `eleven_v4`), `language_code` (optional ISO 639-1; default = G0 language; not sent for `eleven_multilingual_v2`), `voice_settings: { stability, similarity_boost, style, speed, use_speaker_boost }` (optional; `eleven_v4` supports only `stability` and `similarity_boost`), `seed_base` (optional, 0..4294966295). Takes get best-effort seed `seed_base + take`. Hosted TTS takes automatically manage the `## Voices (ElevenLabs)` section of `assets/CREDITS.md` with voice, model, plan tier and licence terms.
+  - `engine: elevenlabs`: `voice_id` (required, `^[A-Za-z0-9]{8,64}$`), `voice_name` (optional, credits only), `model_id` (optional, default `eleven_v4`), `language_code` (optional ISO 639-1; default = G0 language; not sent for `eleven_multilingual_v2`), `voice_settings: { stability, similarity_boost, style, speed, use_speaker_boost }` (optional; `eleven_v4` supports only `stability` and `similarity_boost`), `seed_base` (optional, 0..4294966295), `scratch_rate_cps` (optional positive finite number used only when no matching project VO sample exists). Takes get best-effort seed `seed_base + take`. Hosted TTS takes automatically manage the `## Voices (ElevenLabs)` section of `assets/CREDITS.md` with voice, model, plan tier and licence terms. Hosted scratch estimates use 14.3 cps for Indonesian `eleven_v4`; other combinations fall back to a conservative, unvalidated 10 cps.
 - `edit/STORYBOARD.md` and `edit/assets/<id>.v<N>.<ext>` are written by `export-hf`. `stage/edit/<shot>/` is the scene-builder shadow project: `SHOT.md`, `hyperframes.json` (copied from `edit/`), `assets/`, `compositions/<shot>.html`, `index.motion.json` (shadow-local seconds).
 - `edit/index.motion.json` is `{ "version": 1, "assertions": [...] }`. Assertions merged by `promote-shot` carry a `"shot": "<sNN>"` tag (HyperFrames ignores unknown assertion fields); assertions without a `shot` tag belong to the main agent and are preserved. Only `appearsBy.bySec` carries a film time and is shifted by the shot start; `before`, `staysInFrame` and `keepsMoving` are copied unchanged.
 - `post/<slug>.v<N>.mp4` (final, immutable), `review/<slug>.draft.mp4` (draft, overwritten), `review/qc.json`.

@@ -109,7 +109,12 @@ export function loadVoDurations(dir, manifest) {
   const out = {};
   const p = join(dir, "tmp", "scratch-vo", "durations.yaml");
   if (existsSync(p)) {
-    for (const [k, v] of Object.entries(readYaml(p) ?? {})) if (typeof v === "number") out[k] = v;
+    for (const [k, v] of Object.entries(readYaml(p) ?? {})) {
+      if (typeof v === "number") out[k] = v;
+      else if (v?.estimated === true && Number.isFinite(v.duration_s) && v.duration_s > 0
+        && typeof v.text_hash === "string" && /^[0-9a-f]{64}$/.test(v.text_hash)
+        && Number.isFinite(v.rate_cps) && v.rate_cps > 0) out[k] = v.duration_s;
+    }
   }
   const vo = manifest.assets.filter((a) => a.kind === "vo" && a.line && a.status !== "rejected" && typeof a.duration_s === "number");
   for (const a of vo.sort((x, y) => x.v - y.v)) out[a.line] = a.duration_s;

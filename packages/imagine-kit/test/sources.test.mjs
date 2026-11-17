@@ -1,12 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { hashValue, sha256 } from "../src/hash.mjs";
-import { parseUnits, bibleLookup, bibleEntities, styleSections, currentAsset, latestAssets } from "../src/docs.mjs";
+import { parseUnits, bibleLookup, bibleEntities, styleSections, currentAsset, latestAssets, loadVoDurations } from "../src/docs.mjs";
 import { createContext, resolveRef, enumerateSources, SUPERSEDED } from "../src/sources.mjs";
 import { blockHash } from "../src/story/block.mjs";
-import { asset, makeProject, put, seedCanon, setManifest, setProject, shot, writeStory } from "./helpers/fixture.mjs";
+import { applyLexicon } from "../src/tts/voices.mjs";
+import { asset, cli, makeProject, put, seedCanon, setManifest, setProject, shot, snapshot, writeStory } from "./helpers/fixture.mjs";
 
 test("parseUnits: lines, bullets, mode prefix and duplicates", () => {
   const { units, duplicates } = parseUnits("L01 [narrator]: Hello there.\n- L02: No speaker.\nT01: ignored here\nL01: again\nnoise\n", "L");
@@ -99,6 +100,74 @@ test("resolveRef: clock labels", async () => {
   setManifest(dir, (m) => { m.assets.push(asset("vo-L02", "vo", 2, { line: "L02" })); });
   ctx = createContext(dir);
   assert.equal(resolveRef(ctx, "clock:L02", "vo.v1:"), `vo.v1:${SUPERSEDED}`);
+});
+
+test("loadVoDurations reads estimated entries and lets production takes supersede them", async () => {
+  const { dir } = await makeProject();
+  put(dir, "tmp/scratch-vo/durations.yaml", `L01: 2\nL02:\n  duration_s: 3\n  estimated: true\n  text_hash: ${"0".repeat(64)}\n  rate_cps: 10\nL03:\n  duration_s: 4\n  estimated: true\n  text_hash: invalid\n  rate_cps: 10\n`);
+  const manifest = { assets: [asset("vo-L02", "vo", 1, { line: "L02", duration_s: 8 })] };
+  assert.deepEqual(loadVoDurations(dir, manifest), { L01: 2, L02: 8 });
+});
+
+test("estimated clock uses valid metadata over a leftover WAV and stales on equal-length text edits", async () => {
+  const { dir } = await makeProject();
+  seedCanon(dir);
+  const initial = createContext(dir);
+  const effectiveText = applyLexicon(initial.units.units.L02.text, initial.bible);
+  put(dir, "tmp/scratch-vo/L02.wav", "obsolete-wav");
+  put(dir, "tmp/scratch-vo/durations.yaml", `L02:\n  duration_s: 3\n  estimated: true\n  text_hash: ${sha256(effectiveText)}\n  rate_cps: 10\n`);
+  const before = resolveRef(createContext(dir), "clock:L02", "scratch:");
+  assert.ok(before);
+  assert.notEqual(before, `scratch:${sha256("obsolete-wav")}`, "estimate metadata must supersede an obsolete WAV");
+  const narration = readFileSync(join(dir, "script/narration.md"), "utf8");
+  put(dir, "script/narration.md", narration.replace("Tonight the sea was quiet", "Today the sea was quiet"));
+  const after = resolveRef(createContext(dir), "clock:L02", "scratch:");
+  assert.equal(after, null, "old estimate provenance must not resolve after a same-length text edit");
+});
+
+test("estimated scratch fingerprint changes when lexicon, voice rate, or audio mode changes", async () => {
+  const { dir } = await makeProject();
+  seedCanon(dir);
+  const bible = readFileSync(join(dir, "bible.yaml"), "utf8").replace("term: Skerryvore", "term: Tonight").replace("say: SKERRY-vor", "say: Tonight");
+  put(dir, "bible.yaml", `${bible}\nnarrator:\n  voice:\n    engine: elevenlabs\n    voice_id: 21m00Tcm4TlvDq8ikWAM\n    model_id: eleven_v4\n    scratch_rate_cps: 10\n`);
+  const ctx = createContext(dir);
+  const text = applyLexicon(ctx.units.units.L02.text, ctx.bible);
+  put(dir, "tmp/scratch-vo/durations.yaml", `L02:\n  duration_s: 3\n  estimated: true\n  text_hash: ${sha256(text)}\n  rate_cps: 10\n`);
+  put(dir, "bible.yaml", readFileSync(join(dir, "bible.yaml"), "utf8").replace("scratch_rate_cps: 10", "scratch_rate_cps: 12"));
+  const rateChanged = resolveRef(createContext(dir), "clock:L02", "scratch:");
+  assert.equal(rateChanged, null, "a changed configured rate invalidates stored estimate provenance");
+  const changedBible = readFileSync(join(dir, "bible.yaml"), "utf8").replace("say: Tonight", "say: At night");
+  put(dir, "bible.yaml", changedBible);
+  assert.equal(resolveRef(createContext(dir), "clock:L02", "scratch:"), null, "a changed lexicon invalidates stored text provenance");
+  setProject(dir, (project) => { project.g0.audio_mode = "text-led"; });
+  assert.equal(resolveRef(createContext(dir), "clock:L02", "scratch:"), null, "a mode change removes the narrated unit source");
+});
+
+test("estimated clock text changes stale downstream planning items", async () => {
+  const { cwd, dir } = await makeProject();
+  seedCanon(dir);
+  const context = createContext(dir);
+  const text = applyLexicon(context.units.units.L02.text, context.bible);
+  put(dir, "tmp/scratch-vo/L02.wav", "old scratch wav");
+  put(dir, "tmp/scratch-vo/durations.yaml", `L02:\n  duration_s: 3\n  estimated: true\n  text_hash: ${sha256(text)}\n  rate_cps: 10\n`);
+  await snapshot(dir, "shot:s01.previz", ["clock:L02=scratch"], { status: "proposed" });
+  const initial = await cli(cwd, "status", "--item", "shot:s01.previz");
+  assert.equal(initial.env.data.items[0].status, "proposed");
+  const narration = readFileSync(join(dir, "script/narration.md"), "utf8");
+  put(dir, "script/narration.md", narration.replace("Tonight the sea was quiet", "Today the sea was quiet"));
+  const stale = await cli(cwd, "status", "--item", "shot:s01.previz");
+  assert.equal(stale.env.data.items[0].status, "stale");
+});
+
+test("estimated clock rejects stale text hashes and missing scratch artifacts without throwing", async () => {
+  const { dir } = await makeProject();
+  seedCanon(dir);
+  put(dir, "tmp/scratch-vo/durations.yaml", "L02:\n  duration_s: 3\n  estimated: true\n  text_hash: invalid\n  rate_cps: 10\n");
+  assert.equal(resolveRef(createContext(dir), "clock:L02", "scratch:"), null);
+  const { dir: missingDir } = await makeProject();
+  seedCanon(missingDir);
+  assert.doesNotThrow(() => resolveRef(createContext(missingDir), "clock:L02", "scratch:"));
+  assert.equal(resolveRef(createContext(missingDir), "clock:L02", "scratch:"), null);
 });
 
 test("enumerateSources lists the references a dispatch needs", async () => {

@@ -8,7 +8,7 @@ The `audio_mode` selected at G0 is authoritative.
 
 | Mode | Script source | Unit type | Previz clock | Voice |
 |---|---|---|---|---|
-| `narrated` | `script/narration.md` | `L##` | Measured scratch-VO durations | Required |
+| `narrated` | `script/narration.md` | `L##` | Measured local scratch-VO durations or estimated hosted scratch clock | Required |
 | `music-led` | `script/copy.md` | `T##` | Licensed track's beat grid | N/A |
 | `text-led` | `script/copy.md` | `T##` | Calculated or approved read-time plan | N/A |
 
@@ -20,11 +20,13 @@ A change to `audio_mode` after G0 requires an explicit user decision, re-opens G
 
 ### 2.1 Scratch voice
 
-Before stage 6, produce and measure a scratch voice reading of the locked narration units.
+Before stage 6, establish a scratch clock for the locked narration units. Local Pocket TTS scratch reads produce measured durations. Hosted voices use estimated durations by default to avoid spending hosted characters; request `tts --scratch --hosted` only when a real hosted scratch read is needed.
+
+For an estimated hosted clock, treat each `L##` duration as a planning estimate, not a measured spoken duration. Final VO durations supersede estimates and may require timing reconciliation.
 
 The scratch clock provides:
 
-- Each `L##` unit's measured spoken duration.
+- Each `L##` unit's measured or estimated spoken duration.
 - Intended pauses.
 - Required pronunciation assumptions.
 - Unit order.
@@ -45,17 +47,17 @@ The planned voice and lexicon must come from the approved G2 bible.
 
 Use `imagine-kit tts` only within the command's documented capabilities.
 
-If the documented TTS interface cannot produce scratch output without turning it into a production asset, do not invent a hidden scratch flag. Use a measured temporary human reading or another explicitly authorized scratch method, and keep it outside the approved asset pipeline.
+Hosted scratch is estimated by default and does not call the provider. Use `tts --scratch --hosted` only when a real hosted read is explicitly wanted; it reports the characters sent. Local Pocket TTS scratch continues to produce temporary WAVs. Keep all scratch outputs outside the approved asset pipeline.
 
 Do not assume there is a TTS speed control.
 
 Do not claim punctuation makes the TTS voice reliably slower. Measure the actual generated or recorded duration.
 
-If a required reading cannot be measured, stage 6 is blocked.
+An estimated hosted clock may be used for planning with its uncertainty stated. Stage 6 is blocked only when a required unit has neither a measured duration nor a valid estimate.
 
 ### 2.3 From scratch to final voice
 
-At previz, use measured scratch durations to establish an executable timing plan.
+At previz, use the scratch clock to establish an executable timing plan, noting whether hosted durations are estimated or local durations were measured.
 
 At G5a, the generation owner obtains and presents final VO audio for listening approval. Final audio has its own asset identity and measured duration.
 
