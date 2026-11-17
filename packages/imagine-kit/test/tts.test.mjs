@@ -6,10 +6,11 @@ import { tmpdir } from "node:os";
 import YAML from "yaml";
 import { sha256File } from "../src/hash.mjs";
 import { wavInfo } from "../src/media.mjs";
-import { approveThrough, cli, cliWith, getManifest, getProject, put, setProject } from "./helpers/fixture.mjs";
-import { FAKE_UV, NARRATOR, ttsProject } from "./helpers/tts.mjs";
+import { approveThrough, asset, cli, cliWith, getManifest, getProject, put, setManifest, setProject } from "./helpers/fixture.mjs";
+import { ELEVEN_NARRATOR, FAKE_UV, NARRATOR, ttsProject } from "./helpers/tts.mjs";
 import { editProject } from "./helpers/edit.mjs";
 import { encodeWav } from "./helpers/wav.mjs";
+import { createContext, resolveRef } from "../src/sources.mjs";
 
 test("PROC-ONE-LINE-PER-WAV, PROC-CAPTION-ORIGINAL, HARD-TTS-EOS: production takes: one WAV per line, manifest entry id = line, seed = seed_base + take, pending listen_status", async () => {
   const p = await ttsProject({ edit: (t) => t.replace("She lit it anyway.", "She lit Skerryvore anyway.") });
@@ -232,6 +233,105 @@ test("PROC-CLOCK-PER-MODE: --scratch writes tmp/scratch-vo and durations.yaml, n
   assert.deepEqual(Object.keys(d), ["L01", "L02", "L03"]);
   assert.ok(existsSync(join(p.dir, "tmp/scratch-vo/L02.wav")));
   assert.ok(r.env.advice.some((a) => a.rule === "PROC-SCRATCH-NOT-ASSET"));
+});
+
+test("hosted scratch estimates without a provider call and fingerprints its estimate inputs", async () => {
+  const p = await ttsProject({ narrator: ELEVEN_NARRATOR });
+  const bible = readFileSync(join(p.dir, "bible.yaml"), "utf8");
+  put(p.dir, "bible.yaml", bible.replace("model_id: eleven_v4", "model_id: eleven_v4\n    scratch_rate_cps: 2\n").replace("term: Skerryvore", "term: Every").replace("say: SKERRY-vor", "say: Each"));
+  const r = await p.run({ ELEVENLABS_API_KEY: "sk_test_mock_eleven_key_123456789" }, "tts", "--all", "--scratch");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.equal(p.calls().length, 0, "estimated scratch must not invoke a hosted worker");
+  assert.equal(r.env.data.takes.length, 3);
+  assert.deepEqual(Object.keys(YAML.parse(readFileSync(join(p.dir, "tmp/scratch-vo/durations.yaml"), "utf8"))), ["L01", "L02", "L03"]);
+  assert.equal(r.env.data.characters, 0);
+  assert.equal(r.env.data.takes[0].estimated, true);
+  assert.equal(r.env.data.takes[0].duration_s, "Each night for forty years, Mara climbed the stairs and lit the lamp.".length / 2);
+  const saved = YAML.parse(readFileSync(join(p.dir, "tmp/scratch-vo/durations.yaml"), "utf8"));
+  assert.equal(saved.L01.estimated, true);
+  assert.equal(saved.L01.duration_s, r.env.data.takes[0].duration_s);
+  assert.ok(r.env.advice.some((a) => a.rule === "ADV-SCRATCH-ESTIMATED"));
+});
+
+test("project VO sample rate takes precedence over scratch_rate_cps", async () => {
+  const p = await ttsProject({ narrator: ELEVEN_NARRATOR });
+  const bible = readFileSync(join(p.dir, "bible.yaml"), "utf8");
+  put(p.dir, "bible.yaml", bible.replace("model_id: eleven_v4", "model_id: eleven_v4\n    scratch_rate_cps: 2\n"));
+  setManifest(p.dir, (manifest) => {
+    manifest.assets.push({ id: "prior", kind: "vo", v: 1, path: "assets/vo/prior.v1.wav", sha256: "0".repeat(64), status: "approved", line: "L03",
+      engine: "elevenlabs", model_id: "eleven_v4", voice_id: "21m00Tcm4TlvDq8ikWAM", tts_text: "1234567890", duration_s: 20 });
+  });
+  const r = await p.run({ ELEVENLABS_API_KEY: "sk_test_mock_eleven_key_123456789" }, "tts", "L01", "--scratch");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.equal(r.env.data.takes[0].duration_s, "Every night for forty years, Mara climbed the stairs and lit the lamp.".length / 0.5);
+  assert.equal(p.calls().length, 0);
+});
+
+test("unidentified and rejected VO samples do not calibrate the hosted scratch rate", async () => {
+  const p = await ttsProject({ narrator: ELEVEN_NARRATOR });
+  setManifest(p.dir, (manifest) => {
+    manifest.assets.push(asset("other", "vo", 1, { status: "approved", tts_text: "x".repeat(100), duration_s: 1 }));
+    manifest.assets.push(asset("rejected", "vo", 1, { status: "rejected", engine: "elevenlabs", model_id: "eleven_v4",
+      voice_id: "21m00Tcm4TlvDq8ikWAM", tts_text: "x".repeat(100), duration_s: 1 }));
+  });
+  setProject(p.dir, (project) => { project.g0.language = "en"; });
+  const r = await p.run({}, "tts", "L01", "--scratch");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.equal(r.env.data.takes[0].duration_s, Math.round(("Every night for forty years, Mara climbed the stairs and lit the lamp.".length / 10) * 1000) / 1000);
+  assert.equal(p.calls().length, 0);
+});
+
+test("only the latest valid take per line calibrates hosted scratch", async () => {
+  const p = await ttsProject({ narrator: ELEVEN_NARRATOR });
+  setManifest(p.dir, (manifest) => {
+    manifest.assets.push(asset("L01", "vo", 1, { line: "L01", status: "approved", engine: "elevenlabs", model_id: "eleven_v4",
+      voice_id: "21m00Tcm4TlvDq8ikWAM", tts_text: "x".repeat(100), duration_s: 1 }));
+    manifest.assets.push(asset("L01", "vo", 2, { line: "L01", status: "pending", engine: "elevenlabs", model_id: "eleven_v4",
+      voice_id: "21m00Tcm4TlvDq8ikWAM", tts_text: "1234567890", duration_s: 2 }));
+  });
+  const r = await p.run({}, "tts", "L01", "--scratch");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.equal(r.env.data.takes[0].duration_s, "Every night for forty years, Mara climbed the stairs and lit the lamp.".length / 5);
+});
+
+test("Indonesian eleven_v4 uses its documented rate and other combinations use the conservative fallback", async () => {
+  const p = await ttsProject({ narrator: ELEVEN_NARRATOR });
+  setProject(p.dir, (project) => { project.g0.language = "id"; });
+  let r = await p.run({}, "tts", "L01", "--scratch");
+  assert.equal(r.env.data.takes[0].duration_s, Math.round(("Every night for forty years, Mara climbed the stairs and lit the lamp.".length / 14.3) * 1000) / 1000);
+  const bible = readFileSync(join(p.dir, "bible.yaml"), "utf8").replace("model_id: eleven_v4", "model_id: eleven_v3");
+  put(p.dir, "bible.yaml", bible);
+  r = await p.run({}, "tts", "L01", "--scratch");
+  assert.equal(r.env.data.takes[0].duration_s, Math.round(("Every night for forty years, Mara climbed the stairs and lit the lamp.".length / 10) * 1000) / 1000);
+});
+
+test("--scratch --hosted preserves the hosted read and reports characters sent", async () => {
+  const p = await ttsProject({ narrator: ELEVEN_NARRATOR });
+  const r = await p.run({ ELEVENLABS_API_KEY: "sk_test_mock_eleven_key_123456789" }, "tts", "L01", "--scratch", "--hosted");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.equal(p.calls().length, 1);
+  assert.equal(r.env.data.characters, p.calls()[0].request.jobs[0].text.length);
+  assert.equal(p.notices().join(""), `Hosted TTS scratch will send ${r.env.data.characters} characters.\n`);
+  assert.equal(p.callsAtNotice(), 0, "the count notice must happen before provider dispatch");
+  assert.deepEqual(JSON.parse(r.stdout), r.env, "stdout remains the JSON envelope only");
+  assert.equal(r.env.data.takes[0].estimated, false);
+});
+
+test("switching hosted scratch to estimated scratch ignores but preserves the old WAV", async () => {
+  const p = await ttsProject({ narrator: ELEVEN_NARRATOR });
+  const env = { ELEVENLABS_API_KEY: "sk_test_mock_eleven_key_123456789" };
+  const hosted = await p.run(env, "tts", "L01", "--scratch", "--hosted");
+  assert.equal(hosted.exit, 0, JSON.stringify(hosted.env.errors));
+  const wav = join(p.dir, "tmp/scratch-vo/L01.wav");
+  assert.ok(existsSync(wav));
+  const oldCalls = p.calls().length;
+  const estimated = await p.run(env, "tts", "L01", "--scratch");
+  assert.equal(estimated.exit, 0, JSON.stringify(estimated.env.errors));
+  assert.equal(p.calls().length, oldCalls, "estimated rerun must not call the hosted worker");
+  assert.equal(estimated.env.data.characters, 0);
+  assert.ok(existsSync(wav), "switching modes does not delete the old scratch WAV");
+  const current = resolveRef(createContext(p.dir), "clock:L01", "scratch:");
+  assert.notEqual(current, `scratch:${sha256File(wav)}`, "the estimate is the current clock source");
 });
 
 test("--audition writes one file per voice under tmp/audition", async () => {

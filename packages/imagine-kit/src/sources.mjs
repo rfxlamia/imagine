@@ -8,6 +8,7 @@ import { assetEntry, bibleEntities, bibleLookup, currentAsset, currentAssets, lo
 import { parseStory } from "./story/parse.mjs";
 import { blockHash } from "./story/block.mjs";
 import { expectedTtsParamsHash } from "./tts/provenance.mjs";
+import { applyLexicon, voiceConfig } from "./tts/voices.mjs";
 
 export const SUPERSEDED = "superseded";
 
@@ -70,7 +71,27 @@ function clockValue(ctx, key, recorded) {
   } else if (label === "scratch") {
     if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(key)) return null;
     const p = join(ctx.dir, "tmp", "scratch-vo", `${key}.wav`);
-    hash = existsSync(p) ? sha256File(p) : null;
+    const durationsPath = join(ctx.dir, "tmp", "scratch-vo", "durations.yaml");
+    const durations = existsSync(durationsPath) ? (readYaml(durationsPath) ?? {}) : {};
+    const entry = durations[key];
+    if (entry?.estimated === true) {
+      const unit = ctx.units.units[key];
+      if (!unit || !Number.isFinite(entry.duration_s) || entry.duration_s <= 0
+        || !Number.isFinite(entry.rate_cps) || entry.rate_cps <= 0) return null;
+      const text = applyLexicon(unit.text, ctx.bible);
+      const textHash = sha256(text);
+      if (typeof entry.text_hash !== "string" || entry.text_hash !== textHash) return null;
+      const config = voiceConfig(ctx.bible, unit.speaker);
+      if (Number.isFinite(config?.scratch_rate_cps) && config.scratch_rate_cps > 0 && config.scratch_rate_cps !== entry.rate_cps) return null;
+      hash = hashValue({
+        duration_s: entry.duration_s,
+        text_hash: textHash,
+        rate_cps: entry.rate_cps,
+        voice: config,
+        language: ctx.project.g0.language,
+        audio_mode: ctx.project.g0.audio_mode,
+      });
+    } else if (existsSync(p)) hash = sha256File(p);
   } else if (label === "readtime") {
     if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(key)) return null;
     const p = join(ctx.dir, "script", "readtime.yaml");

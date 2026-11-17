@@ -226,11 +226,15 @@ is not a reason to rewrite approved planning keys.
 ### 4.1 Narrated
 
 Scratch VO is temporary timing evidence, never an approved final
-VO asset. Final measured duration replaces scratch timing.
+VO asset. Local Pocket TTS scratch durations are measured; hosted
+scratch is estimated by default without a provider call. Use
+`tts --scratch --hosted` only when a real hosted read is explicitly
+wanted. Final measured duration replaces scratch timing.
 
-For each narration line, use actual duration. If final VO changes
-timing beyond the allowed tolerance, reopen the affected previz
-rather than stretching the shot without authorization.
+For final VO, use the actual measured duration. During planning,
+a hosted scratch estimate is permitted but remains advisory. If
+final VO changes timing beyond the allowed tolerance, reopen the
+affected previz rather than stretching the shot without authorization.
 
 ### 4.2 Music-led
 

@@ -101,7 +101,17 @@ test("HARD-VO-NO-OVERLAP: overlap and overrun fail, a fit passes, unknown durati
   put(fit.dir, "tmp/scratch-vo/durations.yaml", DURATIONS);
   assert.equal((await validate(fit.cwd, "--stage", "previz")).exit, 0);
 
-  const overlap = await proj(OK().map((s) => (s.id === "s01" ? { ...s, keys: { ...s.keys, voiceover: "[L01, L02@2]" } } : s.id === "s02" ? { ...s, keys: { scene: "sea", duration_est: "5s" } } : s)));
+  const estimated = await proj();
+  put(estimated.dir, "tmp/scratch-vo/durations.yaml", `L01:\n  duration_s: 3\n  estimated: true\n  text_hash: "${"0".repeat(64)}"\n  rate_cps: 10\nL02: 3\nL03: 3\n`);
+  const estimatedValidation = await validate(estimated.cwd, "--stage", "previz");
+  assert.equal(estimatedValidation.env.errors.some((e) => e.rule === "HARD-VO-NO-OVERLAP" && e.code === "HARD_NOT_RUN"), false, JSON.stringify(estimatedValidation.env.errors));
+
+  const overlapShots = OK().map((s) => {
+    if (s.id === "s01") return { ...s, keys: { ...s.keys, voiceover: "[L01, L02@2]" } };
+    if (s.id === "s02") return { ...s, keys: { scene: "sea", duration_est: "5s" } };
+    return s;
+  });
+  const overlap = await proj(overlapShots);
   put(overlap.dir, "tmp/scratch-vo/durations.yaml", DURATIONS);
   const o = await validate(overlap.cwd, "--stage", "previz");
   assert.ok(o.env.errors.some((e) => e.rule === "HARD-VO-NO-OVERLAP" && e.code === "HARD"));

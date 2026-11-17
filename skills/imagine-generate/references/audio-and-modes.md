@@ -159,9 +159,9 @@ Three distinct purposes:
 
 Stored in `tmp/audition/`, used during casting and G2 decisions. They are never production assets.
 
-**Scratch VO**
+**Scratch VO / clock**
 
-Stored in `tmp/scratch-vo/`, used only to estimate timing before final VO. It has no G5a production approval.
+Stored under `tmp/scratch-vo/` and used only for planning before final VO. Local Pocket TTS produces temporary WAVs with measured durations. Hosted voices use an estimated clock by default without a provider call; use `tts --scratch --hosted` only when a real hosted read is wanted, and review the reported character count. Estimates use valid project VO samples first, then optional voice-level `scratch_rate_cps`, then a language/model default (14.3 characters per second for Indonesian `eleven_v4`; otherwise a conservative, unvalidated 10). These defaults are not an accuracy guarantee. Estimated durations are advisory; final VO measurements supersede them. Scratch outputs have no G5a production approval.
 
 **Final VO**
 
