@@ -462,6 +462,29 @@ The shared test matrix tracks automated verification of portability concerns acr
 | Skill mandatory reads portability | `tests/portability/skill-reads.test.mjs` | `every skill read of claude-code-platform.md is conditional on claude-code host-id`, `every skill that mentions harness-portability.md as a read also mentions hosts/<host-id>.md` | `VERIFIED-TEST` |
 | Clean checkout installation | `tests/slice/probe.test.mjs`, `tests/portability/preflight.test.mjs` | `tests/portability/preflight.test.mjs`: `a found tool returns found: true and first non-empty stdout line`, `the node version check passes for >= 22 and fails for < 22`, `CLI prints JSON and handles exit codes`; `tests/slice/probe.test.mjs` | `VERIFIED-TEST` |
 
+### 11.1 Autonomous quality gates traceability
+
+This table maps each test added for the autonomous quality gates spec (`.kiro/specs/autonomous-quality-gates`) to the rule identifiers it exercises in `docs/contracts/rules.yaml`. All test files live under `packages/imagine-kit/test/`. "Property N" refers to the numbered correctness properties in the spec design. Rule identifiers that are replaced or promoted by the `rules.yaml` update (`HARD-GATES-RECORDED`, `GATE-QUOTE`, `PROC-PATCH-ROUNDS`, `PROC-IMG-RETRY`, `PROC-SCENE-LINT-BLOCKED`) are listed under their current identifiers; the replacement identifier is recorded in `rules.yaml` against the replaced rule.
+
+| Test file | Property / subject | Rule identifiers | Requirements | Status |
+|---|---|---|---|---|
+| `evidence.property.test.mjs` | Properties 3, 4, 9: Evidence_Record rejects missing fields, one record and one journal entry per Check, YAML round-trip | `HARD-STATUS-DERIVED`, `PROC-JOURNAL`, `HARD-NO-SELF-JUDGEMENT` | 6.4, 6.5, 6.11 | `VERIFIED-TEST` |
+| `consent-quote.property.test.mjs` | Property 6: blank, whitespace-only, invisible-only and boilerplate quotes are rejected with `GATE-QUOTE` | `GATE-QUOTE`, `HARD-NON-WAIVABLE` | 6.8, 6.9 | `VERIFIED-TEST` |
+| `checkpoint-aggregation.property.test.mjs` | Property 1: a Checkpoint is `passed` iff every Check's latest Evidence_Record is `passed` | `HARD-GATES-RECORDED`, `HARD-NO-SELF-JUDGEMENT` | 3.6, 4.8, 5.5 | `VERIFIED-TEST` |
+| `capability-gating.property.test.mjs` | Property 5: an Evaluator lacking a required capability never yields `passed` | `CAP-NO-FABRICATION`, `CAP-ADV-NOT-RUN`, `CAP-BLOCKED-STOP`, `HARD-NO-SELF-JUDGEMENT` | 6.7, 10.2, 10.3, 10.7 | `VERIFIED-TEST` |
+| `derive.property.test.mjs` | Properties 8, 20: stale propagation from a changed input hash; Dependency_DAG stays acyclic | `HARD-STATUS-DERIVED`, `DAG-STALE-VS-REVIEW`, `GATE-PER-ITEM` | 6.10, 9.3, 9.4, 9.5 | `VERIFIED-TEST` |
+| `repair-budget.property.test.mjs` | Properties 11, 13: attempt counter is monotone and scoped; exhaustion at the budget threshold | `PROC-IMG-RETRY`, `PROC-SCENE-LINT-BLOCKED`, `PROC-PATCH-ROUNDS` | 7.3, 7.5 | `VERIFIED-TEST` |
+| `repair-selection.property.test.mjs` | Properties 10, 12: re-validation scope is exact; strategy selection never repeats under budget | `PROC-IMG-RETRY`, `PROC-SCENE-LINT-BLOCKED`, `PROC-PATCH-ROUNDS`, `HARD-STATUS-DERIVED` | 7.2, 7.4, 7.6, 11.6 | `VERIFIED-TEST` |
+| `readiness.property.test.mjs` | Properties 15, 16, 17, 19: Shot_Readiness derived from dependency states, independent of sibling shots, errors name the blocking dependency, intentional silence satisfies audio | `HARD-GATES-RECORDED`, `HARD-REFS-APPROVED`, `HARD-ASSETS-APPROVED`, `GATE-PER-ITEM` | 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.9 | `VERIFIED-TEST` |
+| `delivery.property.test.mjs` | Properties 23, 24: reaching Production_Complete never publishes; publish succeeds only on a matching file hash | `GATE-QUOTE`, `HARD-NON-WAIVABLE`, `GATE-G7` | 12.1, 12.3, 12.5 | `VERIFIED-TEST` |
+| `report-sectioning.property.test.mjs` | Property 22: quality report sections records by evaluator capability and lists unevaluated Checks | `CAP-ADV-NOT-RUN`, `CAP-NO-FABRICATION` | 2.6, 5.6, 10.7 | `VERIFIED-TEST` |
+| `evaluator-mapping.test.mjs` | Property 21 and Evaluator output equals the legacy validator output | `HARD-STORY-UNIT-ONCE`, `HARD-AUDIO-LICENCE`, `HARD-ASSETS-APPROVED`, `HARD-REFS-APPROVED`, `HARD-SCENE-LINT`, `HARD-ROOT-MOTION` | 3.1, 4.1, 5.1, 10.6 | `VERIFIED-TEST` |
+| `migrate.test.mjs` | Properties 25 to 28: quote preservation, no vouching for stale items, unknown gates left unchanged, idempotent migration; gate shim | `GATE-QUOTE`, `GATE-PER-ITEM`, `HARD-STATUS-DERIVED`, `HARD-GATES-RECORDED` | 13.1, 13.2, 13.3, 13.4, 13.5 | `VERIFIED-TEST` |
+| `gate-classification.test.mjs` | Every Legacy_Gate maps to exactly one Checkpoint or delivery, with its retained Checks | `GATE-G0`, `GATE-G1`, `GATE-G2`, `GATE-G3`, `GATE-G4`, `GATE-G5R`, `GATE-G5A`, `GATE-G5B`, `GATE-G6`, `GATE-G7`, `HARD-GATES-RECORDED` | 1.1, 1.12 | `VERIFIED-TEST` |
+| `checkpoints.test.mjs` | Q1, Q2, Q3 definitions, thresholds, one Evidence_Record per Check, failing defective fixtures | `HARD-GATES-RECORDED`, `HARD-STORY-UNIT-ONCE`, `HARD-DURATION`, `HARD-FPS-SIZE`, `HARD-LOUDNESS`, `HARD-NO-SELF-JUDGEMENT`, `CAP-NO-FABRICATION` | 3.1, 3.6, 4.8, 5.5, 14.6 | `VERIFIED-TEST` |
+
+Tests do not need to cite a rule identifier in their source for this table to hold. `tools/check-traceability.mjs` covers the registry and instruction/test references; this table is the human-readable mapping required by the Regression_Suite.
+
 ## 12. Definition of done evidence (issue #18)
 
 This section maps each of the five Definition of Done (DoD) requirements for issue #18 to the files, tests, and commands that satisfy it, embedding the exact execution output collected on the integration branch.

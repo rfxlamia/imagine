@@ -232,3 +232,41 @@ Keep their historical entries in REVIEW.md for auditability.
 If an active waiver becomes invalid during final rendering or
 delivery verification, stop delivery until the underlying rule
 passes or a new valid user waiver is granted.
+
+
+## Orchestrator handling of non-waivable rules and entry keys
+
+The non-waivable list there is exhaustive: gate quotes, patch/key
+isolation, base revision, guard integrity, asset approvals and
+hashes including canonical refs, audio licensing, placeholders,
+a playable MP4 at the G0 spec, the raster quality floor (no
+`replan` tier may ship; a `soft` tier needs explicit G4 and G5b
+acceptance), and the story validators the kit runs before G4, such
+as HARD-STORY-UNIT-ONCE. A rule the kit itself decides is never
+waivable: `imagine-kit gate G4 approve` refuses a story error
+whatever REVIEW.md says, so a waiver for one would leave G4 blocked
+and only misstate the evidence. When such a rule blocks, say that
+it has to be corrected and route the fix through its normal path
+(a planning patch for STORY.md). Ask the user the decision the fix
+needs, as a direct question (for a unit anchored twice: which shot
+keeps it), and apply nothing until they answer. Every other HARD
+failure is waivable. When one of those blocks, never call it unwaivable: ask
+the user to choose between correcting it through its normal path
+and a waiver scoped to that one rule and its explicit items, and
+record nothing until they answer.
+<!-- rule:HARD-NON-WAIVABLE -->
+
+Required entry keys, using the source-format contract's item refs:
+
+- status: proposed
+- rule: HARD-<RULE-ID>
+- items: shot:s03.previz, asset:bg-harbor.v2
+- item_hashes: shot:s03.previz=<64-hex>, asset:bg-harbor.v2=<64-hex>
+- reason: <user reason>
+- consequence: <delivery consequence>
+- manual_check: <user's alternative check>
+- asked: "<exact question>"
+- quote: "<verbatim user answer>"
+- granted: <YYYY-MM-DD>
+- history: proposed <YYYY-MM-DD>
+

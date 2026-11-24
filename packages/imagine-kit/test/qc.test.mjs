@@ -17,7 +17,8 @@ t("qc reports spec, loudness and raster data and writes review/qc.json", async (
   const p = await renderProject();
   const r = await cli(p.cwd, "qc", p.mp4);
   assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
-  assert.deepEqual(Object.keys(r.env.data), ["w", "h", "fps", "duration_s", "audio", "lufs", "true_peak", "raster", "credits"]);
+  assert.deepEqual(Object.keys(r.env.data).slice(0, 9), ["w", "h", "fps", "duration_s", "audio", "lufs", "true_peak", "raster", "credits"]);   // existing keys first; new fields are additive
+  assert.ok(r.env.data.checkpoints.Q2 && r.env.data.item_states);
   assert.deepEqual([r.env.data.w, r.env.data.h, r.env.data.fps], [1080, 1920, 30]);
   assert.ok(Math.abs(r.env.data.duration_s - 13) < 0.1);
   assert.equal(r.env.data.audio.codec, "aac");

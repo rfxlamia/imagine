@@ -1,11 +1,13 @@
+# replaced_by: this rule was removed or changed by the autonomous-quality-gates feature; the named rule is its replacement (the old text stays for the record).
+# enforced: kit = the kit tracks and refuses it (not instruction-only).
 # Stable rule IDs for Imagine. source = section number in docs/architecture-proposal.md.
 # cover: instructions (marker in skills/agents/hooks) | tests (ID in a test) | both
 # status: active (default) | deferred. A deferred rule is kept for the record and skipped by coverage;
 #   replan = why the rule changed in the 2026-10-31 Phase 1 re-plan (cut commands, enforcement moved to instructions).
 rules:
   # Process
-  - { id: PROC-BRIEF-START, source: "section 2.6", text: "Before every stage, and again after resume or compaction, read every file on the stage's mandatory list (from the skill) in full", cover: instructions, replan: "brief and stage start|finish cut; skill lists the files to read" }
-  - { id: PROC-BRIEF-EMBED, source: "section 2.6", text: "Subagent dispatch embeds the full contents of the stage's mandatory files; the patch echoes their hashes in inputs", replan: "brief and stage start|finish cut; skill lists the files to read" }
+  - { id: PROC-BRIEF-START, source: "section 2.6", text: "Before every stage, and again after resume or compaction, read every file on the stage's mandatory list (from the skill) in full", replaced_by: "PROC-TARGETED-READ", cover: instructions, replan: "brief and stage start|finish cut; skill lists the files to read" }
+  - { id: PROC-BRIEF-EMBED, source: "section 2.6", text: "Subagent dispatch embeds the full contents of the stage's mandatory files; the patch echoes their hashes in inputs", replaced_by: "PROC-DISPATCH-REFS-HASHED", replan: "brief and stage start|finish cut; skill lists the files to read" }
   - { id: PROC-BRIEF-AUDIT-CANON, source: "section 2.6", text: "Every audit/review stage lists bible.yaml and style.md as mandatory project references", cover: instructions, replan: "brief and stage start|finish cut; skill lists the files to read" }
   - { id: PROC-BRIEF-LIMIT, source: "section 2.6", text: "Reading the mandatory files proves delivery, not understanding; audits and validators check comprehension", replan: "brief and stage start|finish cut; skill lists the files to read" }
   - { id: PROC-LOCK-HASHED-WRITES, source: "section 3.2", text: "Hashed sources are written only by the main agent or by patch apply; planning subagents have no authorized write action. Native Codex inherits parent tool permissions, so no-write is instruction-level with mandatory parent hash/backup/restore guards; status detects hash changes", cover: instructions, replan: "lock and doc write cut (one user, one main agent); user-approved native Codex integrity-guard exception, 2026-11-14" }
@@ -13,9 +15,9 @@ rules:
   - { id: PROC-JOURNAL, source: "section 5", text: "Every state change appends a journal entry", cover: both }
   - { id: PROC-DISPATCH-GUARD, source: "section 3.2", text: "Before every dispatch record sha256 of protected files and re-hash after it; on mismatch restore the recorded copy and reject the output", cover: instructions, replan: "guard cut; main agent hashes protected files by instruction; kit guard is narrower (no restore)" }
   - { id: PROC-PATCH-VERBATIM, source: "section 3.2", text: "Store the subagent patch verbatim in stage/<stage>/r<n>.patch.yaml" }
-  - { id: PROC-PATCH-ROUNDS, source: "section 3.2", text: "Rejected patch goes back to the same subagent, round n+1, max 3, then blocked" }
-  - { id: PROC-AUDIT-REREAD, source: "section 3.2", text: "Main-agent semantic audit re-reads bible.yaml and style.md from disk before every audit" }
-  - { id: PROC-IMPACT-CONFIRM, source: "section 6.2", text: "Before editing an approved doc show which gates/items re-open and get a yes" }
+  - { id: PROC-PATCH-ROUNDS, source: "section 3.2", text: "Rejected patch goes back to the same subagent, round n+1, max 3, then blocked", replaced_by: "PROC-REPAIR-BY-CLASS" }
+  - { id: PROC-AUDIT-REREAD, source: "section 3.2", text: "Main-agent semantic audit re-reads bible.yaml and style.md from disk before every audit", replaced_by: "PROC-AUDIT-CHANGED-ONLY" }
+  - { id: PROC-IMPACT-CONFIRM, source: "section 6.2", text: "Before editing an approved doc show which gates/items re-open and get a yes", replaced_by: "PROC-AUTO-REPAIR-IN-BRIEF" }
   - { id: PROC-NEEDS-REVIEW-REPORT, source: "section 6.2", text: "needs_review is resolved by an impact report and the user's confirm or edit" }
   - { id: PROC-UPSTREAM-BLOCKED, source: "section 6.2", text: "Upstream discovery (missing bible fact) is blocked, then bible edit, then cascade" }
   - { id: PROC-SUBAGENT-NO-USER, source: "section 3.1", text: "Subagents never ask the user; unknowns become blocked + question" }
@@ -37,7 +39,7 @@ rules:
   - { id: PROC-REMOTE-LISTEN, source: "references/audio-and-modes.md", text: "No audio page in Phase 1: list WAV paths; on another device send the WAVs with SendUserFile", replan: "audio-page deferred" }
   - { id: PROC-REVISED-PROMPT, source: "references/image-and-resolution.md", text: "Record the image tool's revised prompt beside the compiled prompt", cover: both }
   - { id: PROC-FRAMING-IN-PROMPT, source: "references/image-and-resolution.md", text: "Every batch prompt states framing explicitly", cover: both }
-  - { id: PROC-IMG-RETRY, source: "references/image-and-resolution.md", text: "Image post-check failure retries at most 2 times, then blocked", cover: both }
+  - { id: PROC-IMG-RETRY, source: "references/image-and-resolution.md", text: "Image post-check failure retries at most 2 times, then blocked", enforced: "kit", cover: both }
   - { id: PROC-RESUME-IDEMPOTENT, source: "section 6.1", text: "Adapters are idempotent per (id, v); partials in tmp/; resume never duplicates approved assets", cover: both }
   - { id: PROC-PURGE-QUOTE, source: "cli-contract purge", text: "Applying purge requires explicit --apply and a non-blank verbatim user quote", cover: both }
   - { id: PROC-VERSIONS-IMMUTABLE, source: "section 6.1", text: "Assets are .vN and never overwritten; approved takes immutable", cover: both }
@@ -54,7 +56,7 @@ rules:
   - { id: PROC-CLOCK-PER-MODE, source: "section 4.1, D3", text: "Previz clock = scratch VO (narrated, measured before previz, never an asset) | beat grid (music-led) | read-time plan (text-led)", cover: both }
   - { id: PROC-STORYBOARD-NO-DROP, source: "section 3.3", text: "Impossible duration → propose cuts to the main agent; never drop script units silently" }
   - { id: PROC-PREVIZ-NO-STRETCH, source: "section 3.4", text: "VO longer than plan by > 20 % → flag a storyboard issue; never stretch silently" }
-  - { id: PROC-SCENE-LINT-BLOCKED, source: "section 3.6", text: "Scene cannot pass lint in 3 tries → blocked with the lint JSON" }
+  - { id: PROC-SCENE-LINT-BLOCKED, source: "section 3.6", text: "Scene cannot pass lint in 3 tries → blocked with the lint JSON", enforced: "kit", cover: both }
   - { id: PROC-CONFLICT-REDISPATCH, source: "section 10.2 Q2", text: "Patch CONFLICT always re-dispatches after re-reading the mandatory files (auto-rebase not implemented)", cover: both, replan: "brief and stage start|finish cut; skill lists the files to read" }
   - { id: PROC-BIBLE-REFS-STYLE, source: "D4", text: "bible.yaml states what is true; it references style.md anchors (style.md#palette) and never duplicates grading, lens or grain" }
   - { id: PROC-CAPTION-ORIGINAL, source: "section 5.1", text: "Captions keep the original spelling; the lexicon changes only tts_text", cover: both }
@@ -73,6 +75,13 @@ rules:
   - { id: PROC-EN-BASELINE, source: "D1", text: "English is the baseline language" }
   - { id: ADV-STYLISED-FIRST, source: "D7", text: "Stylised/illustrated looks first" }
   - { id: ADV-LAYERED-PLATES, source: "section 3.3, section 7.2", text: "Layered plates (bg/mid/character/fg) for parallax, reuse and resolution; 9:16 recomposed, not squeezed" }
+  # Autonomous quality gates (replacements for the rules marked replaced_by)
+  - { id: PROC-CONSENT-QUOTE, source: "autonomous-quality-gates 11.1", text: "A Consent_Record with a verbatim, non-blank, non-agent-generated user quote is required only for a Material_Change and for each Publication_Authorization; internal quality checks record Evidence_Records without a quote", replaces: "GATE-QUOTE", cover: instructions }
+  - { id: PROC-AUTO-REPAIR-IN-BRIEF, source: "autonomous-quality-gates 11.2", text: "An upstream edit that stays inside the Creative_Brief is repaired in place without asking; the user is asked only for a Material_Change", replaces: "PROC-IMPACT-CONFIRM", cover: instructions }
+  - { id: PROC-TARGETED-READ, source: "autonomous-quality-gates 11.3", text: "At stage start and after resume or compaction, read the files selected by version and hash, not every file on the mandatory list in full", replaces: "PROC-BRIEF-START", cover: instructions }
+  - { id: PROC-DISPATCH-REFS-HASHED, source: "autonomous-quality-gates 11.4", text: "Subagent dispatch sends the relevant references with their SHA-256 hashes and full file contents only when the task needs the whole file; the patch echoes the hashes in inputs", replaces: "PROC-BRIEF-EMBED", cover: instructions }
+  - { id: PROC-AUDIT-CHANGED-ONLY, source: "autonomous-quality-gates 11.5", text: "An audit re-reads only the dependencies whose hashes changed since the previous audit", replaces: "PROC-AUDIT-REREAD", cover: instructions }
+  - { id: PROC-REPAIR-BY-CLASS, source: "autonomous-quality-gates 11.6", text: "A rejected patch is recovered by error class and Repair_Budget (different strategy each attempt, escalation to needs_input when the budget is spent), not by a fixed three rounds then blocked", replaces: "PROC-PATCH-ROUNDS", enforced: "kit", cover: instructions }
   # Capability gating
   - { id: CAP-READ, source: "section 2.5", text: "Read capabilities --json once per session and after upgrades", status: deferred, replan: "capabilities command and fallback tables cut" }
   - { id: CAP-FALLBACK-TABLE, source: "section 2.5", text: "not_implemented/experimental → only the fallback listed for that exact step", status: deferred, replan: "capabilities command and fallback tables cut" }
@@ -92,7 +101,7 @@ rules:
   - { id: GATE-G5B, source: "section 4", text: "G5b: every batch image incl. soft tiers" }
   - { id: GATE-G6, source: "section 4", text: "G6: picture lock with draft MP4 full mix by ear" }
   - { id: GATE-G7, source: "section 4", text: "G7: final MP4 accepted" }
-  - { id: GATE-QUOTE, source: "section 2.4", text: "A gate is recorded only after an explicit user answer, with the verbatim quote", cover: both }
+  - { id: GATE-QUOTE, source: "section 2.4", text: "A gate is recorded only after an explicit user answer, with the verbatim quote; scope narrowed: internal quality checks need Evidence_Records, not a quote, and only Consent_Records (Material_Change, Publication_Authorization, migrated legacy quotes) keep the quote", replaced_by: "PROC-CONSENT-QUOTE", cover: both }
   - { id: GATE-PER-ITEM, source: "section 4", text: "Approvals per item; invalidation re-opens affected items only", cover: both }
   # Waivers
   - { id: HARD-WAIVER-USER-ONLY, source: "section 8.0", text: "Only the user grants waivers; agents may propose; subagents neither", cover: instructions, replan: "waiver CLI cut; waivers become a REVIEW.md section with the user's quote" }
@@ -130,7 +139,7 @@ rules:
   - { id: HARD-STAYS-IN-FRAME, source: "section 8.1", text: "Intended elements stay in frame unless allow-overflow + reason", cover: instructions, replan: "check and safe-band cut; skill instructions only (WP1 decision D3)" }
   - { id: HARD-AUDIO-LICENCE, source: "section 7.4", text: "Third-party audio has licence + source + credit", cover: both }
   - { id: HARD-LOUDNESS, source: "section 8.1", text: "−16 LUFS ±1.5, true peak ≤ −1 dBTP; skipped for intentional silence", cover: both }
-  - { id: HARD-GATES-RECORDED, source: "section 8.1", text: "Gates recorded with user quote before downstream work", cover: both }
+  - { id: HARD-GATES-RECORDED, source: "section 8.1", text: "Downstream work needs verified Evidence_Records for its dependencies and dependency readiness (per-shot for stage-shot and export-hf); a user quote is not evidence. Id kept as the error code for refusals; replaces gate records with user quote", enforced: "kit", cover: both }
   - { id: HARD-BRIEF-CURRENT, source: "section 2.6", text: "A stage starts only after its mandatory files were read in this context; the patch echoes their hashes (not tool-verified)", cover: instructions, replan: "brief and stage start|finish cut; skill lists the files to read" }
   - { id: HARD-WAIVERS-VALID, source: "section 8.1", text: "Waivers valid: scoped item hashes match, user quote present (REVIEW.md entry)", cover: instructions, replan: "waiver CLI cut; waivers become a REVIEW.md section with the user's quote" }
   - { id: HARD-GUARD, source: "section 3.2", text: "Protected files unchanged across a dispatch", cover: instructions, replan: "guard cut; main agent hashes protected files by instruction; kit guard is narrower (no restore)" }

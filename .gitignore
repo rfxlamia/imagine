@@ -81,3 +81,6 @@ copilot/
 # Local Claude cache and skills. Only project settings stay tracked.
 /.claude/*
 !/.claude/settings.json
+
+# Kiro spec and steering files (task and design plans, not shipped)
+/.kiro/

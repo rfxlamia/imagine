@@ -1,8 +1,9 @@
 import { err } from "../envelope.mjs";
 import { badBibleIds, bibleLookup } from "../docs.mjs";
+import { THRESHOLDS } from "../thresholds.mjs";
 import { FX_TOOLS, WEBGL_TOOLS, parseValue } from "./keys.mjs";
 
-const EPS = 1e-6;
+const EPS = THRESHOLDS.SHOT_DURATION_EPS;
 const PLACEHOLDER = /\b(TODO|TBD|lorem)\b|\{\{/i;
 const CSS_FILTER = /\bfilter\s*:|\bcss-filter\b/i;
 const BUILTIN_TRANSITIONS = new Set(["cut", "crossfade"]);

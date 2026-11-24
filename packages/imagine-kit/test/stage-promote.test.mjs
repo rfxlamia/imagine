@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cli, getProject, put, setProject, shot } from "./helpers/fixture.mjs";
+import { cli, getProject, put, setManifest, setProject, shot } from "./helpers/fixture.mjs";
 import { addAudio, editProject, COMPOSITION } from "./helpers/edit.mjs";
 
 const motionOf = (dir) => JSON.parse(readFileSync(join(dir, "edit/index.motion.json"), "utf8"));const MOTION = { version: 1, assertions: [
@@ -334,4 +334,19 @@ test("scene composition or motion change during lint is refused with CONFLICT an
   assert.equal(rMotion.env.errors[0]?.rule, "HARD-ROOT-MOTION");
   assert.equal(existsSync(join(q.dir, "edit/compositions/s01.html")), false, "composition must not be copied");
   assert.equal(getProject(q.dir).items["edit:s01"], undefined, "edit:s01 must not be recorded");
+});
+
+test("stage-shot checks only the requested shot's dependencies, not G5a/G5b project-wide, and names the blocking dependency", async () => {
+  const { asset } = await import("./helpers/fixture.mjs");
+  const shots = [
+    shot("s01", { scene: "stairs", duration_est: "6s", duration: "6s", voiceover: "[L01, L02@2.5]", assets: "[bg:img:1536x1024]", framing: "wide" }, "Stairs", "She climbs."),
+    shot("s02", { scene: "lamp", duration_est: "7s", duration: "7s", voiceover: "[L03]", assets: "[late:img:1536x1024]" }, "Lamp"),
+  ];
+  const p = await editProject({ shots });
+  setManifest(p.dir, (m) => { m.assets.push(asset("late", "img", 1, { path: "assets/img/late.v1.png", status: "pending" })); });
+  assert.equal((await p.run({}, "stage-shot", "s01")).exit, 0, "s01 is ready while s02 is not");
+  const blocked = await p.run({}, "stage-shot", "s02");
+  assert.equal(blocked.exit, 1);
+  assert.ok(!blocked.env.errors.some((e) => e.item === "G5a" || e.item === "G5b"));
+  assert.ok(blocked.env.errors.some((e) => e.item === "asset:late.v1" && /shot s02/.test(e.message) && /missing/.test(e.message)), JSON.stringify(blocked.env.errors));
 });

@@ -123,3 +123,63 @@ test("manifest: cutout provenance fields are optional and closed-list validated"
   assert.equal(validate({ assets: [{ ...entry, review_composite: "../escape.png" }] }).valid, false);
 });
 
+
+// --- autonomous-quality-gates: evidence + consents (Requirements 6.2, 6.4) ---
+const evidenceRecord = { evaluator: "imagine-kit", evaluatorCapabilities: ["hash"], ruleVersion: "1",
+  inputHashes: { "unit:L01": "a".repeat(64) }, outputRefs: ["assets/img/pose.v1.png"],
+  at: "2026-11-01T10:00:00.000Z", result: "passed", checkId: "C-HASH" };
+const gateItem = { kind: "shot", status: "approved", state: "passed", evidence: [evidenceRecord] };
+const withItem = (it) => ({ ...structuredClone(project), items: { s01: it } });
+
+test("project evidence: valid record and all result values accepted", () => {
+  const v = loadValidator("project");
+  assert.equal(v(withItem(gateItem)).valid, true);
+  for (const result of ["passed", "failed", "not_run"]) {
+    assert.equal(v(withItem({ ...gateItem, evidence: [{ ...evidenceRecord, result }] })).valid, true);
+  }
+});
+test("project evidence: each missing required field is rejected", () => {
+  const v = loadValidator("project");
+  for (const key of Object.keys(evidenceRecord)) {
+    const rec = { ...evidenceRecord }; delete rec[key];
+    assert.equal(v(withItem({ ...gateItem, evidence: [rec] })).valid, false, `missing ${key}`);
+  }
+});
+test("project evidence: malformed values rejected", () => {
+  const v = loadValidator("project");
+  const bad = (patch) => v(withItem({ ...gateItem, evidence: [{ ...evidenceRecord, ...patch }] })).valid;
+  assert.equal(bad({ result: "maybe" }), false);
+  assert.equal(bad({ evaluator: "" }), false);
+  assert.equal(bad({ evaluatorCapabilities: [] }), false);
+  assert.equal(bad({ inputHashes: { x: "nothash" } }), false);
+  assert.equal(bad({ extra: 1 }), false);
+});
+test("project item: repairs and state are validated", () => {
+  const v = loadValidator("project");
+  assert.equal(v(withItem({ ...gateItem, repairs: { "C-HASH": { attempts: 1, strategiesTried: ["regen"] } } })).valid, true);
+  assert.equal(v(withItem({ ...gateItem, repairs: { "C-HASH": { attempts: -1, strategiesTried: [] } } })).valid, false);
+  assert.equal(v(withItem({ ...gateItem, state: "bogus" })).valid, false);
+});
+
+const consent = { kind: "material_change", scope: "s01", quote: "yes, change it", at: "2026-11-01T10:00:00.000Z" };
+const withConsents = (c) => ({ ...structuredClone(project), consents: c });
+
+test("project consents: valid records, fileHash optional", () => {
+  const v = loadValidator("project");
+  assert.equal(v(withConsents([consent])).valid, true);
+  assert.equal(v(withConsents([{ ...consent, kind: "publication", fileHash: "b".repeat(64) }])).valid, true);
+  assert.equal(v(withConsents([{ ...consent, kind: "legacy_approval" }])).valid, true);
+  assert.equal(v(withConsents([])).valid, true);
+});
+test("project consents: malformed records rejected", () => {
+  const v = loadValidator("project");
+  for (const key of Object.keys(consent)) {
+    const rec = { ...consent }; delete rec[key];
+    assert.equal(v(withConsents([rec])).valid, false, `missing ${key}`);
+  }
+  assert.equal(v(withConsents([{ ...consent, kind: "other" }])).valid, false);
+  assert.equal(v(withConsents([{ ...consent, quote: "  " }])).valid, false);
+  assert.equal(v(withConsents([{ ...consent, scope: "" }])).valid, false);
+  assert.equal(v(withConsents([{ ...consent, fileHash: "nothash" }])).valid, false);
+  assert.equal(v(withConsents([{ ...consent, extra: 1 }])).valid, false);
+});

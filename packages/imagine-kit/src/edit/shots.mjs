@@ -2,9 +2,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { err } from "../envelope.mjs";
 import { KitError, UsageError } from "../errors.mjs";
-import { currentAsset } from "../docs.mjs";
+import { currentAsset, currentAssets } from "../docs.mjs";
+import { createContext } from "../sources.mjs";
+import { dependencyState, shotReadiness } from "../readiness.mjs";
 import { readText } from "../fsx.mjs";
-import { gateSatisfied } from "../gates.mjs";
 import { parseValue } from "../story/keys.mjs";
 import { safePath } from "../img/commit.mjs";
 
@@ -17,18 +18,55 @@ export function shotOrThrow(sctx, id) {
 
 export const parsedKeys = (shot) => Object.fromEntries(Object.entries(shot.keys).map(([k, raw]) => [k, parseValue(k, raw).value]));
 
-// Preconditions of stage-shot and promote-shot (cli-contract "Decisions frozen", WP2): G4 approved, G5a and G5b satisfied,
-// export-hf ran, the edit project is initialised, and the shot's previz (and fx, when it has fx) items are present and not stale.
-export function editPreconditions(dir, derived, shot) {
+const AUDIO_KINDS = ["vo", "music", "sfx"];
+// Item ids of the assets a shot declares (`assets:`), each at its current version. Declarations with no current version are left
+// to shotAssets / checkAssets, which report them by asset id.
+export function shotAssetItemIds(sctx, shot) {
+  const ids = [];
+  for (const d of parsedKeys(shot).assets ?? []) {
+    const cur = currentAsset(sctx.manifest, d.id);
+    if (cur) ids.push(`asset:${cur.id}.v${cur.v}`);
+  }
+  return ids;
+}
+// Options for shotReadiness taken from the project: G0 silence and the number of audio assets (Requirement 8.9).
+export const readinessOpts = (sctx) => ({
+  silence: sctx.project.g0?.silence ?? null,
+  audioAssetCount: currentAssets(sctx.manifest).filter((a) => AUDIO_KINDS.includes(a.kind)).length,
+  records: sctx.project.items,
+});
+// Errors for the dependencies of one shot that are not satisfied (Requirements 8.6, 8.7). Each names the shot, the dependency and its state;
+// a stale dependency is named as stale. Empty when shotReadiness is "ready".
+export function dependencyErrors(derived, sctx, shot, dependencyIds) {
+  const opts = readinessOpts(sctx);
+  if (shotReadiness(derived, shot, dependencyIds, opts) === "ready") return [];
+  const errors = [];
+  for (const dep of dependencyIds) {
+    if (shotReadiness(derived, shot, [dep], opts) === "ready") continue;
+    const state = dependencyState(derived, dep, opts.records);
+    const text = state === "stale"
+      ? `shot ${shot.id} is blocked: ${dep} is stale; its inputs changed after approval`
+      : `shot ${shot.id} is blocked: ${dep} is ${state}`;
+    errors.push(err("HARD-GATES-RECORDED", "HARD", dep, text));
+  }
+  return errors;
+}
+// Preconditions of stage-shot and promote-shot (Requirements 8.2, 8.3, 8.5, 8.6): per-shot readiness of this shot's own dependencies only
+// (its previz and, when it has fx, fx items, plus the assets it declares; assets go through shotReadiness), G4 approved, export-hf ran, and the edit project initialised.
+// G5a/G5b are not evaluated project-wide, so other shots' unfinished work does not block this shot.
+export function editPreconditions(dir, derived, shot, sctx = null) {
   const errors = [];
   if (derived.gates.G4.state !== "approved") errors.push(err("HARD-GATES-RECORDED", "HARD", "G4", `gate G4 must be approved (state: ${derived.gates.G4.state})`));
-  for (const g of ["G5a", "G5b"]) if (!gateSatisfied(derived.gates, g)) errors.push(err("HARD-GATES-RECORDED", "HARD", g, `gate ${g} must be satisfied (state: ${derived.gates[g].state})`));
+  const context = sctx ?? createContext(dir);
   const stages = ["previz", ...(shot.keys.fx ? ["fx"] : [])];
+  // The shot's own previz/fx stage items are working drafts, so a proposed one is accepted; missing, stale or rejected ones block.
   for (const st of stages) {
-    const item = derived.items.find((i) => i.id === `shot:${shot.id}.${st}`);
-    if (!item) errors.push(err("HARD-GATES-RECORDED", "HARD", `shot:${shot.id}.${st}`, `shot ${shot.id} has no ${st} item; run the ${st} stage first`));
-    else if (!["approved", "proposed"].includes(item.status)) errors.push(err("HARD-GATES-RECORDED", "HARD", item.id, `${item.id} is ${item.status}; redo the ${st} stage for ${shot.id}`));
+    const id = `shot:${shot.id}.${st}`;
+    const item = derived.items.find((i) => i.id === id);
+    if (!item) errors.push(err("HARD-GATES-RECORDED", "HARD", id, `shot ${shot.id} has no ${st} item (${id} state: missing); run the ${st} stage first`));
+    else if (!["approved", "proposed"].includes(item.status)) errors.push(err("HARD-GATES-RECORDED", "HARD", id, `shot ${shot.id} is blocked: ${id} is ${item.status}; redo the ${st} stage for ${shot.id}`));
   }
+  errors.push(...dependencyErrors(derived, context, shot, shotAssetItemIds(context, shot)));
   const sbPath = safePath(dir, "edit/STORYBOARD.md");
   if (!sbPath || !existsSync(sbPath)) errors.push(err("HARD-GATES-RECORDED", "HARD", "edit/STORYBOARD.md", "run export-hf first: edit/STORYBOARD.md is missing"));
   if (errors.length) return { errors };

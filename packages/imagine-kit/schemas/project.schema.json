@@ -10,6 +10,21 @@
       "decision": { "type": "object", "required": ["decision", "quote", "at"], "additionalProperties": false, "properties": {
         "decision": { "enum": ["approve", "reject"] }, "quote": { "type": "string", "pattern": "\\S" },
         "note": { "type": "string" }, "at": { "type": "string" } } },
+      "state": { "enum": ["pending", "validating", "passed", "failed", "repairing", "needs_input", "ready", "published"] },
+      "evidence": { "type": "array", "items": { "type": "object",
+        "required": ["evaluator", "evaluatorCapabilities", "ruleVersion", "inputHashes", "outputRefs", "at", "result", "checkId"],
+        "additionalProperties": false,
+        "properties": {
+          "evaluator": { "type": "string", "minLength": 1 },
+          "evaluatorCapabilities": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "ruleVersion": { "type": "string", "minLength": 1 },
+          "inputHashes": { "$ref": "#/definitions/valueMap" },
+          "outputRefs": { "type": "array", "items": { "type": "string" } },
+          "at": { "type": "string" },
+          "result": { "enum": ["passed", "failed", "not_run"] },
+          "checkId": { "type": "string", "minLength": 1 } } } },
+      "repairs": { "type": "object", "additionalProperties": { "type": "object", "required": ["attempts", "strategiesTried"], "additionalProperties": false,
+        "properties": { "attempts": { "type": "integer", "minimum": 0 }, "strategiesTried": { "type": "array", "items": { "type": "string" } } } } },
       "rev": { "type": "integer", "minimum": 0 },
       "inputs": { "$ref": "#/definitions/valueMap" },
       "watch": { "$ref": "#/definitions/valueMap" },
@@ -65,6 +80,15 @@
         }
       }
     },
+    "consents": { "type": "array", "items": { "type": "object",
+      "required": ["kind", "scope", "quote", "at"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["material_change", "publication", "legacy_approval"] },
+        "scope": { "type": "string", "minLength": 1 },
+        "quote": { "type": "string", "pattern": "\\S" },
+        "fileHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "at": { "type": "string" } } } },
     "purges": { "type": "array", "items": { "type": "object", "required": ["at", "quote", "files", "bytes"], "additionalProperties": false,
       "properties": { "at": { "type": "string" }, "quote": { "type": "string", "pattern": "\\S" }, "files": { "type": "integer", "minimum": 0 }, "bytes": { "type": "integer", "minimum": 0 } } } }
   }
