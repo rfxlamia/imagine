@@ -1,6 +1,7 @@
 import { err } from "../envelope.mjs";
 import { deriveAll, reviewHints } from "../derive.mjs";
 import { renderStyleOutput } from "../docs.mjs";
+import { checkpointsSummary } from "../checkpoints.mjs";
 import { resolveProject } from "../project.mjs";
 import { isBlankQuote } from "../gates.mjs";
 import { createContext, enumerateSources, resolveRef } from "../sources.mjs";
@@ -36,6 +37,6 @@ export default {
       .map(([item, r]) => ({ item, gate: r.gate ?? null, decision: r.decision.decision, quote: r.decision.quote, at: r.decision.at }));
     return { project: rel, errors,
       data: { stage, gates, items: values.item ? items.filter((i) => i.id === values.item) : items, blocked: project.blocked, sources, unresolved,
-        decisions, review_hints: reviewHints(items), purges: project.purges ?? [] } };
+        decisions, review_hints: reviewHints(items), purges: project.purges ?? [], checkpoints: checkpointsSummary(project) } };
   },
 };

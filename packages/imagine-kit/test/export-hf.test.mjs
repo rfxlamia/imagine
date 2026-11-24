@@ -70,13 +70,14 @@ test("HARD-RASTER-TIER: a replan-tier raster is refused; a soft one passes", asy
   assert.equal((await p.run({}, "export-hf")).exit, 0);
 });
 
-test("export-hf needs G5a and G5b and an initialised edit project", async () => {
+test("export-hf has no project-wide G5 check; an unapproved asset is refused and an initialised edit project is needed", async () => {
   const p = await editProject();
   await addAudio(p, { music: false });
   setManifest(p.dir, (m) => { m.assets.push(asset("late", "img", 1, { path: "assets/img/late.v1.png" })); });
   const open = await p.run({}, "export-hf");
   assert.equal(open.exit, 1);
-  assert.ok(open.env.errors.some((e) => e.item === "G5b"));
+  assert.ok(open.env.errors.some((e) => e.item === "late.v1"));
+  assert.ok(!open.env.errors.some((e) => e.item === "G5a" || e.item === "G5b"));
   const q = await editProject();
   await addAudio(q, { music: false });
   unlinkSync(join(q.dir, "edit/hyperframes.json"));
@@ -326,4 +327,47 @@ test("HARD-REAL-RASTER: export-hf rejects malformed PNG bytes even if hash match
   assert.ok(r.env.errors.some((e) => e.rule === "HARD-REAL-RASTER" && e.item === "bg.v1"));
   assert.match(r.env.errors.find((e) => e.rule === "HARD-REAL-RASTER").message, /cannot be parsed as PNG/);
   assert.equal(existsSync(join(p.dir, "edit/assets/bg.v1.png")), false, "malformed PNG must not be exported");
+});
+
+// Per-shot readiness (Requirements 8.4, 8.7, 8.8): s02 declares an asset that is not approved yet; s01 is ready.
+async function siblingProject() {
+  const shots = [
+    shot("s01", { scene: "stairs", duration_est: "6s", duration: "6s", voiceover: "[L01, L02@2.5]", assets: "[bg:img:1536x1024]", framing: "wide" }, "Stairs", "She climbs."),
+    shot("s02", { scene: "lamp", duration_est: "7s", duration: "7s", voiceover: "[L03]", assets: "[late:img:1536x1024]" }, "Lamp"),
+  ];
+  const p = await editProject({ shots });
+  await addAudio(p, { music: false });
+  setManifest(p.dir, (m) => { m.assets.push(asset("late", "img", 1, { path: "assets/img/late.v1.png", status: "pending" })); });
+  return p;
+}
+test("export-hf <shot> exports only that shot's dependencies while a sibling shot is not ready", async () => {
+  const p = await siblingProject();
+  const whole = await p.run({}, "export-hf");
+  assert.equal(whole.exit, 1);
+  const r = await p.run({}, "export-hf", "s01");
+  assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
+  assert.deepEqual(r.env.data.shots, ["s01"]);
+  assert.deepEqual(r.env.data.assets.map((a) => a.path), ["edit/assets/bg.v1.png"]);
+  assert.equal(existsSync(join(p.dir, "edit/assets/late.v1.png")), false, "the sibling's asset is untouched");
+  const blocked = await p.run({}, "export-hf", "s02");
+  assert.equal(blocked.exit, 1);
+  assert.ok(blocked.env.errors.some((e) => /shot s02/.test(e.message) && e.item === "asset:late.v1" && /missing/.test(e.message)), JSON.stringify(blocked.env.errors));
+  assert.equal(existsSync(join(p.dir, "edit/assets/late.v1.png")), false);
+  assert.equal((await p.run({}, "export-hf", "s09")).exit, 2);
+});
+test("export-hf <shot> keeps the other shots' rows in STORYBOARD.md", async () => {
+  const p = await editProject();
+  await addAudio(p);
+  assert.equal((await p.run({}, "export-hf")).exit, 0);
+  assert.equal((await p.run({}, "export-hf", "s01")).exit, 0);
+  assert.match(readFileSync(join(p.dir, "edit/STORYBOARD.md"), "utf8"), /\| bg \| img \| v1 \|/);
+});
+test("export-hf names a stale dependency of the requested shot", async () => {
+  const p = await editProject();
+  await addAudio(p);
+  const { setProject } = await import("./helpers/fixture.mjs");
+  setProject(p.dir, (pr) => { pr.items["asset:bg.v1"].inputs["asset:bg.v1"] = "0".repeat(64); });
+  const r = await p.run({}, "export-hf", "s01");
+  assert.equal(r.exit, 1);
+  assert.ok(r.env.errors.some((e) => e.item === "asset:bg.v1" && /shot s01/.test(e.message) && /stale/.test(e.message)), JSON.stringify(r.env.errors));
 });

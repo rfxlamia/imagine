@@ -16,7 +16,8 @@ t("PROC-TELEMETRY-OFF: render --draft runs the pinned CLI with --fps 30 --no-bes
   const p = await renderProject();
   const r = await p.render({}, "render", "--draft");
   assert.equal(r.exit, 0, JSON.stringify(r.env.errors));
-  assert.deepEqual(Object.keys(r.env.data), ["path", "sha256"]);
+  assert.deepEqual(Object.keys(r.env.data).slice(0, 2), ["path", "sha256"]);   // existing keys first; new fields are additive
+  assert.ok(r.env.data.checkpoints.Q1 && r.env.data.item_states);
   assert.equal(r.env.data.path, "review/keeper.draft.mp4");
   assert.equal(r.env.data.sha256, sha256File(join(p.dir, r.env.data.path)));
   const call = renderCall(p);

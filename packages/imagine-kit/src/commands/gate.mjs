@@ -2,15 +2,32 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { err } from "../envelope.mjs";
 import { UsageError } from "../errors.mjs";
+import { looksAgentGenerated, recordConsent } from "../consent.mjs";
 import { deriveAll, reviewHints } from "../derive.mjs";
 import { badBibleIds, saveManifest } from "../docs.mjs";
 import { GATES, ancestors, applyAssetDecision, gateItems, gateSatisfied, isBlankQuote, itemDeps, itemKind } from "../gates.mjs";
+import { writeEvidence } from "../evidence.mjs";
+import { LEGACY_TO_CHECKPOINT } from "../gate-classification.mjs";
 import { appendJournal } from "../journal.mjs";
 import { resolveProject, saveProject } from "../project.mjs";
 import { SUPERSEDED, createContext, resolveRef } from "../sources.mjs";
 import { checkStoryIntegrity } from "../story/commit.mjs";
 import { inputsFrom, validateStory } from "../story/validate.mjs";
 
+// Compatibility shim (Requirements 11.1, 13.3): `gate` still accepts Legacy_Gate ids, but each decision is written as an
+// Evidence_Record (evidence.mjs) and, for approvals, a Consent_Record (consent.mjs). Approvals are stored as the reserved
+// legacy_approval kind scoped to the item id (the same convention as migrate.mjs); only a real `consent record` yields material_change.
+// The legacy `decision` field is still mirrored on the item because status.mjs and migrate.mjs read it.
+export const SHIM_EVALUATOR = "legacy-gate-shim";
+export const SHIM_RULE_VERSION = "shim-v1";
+const REPLACEMENT = { Q1: "checkpoint Q1 run", Q2: "checkpoint Q2 run", Q3: "checkpoint Q3 run" };
+export function deprecationNotice(gate) {
+  const target = LEGACY_TO_CHECKPOINT[gate];
+  const replacement = REPLACEMENT[target]
+    ? `"${REPLACEMENT[target]}" (checks) and, for a material change, "consent record --kind material_change --scope <item> --quote <user words>"`
+    : '"consent record --kind publication --scope <platform> --quote <user words>" (publication needs its own authorization)';
+  return `DEPRECATED: "gate ${gate}" is a compatibility shim; use ${replacement} instead.`;
+}
 const USAGE = 'usage: gate <G0|G1|G2|G3|G4|G5r|G5a|G5b|G6|G7> approve|reject [--scope <id,…>] --quote "<user words>" [--note <text>]';
 
 // Approving G2 or G4 is refused while the sources it freezes are invalid (fail closed; a rejection is always recordable).
@@ -45,6 +62,11 @@ export default {
     if (isBlankQuote(quote)) {
       return { project: rel, code: "NEEDS_USER", data: { gate, decision },
         errors: [err("GATE-QUOTE", "NEEDS_USER", null, "a gate is recorded only after an explicit user answer: pass the user's verbatim words with --quote")] };
+    }
+    // Agent-authored boilerplate is not a user answer; refuse before anything is written (same rule as consent.mjs).
+    if (decision === "approve" && looksAgentGenerated(quote)) {
+      return { project: rel, code: "NEEDS_USER", data: { gate, decision },
+        errors: [err("GATE-QUOTE", "NEEDS_USER", null, "quote looks template-shaped or agent-generated; ask the user and pass their own verbatim words")] };
     }
     const sctx = createContext(dir);
     const { gates, items } = deriveAll(sctx);
@@ -87,7 +109,7 @@ export default {
     }
     if (errors.length) return { project: rel, data: { gate, decision }, errors };
     const project = sctx.project;
-    Object.assign(project.items, records);
+    for (const id of ids) project.items[id] = { ...project.items[id], ...records[id] }; // keep evidence/state/repairs already on the item
     if (gate === "G0") project.g0.status = decision === "approve" ? "approved" : "pending";
     saveProject(dir, project);
     const assetIds = ids.filter((id) => id.startsWith("asset:"));
@@ -98,10 +120,21 @@ export default {
       saveManifest(dir, manifest);
     }
     const journal_id = appendJournal(dir, { command: "gate", summary: `${gate} ${decision} ${ids.join(",")} quote=${JSON.stringify(quote)}`, now: ctx.now() });
-    const advice = gate === "G4" && decision === "approve"
-      ? reviewHints(items).map((h) => ({ rule: "DAG-STALE-VS-REVIEW", item: h.item, source: "project.yaml watch",
-        message: `watched sources changed since this item was recorded: ${h.sources.join(", ")}; confirm they are still true or redo the item` }))
-      : [];
+    const notice = deprecationNotice(gate);
+    ctx.writeStderr?.(`${notice}\n`);
+    const hashes = (inputs) => Object.fromEntries(Object.entries(inputs).map(([k, v]) => [k, String(v)]));
+    for (const id of ids) {
+      const ev = writeEvidence(dir, { itemId: id, checkId: `legacy-${gate}`, evaluator: SHIM_EVALUATOR, evaluatorCapabilities: ["legacy-record"],
+        ruleVersion: SHIM_RULE_VERSION, inputHashes: hashes(records[id].inputs), outputRefs: [], result: decision === "approve" ? "passed" : "failed", now: ctx.now() });
+      errors.push(...ev.errors);
+      if (decision === "approve") errors.push(...recordConsent(dir, { scope: id, quote, kind: "legacy_approval", internal: true, now: ctx.now() }).errors);
+    }
+    if (errors.length) return { project: rel, journal_id, data: { gate, decision }, errors };
+    const advice = [{ rule: "DEPRECATED-GATE", item: gate, source: "gate", message: notice }];
+    if (gate === "G4" && decision === "approve") {
+      advice.push(...reviewHints(items).map((h) => ({ rule: "DAG-STALE-VS-REVIEW", item: h.item, source: "project.yaml watch",
+        message: `watched sources changed since this item was recorded: ${h.sources.join(", ")}; confirm they are still true or redo the item` })));
+    }
     if (gate === "G4" && decision === "approve" && !existsSync(join(dir, "assets", "plan.yaml"))) {
       advice.push({ rule: "HARD-ASSETS-APPROVED", item: "G4", source: "assets/plan.yaml",
         message: "assets/plan.yaml does not exist yet; img stays blocked until it is written and G4 is approved again" });

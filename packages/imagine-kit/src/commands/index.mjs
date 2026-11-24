@@ -11,6 +11,11 @@ import exportHf from "./export-hf.mjs";
 import render from "./render.mjs";
 import qc from "./qc.mjs";
 import purge from "./purge.mjs";
+import checkpoint from "./checkpoint.mjs";
+import consent from "./consent.mjs";
+import migrate from "./migrate.mjs";
+import publish from "./publish.mjs";
 
 export const COMMANDS = { new: newCmd, status, gate, "validate story": validateStoryCmd, "patch apply": patchApply,
-  img, tts, "stage-shot": stageShot, "promote-shot": promoteShot, "export-hf": exportHf, render, qc, purge };
+  img, tts, "stage-shot": stageShot, "promote-shot": promoteShot, "export-hf": exportHf, render, qc, purge,
+  checkpoint, "consent record": consent, migrate, publish };

@@ -12,28 +12,20 @@ description: >-
 
 Before any project action or agent dispatch, including direct invocation and resume, resolve R and read `R/docs/contracts/hosts/<host-id>.md` for the active harness in full. Use its registered roles and dispatch mechanism.
 
-Imagine coordinates a gated, auditable production workflow. The main agent
-owns project state, user approvals, protected-source writes, and routing.
-Stage skills own specialized production work. No agent may substitute an
-unobserved result or personal judgement for required evidence.
+Imagine coordinates an auditable production workflow. The main agent owns project state, consent, protected-source writes, and routing. Stage skills own specialized work. No agent may substitute an unobserved result or personal judgement for required evidence.
 
 ## 1. Authority and executable contract
 
 Before operating, read these repository contracts in full:
 
-- `docs/contracts/rules.yaml` — authoritative rule registry.
-- `docs/contracts/cli-contract.md` — commands, parameters, JSON envelope,
-  exit codes, and error semantics.
-- `docs/contracts/source-formats.md` — project files, source references,
-  ownership, patches, gates, and state formats.
-- `docs/contracts/claude-code-platform.md` (read only when the active host-id is `claude-code`) —
-  plugin runtime and dispatch constraints.
+- `docs/contracts/rules.yaml`: authoritative rule registry.
+- `docs/contracts/cli-contract.md`: commands, parameters, JSON envelope, exit codes, errors.
+- `docs/contracts/source-formats.md`: project files, source references, ownership, patches, gates, state.
+- `docs/contracts/claude-code-platform.md` (read only when the active host-id is `claude-code`): plugin runtime and dispatch constraints.
 - `docs/contracts/harness-portability.md`: cross-host contract.
-- `docs/contracts/hosts/<host-id>.md`: the active host's mapping, with
-  `claude-code` on Claude Code.
+- `docs/contracts/hosts/<host-id>.md`: the active host's mapping.
 
-When a detail is unspecified, consult its contract. Never invent flags,
-schema fields, exceptions, or successful outcomes.
+When a detail is unspecified, consult its contract. Never invent flags, schema fields, exceptions, or successful outcomes.
 
 Invoke the kit using:
 
@@ -41,16 +33,19 @@ Invoke the kit using:
 
 On a host other than Claude Code, the `CLAUDE_SKILL_DIR` placeholder above is not substituted: use `node "<R>/packages/imagine-kit/bin/imagine-kit.mjs" <command> ...`, where `<R>` is the absolute directory two levels above this SKILL.md, confirmed by `node "<R>/host/plugin-root.mjs" --skill-dir "<R>/skills/imagine"` printing `"ok":true` (protocol `imagine-root/1`, `docs/contracts/harness-portability.md` section 4). Never resolve the kit from the working directory, `PATH`, or a global install.
 
-Hereafter, `imagine-kit` means this invocation, not an assumed globally
-installed executable. Use only documented arguments.
+Hereafter, `imagine-kit` means this invocation. Use only documented arguments.
 
-Phase 1 provides twelve core commands plus the `purge` command:
+Kit commands:
 
 | Command | Responsibility |
 |---|---|
 | `imagine-kit new` | Initialize a project |
-| `imagine-kit status` | Inspect project state and source hashes |
-| `imagine-kit gate` | Record explicit human decisions |
+| `imagine-kit status` | Inspect project state, item states, and source hashes |
+| `imagine-kit checkpoint <Q1\|Q2\|Q3> run [--scope <id,...>]` | Run a Checkpoint's Checks, write Evidence_Records |
+| `imagine-kit consent record --kind <material_change\|publication> --scope <item-or-platform> --quote "<user words>" [--file-hash <sha256>]` | Store a Consent_Record with the user's quote |
+| `imagine-kit migrate [--apply]` | Convert legacy gate records; dry run unless `--apply` |
+| `imagine-kit publish --platform <name> --file <path>` | Publish only with a matching `publication` Consent_Record |
+| `imagine-kit gate` | **Deprecated.** Legacy approval recorder for unmigrated projects; not for new work |
 | `imagine-kit validate story` | Validate STORY.md |
 | `imagine-kit patch apply` | Apply ownership-scoped planning patches |
 | `imagine-kit img` | Generate image assets |
@@ -62,35 +57,49 @@ Phase 1 provides twelve core commands plus the `purge` command:
 | `imagine-kit qc` | Validate delivery evidence |
 | `imagine-kit purge` | Reclaim storage on user request (any stage; needs a final MP4 in `post/`) |
 
-There are no additional kit commands beyond those listed above in Phase 1. Specifically, there is
-no brief, stage start/finish, guard, lock, document-write,
-waiver-management, review-confirmation, capabilities, readtime, beats,
-loudness, check, safe-band, resolution-budget, audio-page,
-asset-management, alternate validator, patch-validation, diff-keys, or
-fork command.
-
-Their applicable responsibilities live in agent instructions, the
-supported commands, or direct pinned HyperFrames operations.
+There are no kit commands beyond those listed (no brief, stage start/finish, guard, lock, waiver, capabilities, loudness, check, safe-band, asset-management, patch-validation, diff-keys, or fork command). Those responsibilities live in agent instructions, the supported commands, or direct pinned HyperFrames operations.
 
 For every kit invocation:
 
-1. Preserve stdout, stderr, process exit status, and the last stdout line.
-2. Parse the last stdout line as the JSON envelope defined by the CLI
-   contract.
-3. Interpret success, errors, and advice using that contract.
-4. Do not assume exit zero alone proves the requested artifact is valid.
-5. Quote the actual envelope fields relied on when reporting an outcome.
-6. Obtain authoritative scoped hashes from `data.sources` in the
-   `imagine-kit status --ref` envelope.
-7. Treat missing, malformed, contradictory, or unreadable evidence as
-   failure, never as permission to invent a replacement.
+1. Preserve stdout, stderr, exit status, and the last stdout line, and parse that line as the JSON envelope in the CLI contract.
+2. Interpret success, errors, and advice by that contract. Exit zero alone does not prove the artifact is valid. Quote the envelope fields you rely on.
+3. Take authoritative scoped hashes from `data.sources` in the `imagine-kit status --ref` envelope.
+4. Treat missing, malformed, contradictory, or unreadable evidence as failure, never as permission to invent a replacement.
+
+## 1A. Autonomous flow
+
+Imagine separates quality checks from consent. Three automated Checkpoints replace the per-stage approval gates: Q1 pre-production (script, bible, style, storyboard, timing, production plan), Q2 assets (references, images, voice-over, audio, continuity, provenance), Q3 film (scene lint, motion, visual review, mix, MP4 QC). A Checkpoint passes only from verified Evidence_Records, never from a user quote or your own judgement.
+
+Run the pipeline without stopping:
+
+1. **Brief_Completion.** Fill every Creative_Brief parameter the user did not state (format, platform, audio_mode, language, duration, silence choice) and record each as defaulted in `project.yaml` and `journal.md`. A stated value always wins. A complete brief needs no second approval.
+2. **Q1.** Produce script, bible, style, storyboard, timing and production plan, then run `imagine-kit checkpoint Q1 run`.
+3. **Q2.** When Q1 is `passed`, produce assets and run `imagine-kit checkpoint Q2 run`.
+4. **Q3.** When Q2 is `passed`, produce the film and run `imagine-kit checkpoint Q3 run`.
+5. **Production_Complete.** When Q3 is `passed`, the project is `ready`. Present the video and a quality report with every Checkpoint result and its Evidence_Record references. Report visual-review and audio-mix results apart from technical validation, and list checks no Evaluator could perform as unevaluated for human review. Do not publish.
+
+Do not ask "may I continue?" between stages. A stage starts when the previous Checkpoint is observed `passed` in the command envelope. Stage each shot as soon as its own dependencies are `passed`.
+
+**Repair.** While a Check returns `failed`, withhold the next stage and repair. For an error class with a defined strategy, set the item to `repairing`, fix it inside the Creative_Brief, then re-run the failed Check and every Check of its dependents. Track attempts per item and error class against the Repair_Budget and choose a different strategy on each retry. If a scene cannot pass scene lint within budget, change build strategy before escalating. Journal raster-replan choices with the rejected alternatives. When an upstream edit invalidates passed items and stays inside the brief, repair them in place without asking, and journal which items were invalidated and re-validated. Pick the recovery for a rejected patch by error class and budget, with no fixed rejection count. <!-- rule:PROC-REPAIR-BY-CLASS -->
+
+**Escalation.** When the Repair_Budget for an error class is exhausted, or a Check cannot run for lack of a capable Evaluator and no fallback exists, set the item to `needs_input` with the failing Evidence_Records and the options open to the user. Report unavailable checks as `not_run`, never `passed`.
+
+**When to ask the user.** Ask only for:
+
+- an item in `needs_input`;
+- a Material_Change: a change to format, platform, audio_mode, language, duration or silence choice, or to approved script meaning, cast, or delivery size beyond the brief. Before applying it, record the answer with `imagine-kit consent record --kind material_change --scope <id> --quote "<verbatim answer>"`;
+- Publication_Authorization, only when the user asks to publish: `imagine-kit consent record --kind publication --scope <platform> --quote "<verbatim answer>" --file-hash <sha256 of the final MP4>`, then `imagine-kit publish --platform <name> --file <path>`. A changed file needs a new authorization.
+
+Never infer, paraphrase, or write a quote yourself; an empty or synthetic quote is rejected. Quotes exist only for Consent_Records, not for quality checks. <!-- rule:PROC-CONSENT-QUOTE -->
+
+**Older projects.** Run `imagine-kit migrate` (dry run), show the result including unmapped records, then `imagine-kit migrate --apply`. Items whose input hashes still match are not re-checked. Use deprecated `imagine-kit gate` only for a project that has not migrated.
 
 ## 2. Ownership and routing
 
 The main agent owns:
 
 - Project creation, activation, resume, and G0 lock.
-- Human questions, gate answers, and recorded approvals.
+- Human questions and recorded consent.
 - Mandatory file loading and stage routing.
 - Protected-source backups and dispatch guards.
 - Planning-patch staging and authorized application.
@@ -107,23 +116,13 @@ The main agent owns:
 | `imagine-edit` | FX implementation, shot promotion, timeline, rough mix/G6 |
 | `imagine-deliver` | Final render, QC, credits, final approval/G7 |
 
-Do not perform another skill's specialized work merely because that
-skill is unavailable. Load its instructions and mandatory references
-before routing, or report BLOCKED.
+Do not perform another skill's work because it is unavailable. Load its instructions and mandatory references before routing, or report BLOCKED.
 
-Planning subagents `storyboard-artist`, `previz-designer`, and
-`fx-designer` are authorized only for reading/searching and returning patches.
-The active host mapping defines enforcement and inherited-permission limits.
-The main agent stores each patch verbatim and invokes the authorized
-patch-application operation.
-
-Review subagents provide findings, not gate approvals or waivers.
+Planning subagents `storyboard-artist`, `previz-designer`, and `fx-designer` only read, search, and return patches; the host mapping defines enforcement. The main agent stores each patch verbatim and invokes the authorized patch-application operation. Review subagents provide findings, not approvals or waivers.
 
 ### Storage purge on request
 
-When the user asks to purge, free disk space, or clean up a project's media, handle it directly here at any time and stage. Do not route to a stage skill or require any gate, stage, freshness, or G7 state. Target the active project or another project the user names with `--project <dir>`, including older projects under `.imagine/`.
-
-Run `imagine-kit purge [--project <dir>]` as a dry-run. The project must have a final MP4 in its project-root `post/`. <!-- rule:HARD-PURGE-FINAL-EXISTS --> If the command exits 1 with `HARD-PURGE-FINAL-EXISTS`, tell the user there is no final MP4 in `post/` and stop. Otherwise, show `data.kept`, `data.total_files`, `data.total_bytes` in human-readable form, and the top `data.by_dir` rows, including any `ADV-PURGE-G7-PENDING` advice. Explain plainly that applying purge permanently deletes every PNG, MP4, and JPG outside `post/`; afterward `img`, `render`, and `export-hf` refuse for that project, while `status`, `gate`, `qc`, audio, text, and `post/` remain. Ask explicitly for approval and, only on a clear yes, run `imagine-kit purge --apply --quote "<verbatim user answer>"`. <!-- rule:PROC-PURGE-QUOTE --> Report the apply envelope result. For several projects, run one dry-run and get one explicit answer per project; never reuse a quote across projects.
+When the user asks to purge or free disk space, handle it here at any stage, without gates. Read `R/skills/imagine/references/purge.md` in full and follow it. A purge needs a final MP4 in `post/` <!-- rule:HARD-PURGE-FINAL-EXISTS --> and `--apply` only after the user's verbatim yes. <!-- rule:PROC-PURGE-QUOTE -->
 
 ## 3. Mandatory files
 
@@ -165,69 +164,44 @@ require it before the stage that creates it. A required file without
 
 ### 3.2 Stage manifest
 
-| Stage | Additional plugin files | Additional project files |
-|---|---|---|
-| Bootstrap/new | None | None before creation; read `P/project.yaml`, `P/journal.md` immediately afterward |
-| Resume/status | None | `P/script/raw.md?`, `U?`, `P/bible.yaml?`, `P/style.md?`, `P/STORY.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
-| G0 lock/reconsideration | None | `P/style.md?`, `P/review/REVIEW.md?` |
-| Script ingestion/G1 | `R/skills/imagine-canon/SKILL.md` | `P/script/raw.md`, `U?`, `P/bible.yaml?`, `P/style.md?` |
-| Bible/casting/G2 | `R/skills/imagine-canon/SKILL.md` | `U`, `P/bible.yaml?`, `P/style.md?`, `P/assets/manifest.yaml?` |
-| Style/G3 | `R/skills/imagine-canon/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md?` |
-| Storyboard planning/audit | `R/skills/imagine-plan/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
-| Previz planning/audit | `R/skills/imagine-plan/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
-| FX planning/audit | `R/skills/imagine-plan/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml`, `P/review/REVIEW.md?` |
-| Production plan/G4 | `R/skills/imagine-plan/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml`, `P/review/REVIEW.md?` |
-| Canonical refs/G5r | `R/skills/imagine-generate/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml`, `P/review/REVIEW.md?` |
-| Audio/G5a | `R/skills/imagine-generate/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml`, `P/review/REVIEW.md?` |
-| Batch images/G5b | `R/skills/imagine-generate/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml`, `P/review/REVIEW.md?` |
-| FX implementation/shot audit | `R/skills/imagine-edit/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml`, `P/review/REVIEW.md?`, `P/review/check.json?` |
-| Timeline/rough mix/G6 | `R/skills/imagine-edit/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml`, `P/assets/CREDITS.md?`, `P/review/REVIEW.md?`, `P/review/check.json?` |
-| Render/QC/G7 | `R/skills/imagine-deliver/SKILL.md` | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md`, `P/assets/manifest.yaml`, `P/assets/CREDITS.md`, `P/review/REVIEW.md`, `P/review/check.json?`, `P/review/qc.json?` |
-| Upstream impact/review | Relevant owner skill | `U`, `P/bible.yaml`, `P/style.md`, `P/STORY.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md?` |
-| Waiver/review audit | Relevant owner skill | `P/bible.yaml`, `P/style.md`, `P/STORY.md?`, `P/assets/manifest.yaml?`, `P/review/REVIEW.md` |
-| Gate recording/journal | Relevant owner skill | Corresponding gate-stage files and approval evidence |
+Read `R/skills/imagine/references/stage-manifest.md` before routing to a stage; the owner skill's own list extends it.
+
 
 Every audit and review, including storyboard, previz, FX, shot,
-continuity, G5r/G5b preparation, and delivery audits, must read
-`P/bible.yaml` and `P/style.md` in full. Missing canon blocks the audit.
+continuity, G5r/G5b preparation, and delivery audits, must have
+`P/bible.yaml` and `P/style.md` read in the current context. Missing canon
+blocks the audit. When an audit starts, re-read only the dependencies whose
+hashes changed since the previous audit; read canon in full on the first
+audit in a context. <!-- rule:PROC-AUDIT-REREAD --> <!-- rule:PROC-AUDIT-CHANGED-ONLY -->
 
 Read any additionally referenced source, patch, manifest entry, or
 approved asset before relying on its contents.
 
-Before every stage, and again after resume or context compaction, read
-every resolved mandatory file in full. <!-- rule:PROC-BRIEF-START -->
+Before every stage, and after resume or context compaction, read by version and hash instead of re-reading everything: take the authoritative scoped hashes from `data.sources` in `imagine-kit status --ref`, compare them with the hashes you read in this context, and read in full only files you have not read or whose hash changed. Read a file in full whenever the task depends on all of it; otherwise read targeted sections and record the hash. <!-- rule:PROC-BRIEF-START --> <!-- rule:PROC-TARGETED-READ -->
 
-Reading mandatory files proves context delivery, not comprehension;
-independent audits and validators must still check understanding.
+Reading mandatory files proves context delivery, not comprehension.
 <!-- rule:PROC-BRIEF-LIMIT -->
 
-A stage starts only after its mandatory files were read in the current
-context; planning patches must echo actual source hashes, which the
+A stage starts only after its mandatory files were read, by hash, in the
+current context; planning patches must echo actual source hashes, which the
 main agent independently checks rather than treating as tool-verified.
 <!-- rule:HARD-BRIEF-CURRENT -->
 
-Once the user opts into an on-demand procedure, add its reference to
-the stage's mandatory list, including
-`R/skills/imagine/references/voice-cloning.md` for cloning-enabled
-casting. <!-- rule:PROC-OPT-IN-MANDATORY -->
+Once the user opts into an on-demand procedure, add its reference to the stage's mandatory list, including `R/skills/imagine/references/voice-cloning.md` for cloning. <!-- rule:PROC-OPT-IN-MANDATORY -->
 
-Missing or unreadable mandatory inputs produce BLOCKED. Changed
-references invalidate outstanding dispatch context; re-read and
-re-plan before using its result.
+Missing or unreadable mandatory inputs produce BLOCKED. Changed references invalidate outstanding dispatch context; re-read and re-plan.
 
 ## 4. G0 and audio-mode lock
 
 For a new project:
 
-1. Collect creative intent and proposed G0 settings.
-2. Show the user the complete configuration.
-3. Ask for explicit G0 approval.
-4. Execute `imagine-kit new` with documented parameters.
-5. Read and verify the created workspace and command envelope.
-6. Record G0 using `imagine-kit gate` and `--quote` containing the
-   user's exact answer to the G0 question.
-7. Append creation and approval events to the journal.
-8. Route to `imagine-canon` only after G0 is verified.
+1. Collect creative intent and the G0 settings the user stated.
+2. Run Brief_Completion: fill unstated settings, never override a stated one, and mark each as defaulted. Ask only when a setting is ambiguous or the user's statements conflict.
+3. Execute `imagine-kit new` with documented parameters, then read and verify the workspace and envelope.
+4. Append creation and the defaulted values to the journal, and show the user the configuration in your report without waiting for a reply.
+5. Route to `imagine-canon` and continue per section 1A.
+
+Changing a G0 setting afterward is a Material_Change.
 
 G0 must lock format, platform, audio_mode, language, target duration,
 and explicit silence choice. <!-- rule:GATE-G0 -->
@@ -297,11 +271,15 @@ unrelated agreement, or inferred consent. <!-- rule:GATE-QUOTE -->
 Record approvals per item and reopen only affected item approvals
 after an invalidation. <!-- rule:GATE-PER-ITEM -->
 
-Record and verify each required gate with the user's verbatim quote
-before downstream work. <!-- rule:HARD-GATES-RECORDED -->
+Before downstream work, require verified Evidence_Records and dependency
+readiness for the items it uses (for older, unmigrated projects: the
+recorded legacy gate with the user's verbatim quote).
+<!-- rule:HARD-GATES-RECORDED -->
 
-A requested change is not gate approval. Apply the impact-and-edit
-procedure, then ask the changed gate question again.
+A requested change is not consent. Apply the impact-and-edit procedure and
+ask only when it is a Material_Change.
+
+**Autonomous projects.** Section 1A replaces the per-stage human gates (G1 to G7) with the Q1/Q2/Q3 Checkpoints. Do not ask the user to approve them or record them with `imagine-kit gate`. The gate table remains the dependency order and the reference for older projects until `imagine-kit migrate`.
 
 ## 6. Source ownership and dispatch
 
@@ -315,9 +293,15 @@ Only the main agent or authorized patch application may write hashed
 project sources; planning subagents are not authorized to write and source-hash
 changes must remain detectable by status. <!-- rule:PROC-LOCK-HASHED-WRITES -->
 
+When dispatching a Subagent, send the relevant references as a path plus
+SHA-256 hash (from `data.sources` of `imagine-kit status --ref`), and embed
+a file's full contents only when the Subagent's task needs the whole file.
+The Subagent reads what it needs and echoes the hashes it used in its
+patch; verify them yourself. <!-- rule:PROC-BRIEF-EMBED --> <!-- rule:PROC-DISPATCH-REFS-HASHED -->
+
 Before dispatch, record SHA-256 hashes and restorable backups for
-protected files; re-hash immediately after dispatch.
-<!-- rule:PROC-DISPATCH-GUARD -->
+protected files; after every dispatch, immediately re-hash and compare
+with the recorded hashes. <!-- rule:PROC-DISPATCH-GUARD -->
 
 On an unauthorized protected-source mismatch, restore the backups,
 reject the dispatch result, preserve evidence, and report failure.
@@ -334,21 +318,13 @@ Derive `stale` from status-recorded hash mismatches, never manual
 status edits; the main agent records `needs_review` from a semantic
 impact report. <!-- rule:HARD-STATUS-DERIVED -->
 
-Planning subagents return patches as final messages. Store them
-verbatim in `stage/`, verify actual input hashes, base revision and
-key ownership, then use the kit's authorized patch operation.
-
-Never claim a patch, promotion, or render succeeded without its
-observed result. See `references/operations.md`.
+Planning subagents return patches as final messages. Store them verbatim in `stage/`, verify input hashes, base revision and key ownership, then use the kit's patch operation. Never claim a patch, promotion, or render succeeded without its observed result. See `references/operations.md`.
 
 ## 7. Impact and review
 
-Before editing any approved document, disclose the exact affected
-items and reopened gates, then obtain explicit user approval for the
-edit, including after G6. <!-- rule:PROC-IMPACT-CONFIRM -->
+Before editing any approved or passed document, compute and journal the exact affected items. When the edit stays inside the Creative_Brief, repair them in place without asking. When it is a Material_Change, disclose the affected items, obtain the user's explicit approval, and record it with `imagine-kit consent record --kind material_change`, including after the film is `ready`. <!-- rule:PROC-IMPACT-CONFIRM --> <!-- rule:PROC-AUTO-REPAIR-IN-BRIEF -->
 
-Resolve `needs_review` with an impact report and the user's explicit
-confirmation that prior meaning remains valid or authorization to edit.
+Resolve `needs_review` with an impact report and the user's explicit confirmation that prior meaning remains valid or authorization to edit.
 <!-- rule:PROC-NEEDS-REVIEW-REPORT -->
 
 If a stage discovers a missing upstream bible fact, block the work,
@@ -364,43 +340,9 @@ Waivers live in `review/REVIEW.md`, after P0/P1/P2 findings and before
 the delivery note. Read `references/waivers.md` in full before
 proposing, activating, checking, or revoking any waiver.
 
-The non-waivable list there is exhaustive: gate quotes, patch/key
-isolation, base revision, guard integrity, asset approvals and
-hashes including canonical refs, audio licensing, placeholders,
-a playable MP4 at the G0 spec, the raster quality floor (no
-`replan` tier may ship; a `soft` tier needs explicit G4 and G5b
-acceptance), and the story validators the kit runs before G4, such
-as HARD-STORY-UNIT-ONCE. A rule the kit itself decides is never
-waivable: `imagine-kit gate G4 approve` refuses a story error
-whatever REVIEW.md says, so a waiver for one would leave G4 blocked
-and only misstate the evidence. When such a rule blocks, say that
-it has to be corrected and route the fix through its normal path
-(a planning patch for STORY.md). Ask the user the decision the fix
-needs, as a direct question (for a unit anchored twice: which shot
-keeps it), and apply nothing until they answer. Every other HARD
-failure is waivable. When one of those blocks, never call it unwaivable: ask
-the user to choose between correcting it through its normal path
-and a waiver scoped to that one rule and its explicit items, and
-record nothing until they answer.
-<!-- rule:HARD-NON-WAIVABLE -->
+The non-waivable list in `references/waivers.md` is exhaustive. It covers gate and consent quotes, patch/key isolation, base revision, guard integrity, asset approvals and hashes, audio licensing, placeholders, a playable MP4 at the G0 spec, the raster quality floor, and the story validators the kit runs. A rule the kit decides is never waivable: say it must be corrected, route the fix through its normal path, and apply nothing until the user answers the fix question. For every other HARD failure, ask the user to choose between correcting it and a waiver scoped to that rule and items, and record nothing until they answer. <!-- rule:HARD-NON-WAIVABLE -->
 
-Required entry keys, using the source-format contract's item refs:
-
-- status: proposed
-- rule: HARD-<RULE-ID>
-- items: shot:s03.previz, asset:bg-harbor.v2
-- item_hashes: shot:s03.previz=<64-hex>, asset:bg-harbor.v2=<64-hex>
-- reason: <user reason>
-- consequence: <delivery consequence>
-- manual_check: <user's alternative check>
-- asked: "<exact question>"
-- quote: "<verbatim user answer>"
-- granted: <YYYY-MM-DD>
-- history: proposed <YYYY-MM-DD>
-
-Only populated, active, hash-valid entries can affect a HARD result.
-The full lifecycle, non-waivable exclusions, and exact `## Waivers`
-section format are defined in `references/waivers.md`.
+The required entry keys, lifecycle, and exact `## Waivers` format are in `references/waivers.md`. Only populated, active, hash-valid entries can affect a HARD result.
 
 ## 9. Capability limits and HARD validation
 
@@ -422,9 +364,7 @@ asset quality, listening evidence, or environmental capabilities.
 Agent judgement never substitutes for an observed HARD validator
 result. <!-- rule:HARD-NO-SELF-JUDGEMENT -->
 
-No automatic upscaler, guaranteed TTS speed adjustment, punctuation
-pacing control, project fork, automatic safe-band check, automatic
-brief, guard, waiver service, or unsupported kit validator exists.
+No automatic upscaler, TTS speed control, punctuation pacing, project fork, safe-band check, waiver service, or unsupported kit validator exists.
 
 Direct HyperFrames calls must pin `npx hyperframes@0.8.223`, with
 `HYPERFRAMES_NO_TELEMETRY=1` in each main-agent command. See
@@ -432,30 +372,13 @@ Direct HyperFrames calls must pin `npx hyperframes@0.8.223`, with
 
 ## 10. Reviews, delivery, and recovery
 
-Record P0/P1/P2 findings, accepted advice with reasons, soft tiers,
-and waivers in `review/REVIEW.md` using the HyperFrames review
-convention. <!-- rule:PROC-REVIEW-MD -->
+Record P0/P1/P2 findings, accepted advice with reasons, soft tiers, and waivers in `review/REVIEW.md` using the HyperFrames review convention. <!-- rule:PROC-REVIEW-MD -->
+Use findings of the form: `t=4.2s · where · problem -> exact change · what stays`.
 
-Use findings of the form:
-`t=4.2s · where · problem -> exact change · what stays`.
+At G6, require Studio preview and draft MP4 full-mix review by the user. For portrait, manually check the 9:16 safe band and record it in REVIEW.md.
 
-At G6, require Studio preview and draft MP4 full-mix review by
-the user. For portrait, manually check the 9:16 safe band and record
-the result in REVIEW.md.
+At G7, require an observed playable MP4 matching G0 dimensions and frame rate, valid QC, licences, credits, current approvals, and all active waiver disclosures.
 
-At G7, require an observed playable MP4 matching G0 dimensions and
-frame rate, valid QC, licences, credits, current approvals, and all
-active waiver disclosures.
+On resume, read the entire resume manifest, query status, re-check waivers, inspect staging, and rebuild the smallest valid dependency worklist. Never assume a prior attempt succeeded. Preserve approved unaffected items, old asset versions, staging evidence, and append-only journal history.
 
-On resume, read the entire resume manifest, query status, re-check
-waivers, inspect staging, and rebuild the smallest valid dependency
-worklist. Never assume a prior attempt succeeded.
-
-Preserve approved unaffected items, old asset versions, staging
-evidence, and append-only journal history.
-
-A retry cap includes the attempt that just failed. When exhausted,
-stop BLOCKED and report the failures; deadlines never override caps.
-
-The project finishes only after explicit G7 acceptance and valid
-non-waivable delivery evidence.
+A retry cap includes the attempt that just failed. When exhausted, stop BLOCKED and report the failures; deadlines never override caps. The project finishes only after explicit G7 acceptance and valid non-waivable delivery evidence.

@@ -189,3 +189,26 @@ test("G5a with intentional silence and no audio assets is the g5a item", async (
   assert.deepEqual(r.env.data.items, [{ id: "g5a", status: "approved" }]);
   assert.ok(getProject(dir).items.g5a.inputs["g0:silence"]);
 });
+test("gate shim: approve writes an Evidence_Record and a Consent_Record and names the replacement command", async () => {
+  const { cwd, dir } = await ready();
+  const r = await cli(cwd, "gate", "G0", "approve", "--quote", "Ya, setuju.");
+  assert.equal(r.exit, 0);
+  const note = r.env.advice.find((a) => a.rule === "DEPRECATED-GATE");
+  assert.ok(note && note.message.includes("checkpoint Q1 run") && note.message.includes("consent record"));
+  const p = getProject(dir);
+  const ev = p.items.g0.evidence.at(-1);
+  assert.deepEqual([ev.checkId, ev.evaluator, ev.result], ["legacy-G0", "legacy-gate-shim", "passed"]);
+  assert.deepEqual(p.consents.map((c) => [c.kind, c.scope, c.quote]), [["legacy_approval", "g0", "Ya, setuju."]]);
+});
+test("gate shim: reject writes failed evidence and no consent; boilerplate approval quotes are NEEDS_USER and write nothing", async () => {
+  const { cwd, dir } = await ready();
+  const before = sha(dir, "project.yaml");
+  const bad = await cli(cwd, "gate", "G0", "approve", "--quote", "user approved");
+  assert.equal(bad.env.code, "NEEDS_USER");
+  assert.equal(sha(dir, "project.yaml"), before);
+  const r = await cli(cwd, "gate", "G0", "reject", "--quote", "belum, ubah durasi");
+  assert.equal(r.exit, 0);
+  const p = getProject(dir);
+  assert.equal(p.items.g0.evidence.at(-1).result, "failed");
+  assert.equal((p.consents ?? []).length, 0);
+});

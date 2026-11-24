@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { err } from "../envelope.mjs";
 import { KitError, UsageError } from "../errors.mjs";
 import { deriveAll } from "../derive.mjs";
+import { checkpointsSummary, itemStates } from "../checkpoints.mjs";
 import { sha256File } from "../hash.mjs";
 import { withLock } from "../fsx.mjs";
 import { appendJournal } from "../journal.mjs";
@@ -54,7 +55,9 @@ export default {
     const slug = sctx.project.slug;
     const final = Boolean(values.final);
     const derived = deriveAll(sctx);
-    const fail = (errors) => ({ project: rel, data: { path: null, sha256: null }, errors });
+    // Additive (Req 13.7): appended after the existing keys.
+    const extra = () => ({ checkpoints: checkpointsSummary(loadProject(dir)), item_states: itemStates(deriveAll(createContext(dir)).items) });
+    const fail = (errors) => ({ project: rel, data: { path: null, sha256: null, ...extra() }, errors });
 
     const safeEdit = safePath(dir, "edit");
     const safeHf = safePath(dir, "edit/hyperframes.json");
@@ -145,7 +148,7 @@ export default {
         project.items[final ? `render:${slug}.v${version}` : "render:draft"] = { kind: "render", status: "proposed", inputs: snapshotInputs };
         saveProject(dir, project);
         const journal_id = appendJournal(dir, { command: "render", summary: `${target} ${sha256.slice(0, 12)}`, now: ctx.now() });
-        return { project: rel, journal_id, data: { path: target, sha256 } };
+        return { project: rel, journal_id, data: { path: target, sha256, ...extra() } };
       });
     } finally {
       try {

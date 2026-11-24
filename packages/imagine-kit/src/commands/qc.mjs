@@ -3,6 +3,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { err } from "../envelope.mjs";
 import { KitError, UsageError } from "../errors.mjs";
 import { deriveAll } from "../derive.mjs";
+import { checkpointsSummary, itemStates } from "../checkpoints.mjs";
 import { currentAssets } from "../docs.mjs";
 import { writeAtomic } from "../fsx.mjs";
 import { appendJournal } from "../journal.mjs";
@@ -10,17 +11,14 @@ import { measureLoudness, pngInfo, probeMedia } from "../media.mjs";
 import { resolveProject } from "../project.mjs";
 import { rasterQ, round2, tierOf } from "../raster.mjs";
 import { createContext } from "../sources.mjs";
+import { THRESHOLDS } from "../thresholds.mjs";
 import { safePath } from "../img/commit.mjs";
 
-const FPS_TOLERANCE = 0.01;
-const DURATION_TOLERANCE = 0.05;
-const TARGET_LUFS = -16;
-const LUFS_TOLERANCE = 1.5;
+const { FPS_TOLERANCE, MP4_DURATION_TOLERANCE: DURATION_TOLERANCE, TARGET_LUFS, LUFS_TOLERANCE, MAX_TRUE_PEAK } = THRESHOLDS;
 const gainTo = (lufs) => { const d = Math.round((TARGET_LUFS - lufs) * 10) / 10; return `${d > 0 ? "+" : ""}${d}`; };
-const MAX_TRUE_PEAK = -1;
 
 // HARD-FPS-SIZE, HARD-DURATION, HARD-AUDIO-STREAM, HARD-LOUDNESS against G0.
-function specChecks(g0, probe, loud, errors) {
+export function specChecks(g0, probe, loud, errors) {
   if (probe.w !== g0.width || probe.h !== g0.height) errors.push(err("HARD-FPS-SIZE", "HARD", null, `video is ${probe.w}x${probe.h} but G0 says ${g0.width}x${g0.height}`));
   if (probe.fps === null || !Number.isFinite(probe.fps) || Math.abs(probe.fps - g0.fps) > FPS_TOLERANCE) errors.push(err("HARD-FPS-SIZE", "HARD", null, `video is ${probe.fps} fps but G0 says ${g0.fps}`));
   const { min, max } = g0.duration_s;
@@ -176,10 +174,12 @@ export default {
       raster,
       credits,
     };
+    // Additive (Req 13.7): written after the existing keys, and not part of review/qc.json.
+    const out = { ...data, checkpoints: checkpointsSummary(sctx.project), item_states: itemStates(derived.items) };
 
     mkdirSync(reportDir, { recursive: true });
     writeAtomic(reportFile, `${JSON.stringify({ file: isAbsolute(path) || path.startsWith("..") ? file : path, generated_at: ctx.now().toISOString(), ...data, errors: errors.map((e) => ({ rule: e.rule, item: e.item, message: e.message })), not_run }, null, 2)}\n`);
     const journal_id = appendJournal(dir, { command: "qc", summary: `${path} ${errors.length} error(s)`, now: ctx.now() });
-    return { project: rel, journal_id, advice, errors, not_run, data };
+    return { project: rel, journal_id, advice, errors, not_run, data: out };
   },
 };
