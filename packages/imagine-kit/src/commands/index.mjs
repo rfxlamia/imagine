@@ -15,7 +15,9 @@ import checkpoint from "./checkpoint.mjs";
 import consent from "./consent.mjs";
 import migrate from "./migrate.mjs";
 import publish from "./publish.mjs";
+import repair from "./repair.mjs";
+import report from "./report.mjs";
 
 export const COMMANDS = { new: newCmd, status, gate, "validate story": validateStoryCmd, "patch apply": patchApply,
   img, tts, "stage-shot": stageShot, "promote-shot": promoteShot, "export-hf": exportHf, render, qc, purge,
-  checkpoint, "consent record": consent, migrate, publish };
+  checkpoint, "consent record": consent, migrate, publish, repair, report };

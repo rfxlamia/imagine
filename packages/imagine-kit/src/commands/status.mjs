@@ -1,4 +1,5 @@
 import { isCheckpointDecision } from "../promotion.mjs";
+import { DELIVERY_ITEM_ID, productionStatus } from "../delivery.mjs";
 import { err } from "../envelope.mjs";
 import { deriveAll, reviewHints } from "../derive.mjs";
 import { renderStyleOutput } from "../docs.mjs";
@@ -38,6 +39,7 @@ export default {
       .map(([item, r]) => ({ item, gate: r.gate ?? null, decision: r.decision.decision, quote: r.decision.quote, ...(r.decision.source ? { source: r.decision.source } : {}), at: r.decision.at }));
     return { project: rel, errors,
       data: { stage, gates, items: values.item ? items.filter((i) => i.id === values.item) : items, blocked: project.blocked, sources, unresolved,
-        decisions, review_hints: reviewHints(items), purges: project.purges ?? [], checkpoints: checkpointsSummary(project) } };
+        decisions, review_hints: reviewHints(items), purges: project.purges ?? [], checkpoints: checkpointsSummary(project),
+        delivery: { state: project.items[DELIVERY_ITEM_ID]?.state ?? "pending", ...productionStatus(project, sctx.story.shots.map((x) => x.id)) } } };
   },
 };
