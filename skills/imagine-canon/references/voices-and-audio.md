@@ -229,9 +229,14 @@ production speech.
 
 ### 5.2 Audition isolation
 
-Keep all audition recordings under `tmp/audition/` and all
-scratch timing VO under `tmp/scratch-vo/`; neither is an
-approved production asset. <!-- rule:PROC-SCRATCH-NOT-ASSET -->
+Keep auditions and scratch material under `tmp/`; neither is
+an approved production asset. <!-- rule:PROC-SCRATCH-NOT-ASSET -->
+
+Local Pocket TTS scratch produces temporary WAVs. Hosted
+scratch uses an estimated clock by default without a provider
+call; use `tts --scratch --hosted` only when a real hosted read
+is wanted, and review its reported character count. Estimated
+durations are advisory and final VO measurements supersede them.
 
 Examples:
 

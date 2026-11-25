@@ -17,7 +17,13 @@ export async function ttsProject({ upTo = "G2", edit = (t) => t, narrator = NARR
   await approveThrough(p.cwd, upTo);
   const home = mkdtempSync(join(tmpdir(), "imagine-uv-"));
   const log = join(home, "uv.jsonl");
-  const run = (env, ...args) => cliWith(p.cwd, { tools: { uv: [process.execPath, FAKE_UV] }, env: { ...process.env, HOME: home, FAKE_UV_LOG: log, ...env } }, ...args);
+  const notices = [];
+  let callsAtNotice = null;
   const calls = () => (existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []);
-  return { ...p, run, calls, writeFileSync, home, log };
+  const run = (env, ...args) => cliWith(p.cwd, {
+    tools: { uv: [process.execPath, FAKE_UV] },
+    env: { ...process.env, HOME: home, FAKE_UV_LOG: log, ...env },
+    writeStderr: (message) => { notices.push(message); callsAtNotice = calls().length; },
+  }, ...args);
+  return { ...p, run, calls, notices: () => notices, callsAtNotice: () => callsAtNotice, writeFileSync, home, log };
 }

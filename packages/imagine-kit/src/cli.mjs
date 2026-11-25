@@ -16,7 +16,7 @@ const finish = (env, pretty = false) => ({ env, exit: exitCode(env), stdout: JSO
 const usage = (command, message, pretty) => finish(envelope({ command, code: "USAGE", errors: [err("USAGE", "USAGE", null, message)] }), pretty);
 
 export async function run(argv, ctx = {}) {
-  const c = { cwd: process.cwd(), now: () => new Date(), hooks: {}, ...ctx };
+  const c = { cwd: process.cwd(), now: () => new Date(), hooks: {}, writeStderr: (message) => process.stderr.write(message), ...ctx };
   const [cmd, rest, name] = pick(argv);
   if (!cmd) return usage(name, `unknown command: ${name}`);
   let parsed;

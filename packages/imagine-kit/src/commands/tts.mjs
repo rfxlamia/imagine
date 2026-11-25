@@ -6,7 +6,7 @@ import { KitError, UsageError } from "../errors.mjs";
 import { deriveAll } from "../derive.mjs";
 import { currentAsset } from "../docs.mjs";
 import { withLock, readYaml, writeYamlAtomic, writeAtomic } from "../fsx.mjs";
-import { sha256File } from "../hash.mjs";
+import { sha256, sha256File } from "../hash.mjs";
 import { wavInfo } from "../media.mjs";
 import { resolveProject } from "../project.mjs";
 import { createContext } from "../sources.mjs";
@@ -16,7 +16,7 @@ import { runTts } from "../tts/worker.mjs";
 import { expectedTtsParamsHash, ttsParamsHash } from "../tts/provenance.mjs";
 
 const DEFAULT_VOICE = { engine: "pocket-tts", source: "builtin:eve" };
-const USAGE = "usage: tts <line,...|--all> [--scratch] [--redo <line> --note <text>] | tts --audition --voices <a,b,c> --line <L##>";
+const USAGE = "usage: tts <line,...|--all> [--scratch [--hosted]] [--redo <line> --note <text>] | tts --audition --voices <a,b,c> --line <L##>";
 const report = (line, v, seed, duration_s, sha, params) => ({ line, v, seed, duration_s, sha256: sha, params_hash: params });
 
 function checkWav(path, item) {
@@ -122,6 +122,33 @@ function updateCredits(currentContent, bullets) {
   }
 }
 
+function estimateScratchRate({ assets, language, voice, config }) {
+  const latestByLine = new Map();
+  for (const asset of assets) {
+    if (asset.kind !== "vo" || !["pending", "approved"].includes(asset.status)) continue;
+    if (asset.engine !== voice.engine || asset.model_id !== voice.model || asset.voice_id !== voice.voice_id) continue;
+    if (!Number.isInteger(asset.v) || typeof asset.line !== "string" || !asset.line) continue;
+    if (typeof asset.tts_text !== "string" || !asset.tts_text.length) continue;
+    if (!Number.isFinite(asset.duration_s) || asset.duration_s <= 0) continue;
+    const previous = latestByLine.get(asset.line);
+    if (!previous || asset.v > previous.v) latestByLine.set(asset.line, asset);
+  }
+  let characters = 0;
+  let seconds = 0;
+  for (const asset of latestByLine.values()) {
+    characters += asset.tts_text.length;
+    seconds += asset.duration_s;
+  }
+  if (characters > 0 && seconds > 0) return characters / seconds;
+  if (Number.isFinite(config.scratch_rate_cps) && config.scratch_rate_cps > 0) return config.scratch_rate_cps;
+  if (language === "id" && voice.engine === "elevenlabs" && voice.model === "eleven_v4") return 14.3;
+  return 10;
+}
+
+function estimateDuration(text, rateCps) {
+  return Math.round((text.length / rateCps) * 1000) / 1000;
+}
+
 function computeDurationReport({ allUnits, getDuration, g0, advice }) {
   let sum = 0;
   const missing_lines = [];
@@ -150,7 +177,7 @@ function computeDurationReport({ allUnits, getDuration, g0, advice }) {
 export default {
   locks: false,   // the project lock is held only around each commit
   options: { all: { type: "boolean" }, audition: { type: "boolean" }, voices: { type: "string" }, line: { type: "string" },
-    scratch: { type: "boolean" }, redo: { type: "string" }, note: { type: "string" } },
+    scratch: { type: "boolean" }, hosted: { type: "boolean" }, redo: { type: "string" }, note: { type: "string" } },
   async run({ values, positionals }, ctx) {
     const { dir, rel } = resolveProject(ctx.cwd, values.project);
     const sctx = createContext(dir);
@@ -159,6 +186,7 @@ export default {
     if (values.audition && (values.scratch || values.all || positionals.length || values.redo)) throw new UsageError(USAGE);
     if ((values.redo === undefined) !== (values.note === undefined)) throw new UsageError("--redo and --note go together");
     if (values.redo !== undefined && values.scratch) throw new UsageError("--scratch measurements are overwritten, not versioned; drop --redo");
+    if (values.hosted && !values.scratch) throw new UsageError("--hosted requires --scratch");
     const units = sctx.units.units;
     const known = (id) => { if (!Object.hasOwn(units, id)) throw new UsageError(`unknown script line ${id}`); return id; };
     const language = g0.language;
@@ -262,40 +290,62 @@ export default {
       if (!safeDurations) throw new KitError("HARD", `${relDurations} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: "durations.yaml" });
       const jobs = [];
       const meta = [];
+      const estimated = [];
       for (const id of ids) {
         const u = units[id];
-        const v = resolveVoice(dir, voiceConfig(sctx.bible, u.speaker) ?? DEFAULT_VOICE, { language, item: id });
+        const voiceBlock = voiceConfig(sctx.bible, u.speaker) ?? DEFAULT_VOICE;
+        const v = resolveVoice(dir, voiceBlock, { language, item: id });
         const seed = v.seed_base;
         checkSeed(v, seed, id);
+        const text = lexicon(u);
+        if (v.engine === "elevenlabs" && !values.hosted) {
+          const rateCps = estimateScratchRate({ assets: sctx.manifest.assets, language, voice: v, config: voiceBlock, bible: sctx.bible });
+          const duration_s = estimateDuration(text, rateCps);
+          const take = { ...report(id, 0, seed, duration_s, null, ttsParamsHash(v, seed, text)), estimated: true };
+          estimated.push({ ...take, text_hash: sha256(text), rate_cps: rateCps });
+          continue;
+        }
         const relOut = join("tmp", "scratch-vo", `${id}.wav`);
         const out = safePath(dir, relOut);
         if (!out) throw new KitError("HARD", `${relOut} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: id });
-        jobs.push(buildJob(v, { id, text: lexicon(u), seed, out }));
-        meta.push({ id, v, seed, out, text: lexicon(u) });
+        jobs.push(buildJob(v, { id, text, seed, out }));
+        meta.push({ id, v, seed, out, text });
       }
-      const { tier } = await runTts(ctx, jobs);
-      const takes = meta.map((m) => {
+      const hostedCharacters = jobs.filter((job) => job.engine === "elevenlabs").reduce((sum, job) => sum + job.text.length, 0);
+      if (values.hosted && hostedCharacters > 0) ctx.writeStderr(`Hosted TTS scratch will send ${hostedCharacters} characters.\n`);
+      const { tier } = jobs.length ? await runTts(ctx, jobs) : { tier: null };
+      const takes = [...meta.map((m) => {
         const info = checkWav(m.out, m.id);
-        return report(m.id, 0, m.seed, info.duration_s, sha256File(m.out), ttsParamsHash(m.v, m.seed, m.text));
-      });
+        return { ...report(m.id, 0, m.seed, info.duration_s, sha256File(m.out), ttsParamsHash(m.v, m.seed, m.text)), estimated: false };
+      }), ...estimated];
       let merged = {};
       await withLock(dir, async () => {
         const file = safePath(dir, relDurations);
         if (!file) throw new KitError("HARD", `${relDurations} is outside the project`, { rule: "HARD-ASSETS-APPROVED", item: "durations.yaml" });
         merged = existsSync(file) ? readYaml(file) ?? {} : {};
-        for (const t of takes) merged[t.line] = t.duration_s;
+        for (const t of takes) {
+          merged[t.line] = t.estimated
+            ? { duration_s: t.duration_s, estimated: true, text_hash: t.text_hash, rate_cps: t.rate_cps }
+            : t.duration_s;
+        }
         writeYamlAtomic(file, Object.fromEntries(Object.entries(merged).sort(([a], [b]) => a.localeCompare(b))));
       });
       const advice = [
         { rule: "PROC-SCRATCH-NOT-ASSET", item: null, source: "tmp/scratch-vo", message: "scratch durations feed previz timing only; they are not assets and cannot be approved" }
       ];
+      if (estimated.length) advice.push({ rule: "ADV-SCRATCH-ESTIMATED", item: null, source: "tmp/scratch-vo/durations.yaml", message: "hosted scratch durations are estimates; final VO durations supersede them" });
       const hasEleven = jobs.some((j) => j.engine === "elevenlabs");
       if (hasEleven && (tier === "free" || tier === null)) {
         advice.push({ rule: "PROC-HOSTED-TTS-LICENCE", item: null, source: "assets/CREDITS.md", message: licenseText(tier) });
       }
       const durReport = computeDurationReport({
         allUnits: Object.keys(units).sort(),
-        getDuration: (id) => (typeof merged[id] === "number" ? merged[id] : null),
+        getDuration: (id) => {
+          const value = merged[id];
+          if (typeof value === "number") return value;
+          if (typeof value?.duration_s === "number") return value.duration_s;
+          return null;
+        },
         g0,
         advice,
       });
