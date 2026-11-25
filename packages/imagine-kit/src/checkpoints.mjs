@@ -366,7 +366,6 @@ export const CHECKPOINTS = Object.freeze({
     builtin("asset-ref-exists", ["text"], "edit/assets-check", TEXT, "HARD-ASSETS-APPROVED", ASSET_INPUTS, runAssetRefExists),
     builtin("vo-coverage-and-duration", ["audio-analysis"], "edit/assets-check", ["audio-analysis", "text"], "HARD-VO-PRESENT", [...ASSET_INPUTS, "shot:", "unit:"], runVoCoverage),
     builtin("audio-licence", ["text"], "edit/assets-check", TEXT, "HARD-AUDIO-LICENCE", ASSET_INPUTS, runAudioLicence),
-    builtin("loudness-mix", ["audio-analysis"], "qc:loudness", ["audio-analysis", "file-hash"], "HARD-LOUDNESS", ["g0:"], (env) => loudnessOf(env, env.mix ?? env.mp4)),
     Object.freeze({ id: "visual-continuity", requires: Object.freeze(["image-inspection"]), evaluator: "continuity-reviewer", evaluatorCapabilities: Object.freeze(["image-inspection"]),
       rule: "DAG-STYLE-ANCHOR", ruleVersion: rv("DAG-STYLE-ANCHOR"), inputs: Object.freeze([...ASSET_INPUTS, "style:", "bible:"]), run: judged("visual-continuity") }),
     builtin("raster-quality-floor", ["file-hash"], "raster", ["file-hash"], "HARD-RASTER-TIER", ASSET_INPUTS, runRasterFloor),
@@ -377,6 +376,7 @@ export const CHECKPOINTS = Object.freeze({
     builtin("mp4-technical", ["file-hash"], "qc:mp4", ["file-hash", "video-probe"], "HARD-FPS-SIZE", ["g0:"], runMp4Technical),
     Object.freeze({ id: "visual-review", requires: Object.freeze(["image-inspection"]), evaluator: "visual-review", evaluatorCapabilities: Object.freeze(["image-inspection"]),
       rule: "HARD-FPS-SIZE", ruleVersion: rv("VISUAL-REVIEW"), inputs: Object.freeze(["g0:"]), run: judged("visual-review") }),
+    builtin("loudness-mix", ["audio-analysis"], "qc:loudness", ["audio-analysis", "file-hash"], "HARD-LOUDNESS", ["g0:"], (env) => loudnessOf(env, env.mix ?? env.mp4)),
     builtin("audio-mix-review", ["audio-analysis"], "qc:loudness", ["audio-analysis", "file-hash"], "HARD-LOUDNESS", ["g0:"], (env) => loudnessOf(env, env.mp4)),
   ]) }),
 });
@@ -484,7 +484,9 @@ export async function runCheckpoint(dir, checkpointId, opts = {}) {
     const view = { id: cp.id, state: "failed", checks: checks.map((c) => ({ id: c.checkId, result: c.result, at: null })) };
     return { checkpoint: cp.id, itemId, state: "failed", checks, view };
   }
+  const only = opts.only?.length ? new Set(opts.only) : null;
   for (const check of cp.checks) {
+    if (only && !only.has(check.id)) continue;
     const out = invalid && check === target ? { errors: invalid.errors, outputRefs: ["assets/manifest.yaml"] } : await runOne(env, check);
     const result = resultOf(out);
     const evaluator = out.evaluator ?? check.evaluator;

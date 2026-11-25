@@ -1,3 +1,4 @@
+import { isCheckpointDecision } from "../promotion.mjs";
 import { err } from "../envelope.mjs";
 import { deriveAll, reviewHints } from "../derive.mjs";
 import { renderStyleOutput } from "../docs.mjs";
@@ -20,7 +21,7 @@ export default {
       errors.push(err("HARD-STYLE-OUTPUT-READONLY", "HARD", "style:output", "style.md#output differs from the text generated from G0"));
     }
     for (const [id, rec] of Object.entries(project.items)) {
-      if (rec.status === "approved" && isBlankQuote(rec.decision?.quote)) {
+      if (rec.status === "approved" && isBlankQuote(rec.decision?.quote) && !isCheckpointDecision(rec.decision)) {
         errors.push(err("HARD-GATES-RECORDED", "HARD", id, "approved item has no recorded user quote"));
       }
     }
@@ -34,7 +35,7 @@ export default {
       else sources[ref] = v;
     }
     const decisions = Object.entries(project.items).filter(([, r]) => r.decision)
-      .map(([item, r]) => ({ item, gate: r.gate ?? null, decision: r.decision.decision, quote: r.decision.quote, at: r.decision.at }));
+      .map(([item, r]) => ({ item, gate: r.gate ?? null, decision: r.decision.decision, quote: r.decision.quote, ...(r.decision.source ? { source: r.decision.source } : {}), at: r.decision.at }));
     return { project: rel, errors,
       data: { stage, gates, items: values.item ? items.filter((i) => i.id === values.item) : items, blocked: project.blocked, sources, unresolved,
         decisions, review_hints: reviewHints(items), purges: project.purges ?? [], checkpoints: checkpointsSummary(project) } };

@@ -7,8 +7,9 @@
       "kind": { "type": "string", "pattern": "^[a-z0-9-]+$" },
       "status": { "enum": ["pending", "proposed", "approved", "rejected"] },
       "gate": { "type": "string" },
-      "decision": { "type": "object", "required": ["decision", "quote", "at"], "additionalProperties": false, "properties": {
+      "decision": { "type": "object", "required": ["decision", "at"], "anyOf": [{ "required": ["quote"], "properties": { "quote": true } }, { "required": ["source"], "properties": { "source": true } }], "additionalProperties": false, "properties": {
         "decision": { "enum": ["approve", "reject"] }, "quote": { "type": "string", "pattern": "\\S" },
+        "source": { "type": "string", "pattern": "^checkpoint:Q[123]$" },
         "note": { "type": "string" }, "at": { "type": "string" } } },
       "state": { "enum": ["pending", "validating", "passed", "failed", "repairing", "needs_input", "ready", "published"] },
       "evidence": { "type": "array", "items": { "type": "object",
