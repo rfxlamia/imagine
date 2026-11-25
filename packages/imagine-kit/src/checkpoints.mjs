@@ -218,6 +218,23 @@ function assetErrors(env) {
 function runAssetRefExists(env) {
   const errors = [...byRules(assetErrors(env), ["HARD-ASSETS-APPROVED"])];
   const { manifest } = env.sctx;
+  // Every asset a shot declares must have a live, non-rejected version of the declared kind whose file matches its hash.
+  for (const shot of env.sctx.story?.shots ?? []) {
+    if (!shot.keys?.assets) continue;
+    const parsed = parseValue("assets", shot.keys.assets);
+    for (const d of Array.isArray(parsed?.value) ? parsed.value : []) {
+      if (env.scope?.size && ![d.id, shot.id].some((k) => env.scope.has(k))) continue;
+      const cur = currentAsset(manifest, d.id);
+      const fail = (m) => errors.push(err("HARD-ASSETS-APPROVED", "HARD", d.id, `shot ${shot.id} declares asset ${d.id} but ${m}`));
+      const latest = manifest.assets.filter((a) => a.id === d.id).reduce((b, a) => (b === null || a.v > b.v ? a : b), null);
+      if (!cur || !latest) { fail("it has no live version in the manifest"); continue; }
+      if (latest.status === "rejected") { fail(`its latest version v${latest.v} is rejected`); continue; }
+      if (cur.kind !== d.kind) { fail(`its current version is ${cur.kind}, not ${d.kind}`); continue; }
+      const file = hasPlacedFile(env, cur);
+      if (!file) { if (!isPurged(env)) fail(`${cur.path} does not exist`); continue; }
+      if (sha256File(file) !== cur.sha256) fail(`${cur.path} no longer matches its recorded hash`);
+    }
+  }
   for (const a of currentAssets(manifest).filter((x) => inScope(env, x))) {
     for (const ref of a.refs ?? []) {
       const cur = currentAsset(manifest, ref);
