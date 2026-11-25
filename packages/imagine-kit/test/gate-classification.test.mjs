@@ -56,9 +56,9 @@ test("retained checks per gate", () => {
     G3: ["style-consistency"],
     G4: ["plan-validation"],
     G5r: ["visual-continuity"],
-    G5a: ["vo-coverage-and-duration", "audio-licence", "loudness-mix"],
+    G5a: ["vo-coverage-and-duration", "audio-licence"],
     G5b: ["image-integrity", "alpha-cutout-integrity", "asset-ref-exists", "raster-quality-floor"],
-    G6: ["scene-lint", "motion-assertions", "mp4-technical", "visual-review", "audio-mix-review"],
+    G6: ["scene-lint", "motion-assertions", "mp4-technical", "visual-review", "loudness-mix", "audio-mix-review"],
     G7: [],
   };
   for (const [id, checks] of Object.entries(expected)) {

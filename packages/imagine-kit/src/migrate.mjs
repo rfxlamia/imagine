@@ -35,6 +35,7 @@ export function migrateProject(project, options = {}) {
   for (const id of Object.keys(out.items).sort()) {
     const item = out.items[id];
     if (!isObject(item) || item.gate === undefined) continue; // not a Legacy_Gate record
+    if (item.decision?.source?.startsWith?.("checkpoint:")) continue; // recorded by a passed Checkpoint, not a user answer
     if (item.status !== "approved") continue; // pending / proposed / rejected carry no passed evidence
     if (typeof item.gate !== "string" || !hasOwn(LEGACY_TO_CHECKPOINT, item.gate)) {
       report.unmapped.push({ id, gate: item.gate, reason: "unknown gate id" });

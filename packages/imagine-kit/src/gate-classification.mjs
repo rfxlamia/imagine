@@ -22,11 +22,11 @@ export const GATE_CLASSIFICATION = Object.freeze({
   // 1.8
   G5r: gate("Q2", "mixed", ["visual-continuity"], ["per-image-approval"], "none"),
   // 1.9
-  G5a: gate("Q2", "mixed", ["vo-coverage-and-duration", "audio-licence", "loudness-mix"], ["per-vo-approval", "per-cue-approval"], "none"),
+  G5a: gate("Q2", "mixed", ["vo-coverage-and-duration", "audio-licence"], ["per-vo-approval", "per-cue-approval"], "none"),
   // 1.10
   G5b: gate("Q2", "mixed", ["image-integrity", "alpha-cutout-integrity", "asset-ref-exists", "raster-quality-floor"], ["per-asset-approval"], "none"),
   // 1.11: draft review is optional
-  G6: gate("Q3", "essential", ["scene-lint", "motion-assertions", "mp4-technical", "visual-review", "audio-mix-review"], [], "optional draft review"),
+  G6: gate("Q3", "essential", ["scene-lint", "motion-assertions", "mp4-technical", "visual-review", "loudness-mix", "audio-mix-review"], [], "optional draft review"),
   // 1.12: replaced by Production_Complete; publishing needs a separate Publication_Authorization
   G7: gate(DELIVERY, "ceremonial", [], ["g7-approval"], "publication_authorization required for external publishing"),
 });

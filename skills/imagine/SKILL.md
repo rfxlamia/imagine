@@ -41,7 +41,7 @@ Kit commands:
 |---|---|
 | `imagine-kit new` | Initialize a project |
 | `imagine-kit status` | Inspect project state, item states, and source hashes |
-| `imagine-kit checkpoint <Q1\|Q2\|Q3> run [--scope <id,...>]` | Run a Checkpoint's Checks, write Evidence_Records |
+| `imagine-kit checkpoint <Q1\|Q2\|Q3> run\|review` | Run a Checkpoint's Checks, or submit a reviewer answer |
 | `imagine-kit consent record --kind <material_change\|publication> --scope <item-or-platform> --quote "<user words>" [--file-hash <sha256>]` | Store a Consent_Record with the user's quote |
 | `imagine-kit migrate [--apply]` | Convert legacy gate records; dry run unless `--apply` |
 | `imagine-kit publish --platform <name> --file <path>` | Publish only with a matching `publication` Consent_Record |
@@ -70,15 +70,15 @@ For every kit invocation:
 
 Imagine separates quality checks from consent. Three automated Checkpoints replace the per-stage approval gates: Q1 pre-production (script, bible, style, storyboard, timing, production plan), Q2 assets (references, images, voice-over, audio, continuity, provenance), Q3 film (scene lint, motion, visual review, mix, MP4 QC). A Checkpoint passes only from verified Evidence_Records, never from a user quote or your own judgement.
 
-Run the pipeline without stopping:
+Run without stopping:
 
 1. **Brief_Completion.** Fill every Creative_Brief parameter the user did not state (format, platform, audio_mode, language, duration, silence choice) and record each as defaulted in `project.yaml` and `journal.md`. A stated value always wins. A complete brief needs no second approval.
 2. **Q1.** Produce script, bible, style, storyboard, timing and production plan, then run `imagine-kit checkpoint Q1 run`.
 3. **Q2.** When Q1 is `passed`, produce assets and run `imagine-kit checkpoint Q2 run`.
-4. **Q3.** When Q2 is `passed`, produce the film and run `imagine-kit checkpoint Q3 run`.
-5. **Production_Complete.** When Q3 is `passed`, the project is `ready`. Present the video and a quality report with every Checkpoint result and its Evidence_Record references. Report visual-review and audio-mix results apart from technical validation, and list checks no Evaluator could perform as unevaluated for human review. Do not publish.
+4. **Q3.** When Q2 is `passed`, produce the film and run `imagine-kit checkpoint Q3 run --mp4 <final.mp4> [--mix <mix>]`.
+5. **Production_Complete.** When Q3 is `passed`, the project is `ready`. Present the video and a quality report with every Checkpoint result and its Evidence_Record references. Report visual-review and audio-mix results apart from technical validation, and list checks no Evaluator could run as unevaluated. Do not publish.
 
-Do not ask "may I continue?" between stages. A stage starts when the previous Checkpoint is observed `passed` in the command envelope. Stage each shot as soon as its own dependencies are `passed`.
+Do not ask "may I continue?" between stages. A stage starts when the previous Checkpoint is `passed` in the envelope. Stage each shot as soon as its own dependencies are `passed`.
 
 **Repair.** While a Check returns `failed`, withhold the next stage and repair. For an error class with a defined strategy, set the item to `repairing`, fix it inside the Creative_Brief, then re-run the failed Check and every Check of its dependents. Track attempts per item and error class against the Repair_Budget and choose a different strategy on each retry. If a scene cannot pass scene lint within budget, change build strategy before escalating. Journal raster-replan choices with the rejected alternatives. When an upstream edit invalidates passed items and stays inside the brief, repair them in place without asking, and journal which items were invalidated and re-validated. Pick the recovery for a rejected patch by error class and budget, with no fixed rejection count. <!-- rule:PROC-REPAIR-BY-CLASS -->
 
@@ -279,7 +279,7 @@ recorded legacy gate with the user's verbatim quote).
 A requested change is not consent. Apply the impact-and-edit procedure and
 ask only when it is a Material_Change.
 
-**Autonomous projects.** Section 1A replaces the per-stage human gates (G1 to G7) with the Q1/Q2/Q3 Checkpoints. Do not ask the user to approve them or record them with `imagine-kit gate`. The gate table remains the dependency order and the reference for older projects until `imagine-kit migrate`.
+**Autonomous projects.** Section 1A replaces the per-stage human gates (G1 to G7) with the Q1/Q2/Q3 Checkpoints. Do not ask the user to approve them or run `imagine-kit gate`: a passed Checkpoint records the gates it covers, so no `gate` call is needed. Details: `references/checkpoints.md`. The gate table is the dependency order and the reference for older projects.
 
 ## 6. Source ownership and dispatch
 
@@ -377,8 +377,8 @@ Use findings of the form: `t=4.2s · where · problem -> exact change · what st
 
 At G6, require Studio preview and draft MP4 full-mix review by the user. For portrait, manually check the 9:16 safe band and record it in REVIEW.md.
 
-At G7, require an observed playable MP4 matching G0 dimensions and frame rate, valid QC, licences, credits, current approvals, and all active waiver disclosures.
+At Q3 (G7 in older projects), require an observed playable MP4 matching G0 dimensions and frame rate, valid QC, licences, credits, current approvals, and all active waiver disclosures.
 
 On resume, read the entire resume manifest, query status, re-check waivers, inspect staging, and rebuild the smallest valid dependency worklist. Never assume a prior attempt succeeded. Preserve approved unaffected items, old asset versions, staging evidence, and append-only journal history.
 
-A retry cap includes the attempt that just failed. When exhausted, stop BLOCKED and report the failures; deadlines never override caps. The project finishes only after explicit G7 acceptance and valid non-waivable delivery evidence.
+A retry cap includes the attempt that just failed. When exhausted, stop BLOCKED and report the failures; deadlines never override caps. The project finishes when Q3 has passed and `delivery:film` is `ready`; older projects need explicit G7 acceptance.

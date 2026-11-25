@@ -335,7 +335,9 @@ Retain the actual G6 user listening decision rather than inventing a new auditor
 
 After a verified final render, current QC, complete delivery note, and all required approvals, show the actual final MP4, evidence, risks, and active waivers to the user.
 
-Ask explicitly whether the user has reviewed that final version and accepts it for G7.
+In an autonomous project this step does not apply: when `imagine-kit checkpoint Q3 run --mp4 <final.mp4>` is `passed` and `delivery:film` is `ready`, present the MP4 and the quality report and stop. Do not run `gate G7`. Publishing needs its own `consent record --kind publication`.
+
+For an unmigrated legacy project, ask explicitly whether the user has reviewed that final version and accepts it for G7.
 
 Only after the user answers that question affirmatively, run:
 

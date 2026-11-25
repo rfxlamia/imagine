@@ -238,10 +238,10 @@ test("Q2 audio-licence fails for music missing license, source or credit", async
   }
 });
 
-test("Q2 loudness-mix fails for a mix far from -16 LUFS", { skip: !hasFfmpeg && "ffmpeg is not installed (loudness is measured through ffmpeg)" }, async () => {
+test("Q3 loudness-mix fails for a mix far from -16 LUFS", { skip: !hasFfmpeg && "ffmpeg is not installed (loudness is measured through ffmpeg)" }, async () => {
   const { dir } = await baseProject();
   const mix = makeMp4(join(mkdtempSync(join(tmpdir(), "mix-")), "quiet.mp4"), { seconds: 3, volume: 0.2 });
-  await assertFails(dir, "Q2", "loudness-mix", { mix });
+  await assertFails(dir, "Q3", "loudness-mix", { mix });
 });
 
 test("Q2 visual-continuity fails when a capable evaluator reports an inconsistency", async () => {
