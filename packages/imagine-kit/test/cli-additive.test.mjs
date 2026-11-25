@@ -14,7 +14,7 @@ const BASELINE = {
   qc: ["w", "h", "fps", "duration_s", "audio", "lufs", "true_peak", "raster", "credits"],
   render: ["path", "sha256"],
 };
-const NEW_KEYS = ["checkpoints", "item_states"];
+const NEW_KEYS = ["checkpoints", "item_states", "delivery"];
 const assertAdditive = (command, data) => {
   const keys = Object.keys(data);
   for (const k of BASELINE[command]) assert.ok(keys.includes(k), `${command} lost key ${k}`);

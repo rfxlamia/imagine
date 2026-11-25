@@ -26,3 +26,9 @@ When the unscoped Checkpoint is `passed`, the kit records the gates it covers as
 | Q3 | G6, then `delivery:film` is updated |
 
 This is why `tts`, `img`, `export-hf`, `stage-shot` and `render --final` need no `gate` call. Items the user rejected stay rejected, and an image with unreviewed integrity flags stays pending. Write `assets/plan.yaml` before Q1, or run Q1 again after writing it. The envelope lists `recorded` and `not_recorded` items.
+
+## Repair, report and delivery
+
+- `imagine-kit repair <item-id> --class <asset-regeneration|scene-lint|patch-rejection|…> [--strategy <id>]` starts the next repair attempt. The kit counts attempts against the Repair_Budget, picks an untried strategy, sets the item to `repairing` and journals the invalidated items and the Checks to re-run. When the budget or the strategies are spent it sets `needs_input` and exits `NEEDS_USER` with the failing Evidence_Records and the strategies tried. A Material_Change strategy needs a `material_change` consent first.
+- `imagine-kit report [--scope <id,…>]` is read-only. It returns the quality report built from Evidence_Records (`data.report`, and `data.markdown` to present).
+- `imagine-kit status` shows `data.delivery`: `state` (`pending`, `ready`, `published`) and the shots whose Q3 has not passed. `checkpoint Q3 run` updates it.
