@@ -1,5 +1,5 @@
 import { isCheckpointDecision } from "../promotion.mjs";
-import { DELIVERY_ITEM_ID, productionStatus } from "../delivery.mjs";
+import { DELIVERY_ITEM_ID, currentRenderHash, productionStatus } from "../delivery.mjs";
 import { err } from "../envelope.mjs";
 import { deriveAll, reviewHints } from "../derive.mjs";
 import { renderStyleOutput } from "../docs.mjs";
@@ -40,6 +40,6 @@ export default {
     return { project: rel, errors,
       data: { stage, gates, items: values.item ? items.filter((i) => i.id === values.item) : items, blocked: project.blocked, sources, unresolved,
         decisions, review_hints: reviewHints(items), purges: project.purges ?? [], checkpoints: checkpointsSummary(project),
-        delivery: { state: project.items[DELIVERY_ITEM_ID]?.state ?? "pending", ...productionStatus(project, sctx.story.shots.map((x) => x.id)) } } };
+        delivery: { state: project.items[DELIVERY_ITEM_ID]?.state ?? "pending", ...productionStatus(project, sctx.story.shots.map((x) => x.id), currentRenderHash(dir), sctx) } } };
   },
 };

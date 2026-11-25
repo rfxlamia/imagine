@@ -104,3 +104,9 @@ test("Property 20: self-edge and direct back-edge are rejected", () => {
   assert.equal(addDependencyEdge(g, "a", "b").ok, true);
   assert.equal(addDependencyEdge(g, "b", "a").ok, false);
 });
+
+test("an escalated item with failed latest evidence derives to needs_input", () => {
+  const failed = { checkId: "c", result: "failed", at: "2025-01-01T00:00:00.000Z", inputHashes: {} };
+  assert.equal(deriveItemState({ state: "needs_input", evidence: [failed] }), "needs_input");
+  assert.equal(deriveItemState({ state: "repairing", evidence: [failed] }), "failed");
+});

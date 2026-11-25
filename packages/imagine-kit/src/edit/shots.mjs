@@ -64,7 +64,7 @@ export function editPreconditions(dir, derived, shot, sctx = null) {
     const id = `shot:${shot.id}.${st}`;
     const item = derived.items.find((i) => i.id === id);
     if (!item) errors.push(err("HARD-GATES-RECORDED", "HARD", id, `shot ${shot.id} has no ${st} item (${id} state: missing); run the ${st} stage first`));
-    else if (!["approved", "proposed"].includes(item.status)) errors.push(err("HARD-GATES-RECORDED", "HARD", id, `shot ${shot.id} is blocked: ${id} is ${item.status}; redo the ${st} stage for ${shot.id}`));
+    else if (item.stale || item.status === "stale" || !["approved", "proposed"].includes(item.status)) errors.push(err("HARD-GATES-RECORDED", "HARD", id, `shot ${shot.id} is blocked: ${id} is ${item.stale ? "stale" : item.status}; redo the ${st} stage for ${shot.id}`));
   }
   errors.push(...dependencyErrors(derived, context, shot, shotAssetItemIds(context, shot)));
   const sbPath = safePath(dir, "edit/STORYBOARD.md");

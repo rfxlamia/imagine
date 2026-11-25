@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import { err } from "./envelope.mjs";
 import { KitError } from "./errors.mjs";
 import { deriveAll } from "./derive.mjs";
@@ -7,6 +7,7 @@ import { currentAsset, currentAssets, loadManifest } from "./docs.mjs";
 import { writeEvidence } from "./evidence.mjs";
 import { defaultEvaluators } from "./evaluators.mjs";
 import { sha256File } from "./hash.mjs";
+import { latestByCheck } from "./latest-evidence.mjs";
 import { loadProject } from "./project.mjs";
 import { measureLoudness, pngInfo, probeMedia } from "./media.mjs";
 import { rasterQ, round2, tierOf } from "./raster.mjs";
@@ -45,13 +46,25 @@ const memo = (env, key, make) => {
 const derived = (env) => memo(env, "derived", () => deriveAll(env.sctx));
 const isPurged = (env) => (env.sctx.project.purges ?? []).length > 0;
 const extOf = (p) => p.slice(p.lastIndexOf(".")).toLowerCase();
-const fileHashes = (env, rels) => Object.fromEntries(rels.filter((r) => existsSync(join(env.dir, r))).map((r) => [`file:${r}`, sha256File(join(env.dir, r))]));
+// Hashes every regular file a Check read, whatever its location: project-relative or absolute (MP4, mix, post/ finals).
+const fileHashes = (env, refs) => Object.fromEntries(refs.map((r) => [r, isAbsolute(r) ? r : join(env.dir, r)])
+  .filter(([, abs]) => existsSync(abs) && statSync(abs).isFile()).map(([r, abs]) => [`file:${r}`, sha256File(abs)]));
 
 // Hashes of the sources a Check reads (`g0:`, `story:`, `bible:` ...), taken from the same source model status uses.
 function sourceHashes(env, prefixes) {
   let all;
   try { all = memo(env, "sources", () => enumerateSources(env.sctx)); } catch (e) { if (env.invalid && e instanceof KitError && e.code === "HARD_NOT_RUN") return {}; throw e; }
   return Object.fromEntries(Object.entries(all).filter(([ref]) => prefixes.some((p) => ref.startsWith(p))));
+}
+
+// Render identity: the SHA-256 of the MP4 (and mix) a Check ran against, stamped on every record written with one.
+export const RENDER_KEY = "render:mp4";
+function renderHashes(env) {
+  const out = {};
+  for (const [key, file] of [[RENDER_KEY, env.mp4], ["render:mix", env.mix]]) {
+    if (file && existsSync(file)) out[key] = sha256File(file);
+  }
+  return out;
 }
 
 // One validateStory pass shared by every Q1 Check that reads its findings.
@@ -390,28 +403,21 @@ export function resolveCheckpoint(id) {
 export const checkpointItemId = (id, scope) => `${CHECKPOINT_ITEM_PREFIX}${id}${scope?.length ? `[${[...scope].sort().join(",")}]` : ""}`;
 
 // ---------------------------------------------------------------- state
-// Most recent record per checkId. Records are append-only, so a later `at` wins and ties go to the later position.
-function latestByCheck(records) {
-  const latest = new Map();
-  for (const r of records ?? []) {
-    if (!r || typeof r.checkId !== "string") continue;
-    const prev = latest.get(r.checkId);
-    if (!prev || String(r.at ?? "") >= String(prev.at ?? "")) latest.set(r.checkId, r);
-  }
-  return latest;
-}
 
 // Derived only from Evidence_Records (Req 6.3): `passed` iff every Check's most recent record is `passed`;
 // `failed` if any most recent record is `failed`; otherwise `open` (a Check is missing or `not_run`).
-export function checkpointView(checkpointId, evidenceRecords) {
+// With `opts.render` (an MP4 SHA-256), a record counts only if it was stamped with that render; any other record is `stale`.
+// With `opts.fresh` (record => boolean), a record for which it returns false is `stale` too.
+export function checkpointView(checkpointId, evidenceRecords, opts = {}) {
   const cp = resolveCheckpoint(checkpointId);
   if (!cp) throw new RangeError(`unknown checkpoint ${checkpointId}`);
   const latest = latestByCheck(evidenceRecords);
-  const checks = cp.checks.map((c) => ({ id: c.id, result: latest.get(c.id)?.result ?? "missing", at: latest.get(c.id)?.at ?? null }));
+  const resultOfRecord = (r) => (!r ? "missing" : (opts.render && r.inputHashes?.[RENDER_KEY] !== opts.render) || (opts.fresh && !opts.fresh(r)) ? "stale" : r.result);
+  const checks = cp.checks.map((c) => ({ id: c.id, result: resultOfRecord(latest.get(c.id)), at: latest.get(c.id)?.at ?? null }));
   const state = checks.every((c) => c.result === "passed") ? "passed" : checks.some((c) => c.result === "failed") ? "failed" : "open";
   return { id: cp.id, state, checks };
 }
-export const checkpointState = (checkpointId, evidenceRecords) => checkpointView(checkpointId, evidenceRecords).state;
+export const checkpointState = (checkpointId, evidenceRecords, opts) => checkpointView(checkpointId, evidenceRecords, opts).state;
 
 // The records of a Checkpoint item as stored in project.yaml.
 export function checkpointEvidence(project, checkpointId, scope) {
@@ -491,7 +497,7 @@ export async function runCheckpoint(dir, checkpointId, opts = {}) {
     const result = resultOf(out);
     const evaluator = out.evaluator ?? check.evaluator;
     const capabilities = out.evaluatorCapabilities ?? check.evaluatorCapabilities;
-    const inputHashes = { ...sourceHashes(env, check.inputs), ...fileHashes(env, (out.outputRefs ?? []).filter((r) => !r.startsWith("/") && !r.startsWith("..")).filter((r) => /^(edit|assets)\//.test(r))) };
+    const inputHashes = { ...sourceHashes(env, check.inputs), ...renderHashes(env), ...fileHashes(env, out.outputRefs ?? []) };
     const w = writeEvidence(dir, { itemId, checkId: check.id, evaluator, evaluatorCapabilities: capabilities, requires: check.requires,
       ruleVersion: check.ruleVersion, inputHashes, outputRefs: out.outputRefs ?? [], result, now });
     results.push({ checkId: check.id, result: w.record?.result ?? "not_run", errors: out.errors ?? [], not_run: out.notRun ?? null,

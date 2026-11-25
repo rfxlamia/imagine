@@ -375,7 +375,7 @@ Direct HyperFrames calls must pin `npx hyperframes@0.8.223`, with
 Record P0/P1/P2 findings, accepted advice with reasons, soft tiers, and waivers in `review/REVIEW.md` using the HyperFrames review convention. <!-- rule:PROC-REVIEW-MD -->
 Use findings of the form: `t=4.2s · where · problem -> exact change · what stays`.
 
-At G6, require Studio preview and draft MP4 full-mix review by the user. For portrait, manually check the 9:16 safe band and record it in REVIEW.md.
+At G6, require Studio preview and draft MP4 full-mix review by the user only for older, unmigrated projects. For autonomous projects, rely on the recorded Q3 Checkpoint evidence and ask the user only when a Checkpoint returns `needs_input`. In both cases, for portrait, manually check the 9:16 safe band and record it in REVIEW.md.
 
 At Q3 (G7 in older projects), require an observed playable MP4 matching G0 dimensions and frame rate, valid QC, licences, credits, current approvals, and all active waiver disclosures.
 

@@ -57,6 +57,7 @@ export function writeEvidence(dir, input) {
   const kind = itemId.includes(":") ? itemId.slice(0, itemId.indexOf(":")) : "";
   const item = (project.items[itemId] ??= { kind: /^[a-z0-9-]+$/.test(kind) ? kind : "item", status: "pending" });
   (item.evidence ??= []).push(record);
+  if (item.state === "needs_input") delete item.state;   // new evidence ends a prior escalation
   saveProject(dir, project);
   const journal_id = appendJournal(dir, { command: "evidence",
     summary: `${itemId} ${checkId} ${result} evaluator=${evaluator} rule=${ruleVersion}`, now });
