@@ -74,3 +74,15 @@ test("an evaluator without the required capability cannot yield passed", async (
   assert.equal(c.result, "not_run");
   assert.equal(c.evidenceErrors[0].rule, "EVALUATOR-CAPABILITY");
 });
+test("Q2 asset-ref-exists fails when a shot declares an asset with no manifest entry", async () => {
+  const { dir } = await makeProject();
+  seedCanon(dir);
+  const { createContext } = await import("../src/sources.mjs");
+  const { writeStory, shot } = await import("./helpers/fixture.mjs");
+  const units = Object.keys(createContext(dir).units.units);
+  await writeStory(dir, 0, [shot("s01", { scene: "main", duration_est: "5s", voiceover: `[${units.join(", ")}]`, assets: "[ghost:img:1024x1024]" }, "Main")]);
+  const r = await runCheckpoint(dir, "Q2", { now: NOW });
+  const c = r.checks.find((x) => x.checkId === "asset-ref-exists");
+  assert.equal(c.result, "failed");
+  assert.match(c.errors[0].message, /ghost/);
+});

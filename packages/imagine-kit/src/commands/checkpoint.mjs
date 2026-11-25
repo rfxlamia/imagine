@@ -1,6 +1,7 @@
 import { err } from "../envelope.mjs";
 import { UsageError } from "../errors.mjs";
 import { CHECKPOINT_IDS, resolveCheckpoint, runCheckpoint } from "../checkpoints.mjs";
+import { updateDelivery } from "../delivery.mjs";
 import { resolveProject } from "../project.mjs";
 
 const USAGE = `usage: checkpoint <${CHECKPOINT_IDS.join("|")}> run [--scope <id,…>]`;
@@ -17,6 +18,8 @@ export default {
     if (values.scope !== undefined && scope.length === 0) throw new UsageError("--scope needs at least one item id");
     const { dir, rel } = resolveProject(ctx.cwd, values.project);
     const r = await runCheckpoint(dir, id, { ctx, now: ctx.now(), scope });
+    // Q3 is the last Checkpoint: move delivery:film to ready when every shot passed, or back to pending.
+    const delivery = r.checkpoint === "Q3" ? updateDelivery(dir, { now: ctx.now() }) : null;
     const errors = r.checks.flatMap((c) => [...c.errors, ...c.evidenceErrors]);
     const not_run = r.checks.filter((c) => c.not_run).map((c) => ({ rule: c.checkId, cause: c.not_run }));
     if (r.state === "failed" && errors.length === 0) {
@@ -25,7 +28,7 @@ export default {
     return {
       project: rel, errors, not_run,
       journal_id: r.checks.map((c) => c.journal_id).filter(Boolean).at(-1) ?? null,
-      data: { checkpoint: r.checkpoint, item: r.itemId, state: r.state, scope,
+      data: { delivery: delivery?.state ?? null, checkpoint: r.checkpoint, item: r.itemId, state: r.state, scope,
         checks: r.checks.map((c) => ({ checkId: c.checkId, result: c.result, errors: c.errors.length, not_run: c.not_run, proposal: c.proposal })) },
     };
   },
