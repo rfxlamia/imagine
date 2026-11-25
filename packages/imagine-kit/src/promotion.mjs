@@ -29,7 +29,16 @@ export function promoteCheckpoint(dir, checkpointId, { now = new Date() } = {}) 
     if (blockers.length) { skipped.push({ id: gate, reason: `${blockers.join(", ")} not cleared yet` }); continue; }
     const status = new Map(derived.items.map((i) => [i.id, i.status]));
     for (const id of gateItems(gate, sctx)) {
-      if (status.get(id) === "approved") continue;
+      if (status.get(id) === "approved") {
+        // An approved asset item is skipped only once its manifest entry reflects the decision; otherwise retry the manifest write.
+        const am = id.match(/^asset:(.+)\.v(\d+)$/);
+        const entry = am && sctx.manifest.assets.find((a) => a.id === am[1] && a.v === Number(am[2]));
+        if (entry && (entry.status !== "approved" || (entry.kind === "vo" && entry.listen_status !== "ok"))) {
+          applyAssetDecision(sctx.manifest, id, "approve");
+          promoted.push(id);
+        }
+        continue;
+      }
       if (sctx.project.items[id]?.status === "rejected") { skipped.push({ id, reason: "rejected by the user" }); continue; }
       const m = id.match(/^asset:(.+)\.v(\d+)$/);
       const asset = m && sctx.manifest.assets.find((a) => a.id === m[1] && a.v === Number(m[2]));

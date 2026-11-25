@@ -4,6 +4,7 @@ import { deriveItemState } from "./derive.mjs";
 // Pure: reads only `derived` (the result of deriveAll) and the arguments.
 
 const SATISFIED = new Set(["approved", "passed", "published"]);
+const NEEDS_VALIDATION = new Set(["validating", "repairing", "needs_input"]);
 
 // The default audio dependency ids: the G5a gate item and any `audio:*` item.
 const isAudioDependency = (id) => id === "g5a" || /^audio:/.test(id);
@@ -15,6 +16,8 @@ export function dependencyState(derived, id, records = null) {
   if (row) {
     if (row.state === "failed") return "failed";
     if (row.stale || row.status === "stale") return "stale";
+    // A legacy `approved` status never overrides unevaluated evidence or an explicit state that still needs validation.
+    if (NEEDS_VALIDATION.has(row.state)) return row.state;
     if (SATISFIED.has(row.status) || SATISFIED.has(row.state)) return SATISFIED.has(row.state) ? row.state : row.status;
     return row.state ?? row.status ?? "pending";
   }

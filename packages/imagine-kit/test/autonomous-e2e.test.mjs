@@ -21,12 +21,13 @@ function prompts() {
   const asked = [];
   return { asked, askUser: (why) => { asked.push(why); throw new Error(`unexpected user prompt: ${why}`); } };
 }
+const RENDER = "a".repeat(64);
 function fixtureEvidence(dir, checkpointId, scope, result = "passed") {
   const cp = CHECKPOINTS[checkpointId];
   for (const c of cp.checks) {
     const w = writeEvidence(dir, { itemId: checkpointItemId(checkpointId, scope), checkId: c.id, evaluator: "fixture-evaluator",
       evaluatorCapabilities: ["text", "file-hash", "image-inspection", "audio-analysis", "video-probe"], requires: c.requires,
-      ruleVersion: c.ruleVersion, inputHashes: {}, outputRefs: [], result, now: NOW });
+      ruleVersion: c.ruleVersion, inputHashes: { "render:mp4": RENDER }, outputRefs: [], result, now: NOW });
     assert.deepEqual(w.errors, []);
   }
 }
@@ -48,7 +49,7 @@ test("a valid brief reaches Production_Complete with zero approval prompts and n
   const status = await cli(cwd, "status");
   for (const q of ["Q1", "Q2", "Q3"]) assert.equal(status.env.data.checkpoints[q].state, "passed", q);
   // Production_Complete
-  const delivered = updateDelivery(dir, { now: NOW });
+  const delivered = updateDelivery(dir, { render: RENDER, now: NOW });
   assert.equal(delivered.state, "ready");
   assert.deepEqual(delivered.pending, []);
   const project = getProject(dir);
@@ -71,7 +72,7 @@ test("publication after Production_Complete needs a Publication_Authorization fo
   seedCanon(dir);
   await seedMinimalStory(dir);
   for (const q of ["Q1", "Q2", "Q3"]) fixtureEvidence(dir, q, []);
-  assert.equal(updateDelivery(dir, { now: NOW }).state, "ready");
+  assert.equal(updateDelivery(dir, { render: RENDER, now: NOW }).state, "ready");
   const file = join(dir, "final.mp4");
   writeFileSync(file, "film bytes");
   const c = recordConsent(dir, { kind: "publication", scope: "youtube", quote: "yes, publish the film to youtube", fileHash: sha256File(file), now: NOW });
@@ -85,7 +86,7 @@ test("a failing Q3 keeps the film out of Production_Complete (defective end-to-e
   await seedMinimalStory(dir);
   for (const q of ["Q1", "Q2"]) fixtureEvidence(dir, q, []);
   fixtureEvidence(dir, "Q3", [], "failed");
-  const r = updateDelivery(dir, { now: NOW });
+  const r = updateDelivery(dir, { render: RENDER, now: NOW });
   assert.equal(r.state, "pending");
   assert.ok(r.pending.length > 0);
 });

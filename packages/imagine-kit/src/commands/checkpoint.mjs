@@ -1,6 +1,6 @@
 import { err } from "../envelope.mjs";
 import { UsageError } from "../errors.mjs";
-import { CHECKPOINT_IDS, loadCheckpointView, resolveCheckpoint, runCheckpoint } from "../checkpoints.mjs";
+import { CHECKPOINT_IDS, resolveCheckpoint, runCheckpoint } from "../checkpoints.mjs";
 import { updateDelivery } from "../delivery.mjs";
 import { mapReviewResponse } from "../evaluators.mjs";
 import { isAbsolute, join } from "node:path";
@@ -36,7 +36,7 @@ export default {
     }
     const r = await runCheckpoint(dir, id, { ctx, now: ctx.now(), scope, mp4: file(values.mp4), mix: file(values.mix), ...extra });
     // A passed, unscoped Checkpoint replaces the user's approval of the gates it covers (promotion.mjs).
-    const promotion = loadCheckpointView(dir, r.checkpoint).state === "passed" ? promoteCheckpoint(dir, r.checkpoint, { now: ctx.now() }) : null;
+    const promotion = scope.length === 0 && r.state === "passed" ? promoteCheckpoint(dir, r.checkpoint, { now: ctx.now() }) : null;
     // Q3 is the last Checkpoint: move delivery:film to ready when every shot passed, or back to pending.
     const delivery = r.checkpoint === "Q3" ? updateDelivery(dir, { now: ctx.now() }) : null;
     const errors = [...r.checks.flatMap((c) => [...c.errors, ...c.evidenceErrors]), ...(promotion?.errors ?? [])];

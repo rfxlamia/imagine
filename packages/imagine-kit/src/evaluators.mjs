@@ -106,7 +106,7 @@ export async function sampleFrames(ctx, mp4, count = DEFAULT_FRAME_SAMPLES) {
   const probe = await probeMedia(ctx, mp4);
   const out = mkdtempSync(join(tmpdir(), "imagine-frames-"));
   const frames = [];
-  for (const [i, t] of sampleTimes(probe.duration ?? probe.format?.duration, count).entries()) {
+  for (const [i, t] of sampleTimes(probe.duration_s, count).entries()) {
     const file = join(out, `frame-${String(i).padStart(3, "0")}.png`);
     const r = ensureTool(await runTool(ctx, "ffmpeg", ["-v", "error", "-ss", String(t), "-i", mp4, "-frames:v", "1", "-y", file]), "ffmpeg", "HARD-FPS-SIZE");
     if (r.status === 0) frames.push({ t, path: file });

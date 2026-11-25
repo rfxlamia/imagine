@@ -1,5 +1,6 @@
 import { GATES, gateItems, gateSatisfied } from "./gates.mjs";
 import { err } from "./envelope.mjs";
+import { latestByCheck } from "./latest-evidence.mjs";
 import { resolveRef } from "./sources.mjs";
 
 const STALE_FROM = new Set(["approved", "proposed"]);
@@ -10,12 +11,8 @@ export const ITEM_STATES = ["pending", "validating", "passed", "failed", "repair
 // States a workflow may store on an item. `passed` is never taken from storage; `published` also needs a Consent_Record.
 const STORED_STATES = new Set(["validating", "failed", "repairing", "needs_input", "ready"]);
 
-// Latest Evidence_Record per checkId (the array is append-only; later records win).
-export function latestEvidence(evidence) {
-  const byCheck = new Map();
-  for (const e of Array.isArray(evidence) ? evidence : []) byCheck.set(e.checkId, e);
-  return [...byCheck.values()];
-}
+// Latest Evidence_Record per checkId (greatest `at`; ties go to the later record).
+export const latestEvidence = (evidence) => [...latestByCheck(evidence).values()];
 
 // Item_State from Evidence_Records and Consent_Records (Requirements 6.1, 6.3).
 // `passed` derives only from evidence: every latest record `passed`. A Consent_Record can add `published`
@@ -24,7 +21,9 @@ export function deriveItemState(rec, consents = [], id = null) {
   const latest = latestEvidence(rec?.evidence);
   const stored = STORED_STATES.has(rec?.state) ? rec.state : null;
   let state;
-  if (latest.some((e) => e.result === "failed")) state = "failed";
+  // An escalation (repair.mjs) outlives the failure that caused it; writeEvidence and beginRepair clear it when the item changes.
+  if (stored === "needs_input" && latest.some((e) => e.result === "failed")) state = "needs_input";
+  else if (latest.some((e) => e.result === "failed")) state = "failed";
   else if (latest.length && latest.every((e) => e.result === "passed")) state = "passed";
   else if (latest.length) state = stored === "needs_input" ? "needs_input" : "validating";   // not_run: never passed (6.7)
   else state = stored ?? "pending";

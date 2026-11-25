@@ -11,8 +11,9 @@ import { makeProject, getProject, setProject } from "./helpers/fixture.mjs";
 const NUM_RUNS = 30;
 const NOW = new Date("2025-01-01T00:00:00Z");
 const PLATFORMS = ["youtube", "tiktok", "instagram"];
+const RENDER = "c".repeat(64);
 const Q3_IDS = CHECKPOINTS.Q3.checks.map((c) => c.id);
-const ev = (checkId, result) => ({ checkId, result, evaluator: "t", evaluatorCapabilities: ["text"], ruleVersion: "1", inputHashes: {}, outputRefs: [], at: NOW.toISOString() });
+const ev = (checkId, result) => ({ checkId, result, evaluator: "t", evaluatorCapabilities: ["text"], ruleVersion: "1", inputHashes: { "render:mp4": RENDER }, outputRefs: [], at: NOW.toISOString() });
 const publication = (scope, fileHash) => ({ kind: "publication", scope, quote: "yes, publish it", ...(fileHash !== undefined ? { fileHash } : {}), at: NOW.toISOString() });
 const hex64 = fc.stringMatching(/^[0-9a-f]{64}$/);
 const content = fc.uint8Array({ minLength: 0, maxLength: 64 });
@@ -39,7 +40,7 @@ test("Property 23: Reaching Production_Complete never publishes", () => {
       const consents = withConsent ? PLATFORMS.map((pl) => publication(pl, "a".repeat(64))) : [];
       seed(shots, flags, consents);
       const allPassed = shots.every((_, i) => flags[i]);
-      const r = updateDelivery(dir, { shots, now: NOW });
+      const r = updateDelivery(dir, { shots, render: RENDER, now: NOW });
       assert.equal(r.state, allPassed ? "ready" : "pending");
       assert.notEqual(r.state, "published");
       const stored = getProject(dir).items[DELIVERY_ITEM_ID];
@@ -48,6 +49,19 @@ test("Property 23: Reaching Production_Complete never publishes", () => {
       assert.notEqual(updateDelivery(dir, { shots, now: NOW }).state, "published");
     },
   ), { numRuns: NUM_RUNS });
+});
+
+test("readiness rejects records from another render or with no render", () => {
+  seed(["s01"], [true], []);
+  assert.equal(updateDelivery(dir, { shots: ["s01"], render: "d".repeat(64), now: NOW }).state, "pending");
+  assert.equal(updateDelivery(dir, { shots: ["s01"], now: NOW }).state, "pending");
+  assert.equal(updateDelivery(dir, { shots: ["s01"], render: RENDER, now: NOW }).state, "ready");
+});
+
+test("readiness rejects evidence whose recorded input hashes no longer match", () => {
+  seed(["s01"], [true], []);
+  setProject(dir, (p) => { for (const r of p.items[checkpointItemId("Q3", ["s01"])].evidence) r.inputHashes["g0:duration"] = "e".repeat(64); });
+  assert.equal(updateDelivery(dir, { shots: ["s01"], render: RENDER, now: NOW }).state, "pending");
 });
 
 // **Validates: Requirements 12.3, 12.5**
